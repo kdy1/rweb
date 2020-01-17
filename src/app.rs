@@ -1,3 +1,4 @@
+use crate::service::HttpServiceFactory;
 use actix_service::ServiceFactory;
 
 /// An application builder.

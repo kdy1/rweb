@@ -13,6 +13,7 @@ edition = "2018"
 
 [dependencies]
 rweb-macros = { path = "./macros" }
+rweb-service = { path = "./service" }
 hyper = "0.13"
 tokio = "0.2"
 serde = { version = "1", features = ["derive"] }
