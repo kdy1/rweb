@@ -11,17 +11,28 @@ use std::net::SocketAddr;
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct ReqInfo {
+    method: Method,
+    uri: Uri,
+    version: Version,
+    /// The request's headers.
+    pub headers: HeaderMap,
+}
+
+impl ReqInfo {
     /// The request's method
-    pub method: Method,
+    pub fn method(&self) -> &Method {
+        &self.method
+    }
 
     /// The request's URI
-    pub uri: Uri,
+    pub fn uri(&self) -> &Uri {
+        &self.url
+    }
 
     /// The request's version
-    pub version: Version,
-
-    /// The request's headers
-    pub headers: HeaderMap,
+    pub fn version(&self) -> Version {
+        self.version
+    }
 }
 
 /// Typically generated with macros.
