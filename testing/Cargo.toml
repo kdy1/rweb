@@ -1,15 +1,13 @@
-[workspace]
-members = ["testing"]
-
 [package]
-name = "rweb"
-version = "0.1.1"
+name = "rweb-testing"
+version = "0.1.0"
 authors = ["강동윤 <kdy1997.dev@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/kdy1/rweb.git"
-description = "Yet another web server framework for rust"
+description = "Testing framework for rweb"
 edition = "2018"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rweb-macros = { path = "./macros" }
+rweb-testing-macros = { version = "0.1", path = "./macros" }

@@ -1,0 +1,15 @@
+[package]
+name = "rweb-testing-macros"
+version = "0.1.0"
+authors = ["강동윤 <kdy1997.dev@gmail.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/kdy1/rweb.git"
+description = "Macros for testing framework for rweb"
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+pmutil = "0.5.3"
+syn = "1"
