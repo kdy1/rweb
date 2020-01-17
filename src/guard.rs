@@ -1,4 +1,4 @@
-use crate::service::ReqInfo;
+use crate::http::ReqInfo;
 
 /// Guards can prevent route from matching.
 pub trait Guard {
