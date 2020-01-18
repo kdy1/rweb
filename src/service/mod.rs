@@ -15,7 +15,7 @@ mod registry;
 pub trait AppServiceFactory {}
 
 pub trait HttpServiceFactory {
-    fn register(&self, reg: &mut Registry);
+    fn register(self, reg: &mut Registry);
 }
 
 #[derive(Debug, Clone, Copy)]

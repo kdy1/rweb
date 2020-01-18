@@ -130,7 +130,7 @@ where
                 Poll::Ready(Ok(res)) => Poll::Ready(Ok(res)),
                 Poll::Pending => Poll::Pending,
                 Poll::Ready(Err(e)) => {
-                    let res: Resp = e.into().into();
+                    let res: Resp = Resp::from_err(e.into(), this.req.take().unwrap());
                     Poll::Ready(Ok(res))
                 }
             };

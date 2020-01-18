@@ -48,12 +48,8 @@ impl Req {
 
     /// Create service response for error
     #[inline]
-    pub fn error_response<B, E: Into<Error>>(self, err: E) -> Resp<B>
-    where
-        B: MessageBody,
-    {
-        let res: Resp<B> = err.into().into();
-        res
+    pub fn error_response<E: Into<Error>>(self, err: E) -> Resp {
+        Resp::from_err(err, self)
     }
 }
 
@@ -184,6 +180,15 @@ impl Resp {
     static_resp!(variant_also_negotiates, StatusCode::VARIANT_ALSO_NEGOTIATES);
     static_resp!(insufficient_storage, StatusCode::INSUFFICIENT_STORAGE);
     static_resp!(loop_detected, StatusCode::LOOP_DETECTED);
+}
+
+impl Resp {
+    /// Create service response from the error
+    pub fn from_err<E: Into<Error>>(err: E, _request: Req) -> Self {
+        let e: Error = err.into();
+        let res: Resp = e.as_response_error().error_response();
+        res
+    }
 }
 
 impl<B> Resp<B>

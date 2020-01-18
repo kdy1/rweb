@@ -349,7 +349,7 @@ where
     T: ServiceFactory<Config = (), Request = Req, Response = Resp, Error = Error, InitError = ()>
         + 'static,
 {
-    fn register(&self, config: &mut Registry) {
+    fn register(mut self, config: &mut Registry) {
         let guards = if self.guards.is_empty() {
             None
         } else {
@@ -506,7 +506,6 @@ impl Service for ResourceService {
         if let Some(ref mut default) = self.default {
             Either::Right(default.call(req))
         } else {
-            let req = req.parts().0;
             Either::Left(ok(Resp::new(StatusCode::METHOD_NOT_ALLOWED)))
         }
     }
