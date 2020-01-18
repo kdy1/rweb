@@ -553,7 +553,7 @@ mod tests {
         web, App, Error, HttpResponse,
     };
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_middleware() {
         let mut srv = init_service(
             App::new().service(
@@ -576,7 +576,7 @@ mod tests {
         );
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_middleware_fn() {
         let mut srv = init_service(
             App::new().service(
@@ -604,7 +604,7 @@ mod tests {
         );
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_to() {
         let mut srv = init_service(App::new().service(web::resource("/test").to(|| async {
             delay_for(Duration::from_millis(100)).await;
@@ -616,7 +616,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_pattern() {
         let mut srv = init_service(App::new().service(
             web::resource(["/test", "/test2"]).to(|| async { Ok::<_, Error>(HttpResponse::Ok()) }),
@@ -630,7 +630,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_default_resource() {
         let mut srv = init_service(
             App::new()
@@ -668,7 +668,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_resource_guards() {
         let mut srv = init_service(
             App::new()
@@ -709,7 +709,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_data() {
         let mut srv = init_service(
             App::new()

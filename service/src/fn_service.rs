@@ -366,7 +366,7 @@ mod tests {
     use super::*;
     use crate::{Service, ServiceFactory};
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_fn_service() {
         let new_srv = fn_service(|()| ok::<_, ()>("srv"));
 
@@ -377,7 +377,7 @@ mod tests {
         assert_eq!(res.unwrap(), "srv");
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_fn_service_service() {
         let mut srv = fn_service(|()| ok::<_, ()>("srv"));
 
@@ -387,7 +387,7 @@ mod tests {
         assert_eq!(res.unwrap(), "srv");
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_fn_service_with_config() {
         let new_srv = fn_factory_with_config(|cfg: usize| {
             ok::<_, ()>(fn_service(move |()| ok::<_, ()>(("srv", cfg))))

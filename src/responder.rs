@@ -467,7 +467,7 @@ pub(crate) mod tests {
     };
     use hyper::{header::CONTENT_TYPE, StatusCode};
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_option_responder() {
         let mut srv = init_service(
             App::new()
@@ -518,7 +518,7 @@ pub(crate) mod tests {
         }
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_responder() {
         let req = TestRequest::default().to_http_request();
 
@@ -581,7 +581,7 @@ pub(crate) mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_result_responder() {
         let req = TestRequest::default().to_http_request();
 
@@ -603,7 +603,7 @@ pub(crate) mod tests {
         assert!(res.is_err());
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_custom_responder() {
         let req = TestRequest::default().to_http_request();
         let res = "test"
@@ -630,7 +630,7 @@ pub(crate) mod tests {
         );
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_tuple_responder_with_status_code() {
         let req = TestRequest::default().to_http_request();
         let res = ("test".to_string(), StatusCode::BAD_REQUEST)

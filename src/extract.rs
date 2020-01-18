@@ -285,7 +285,7 @@ mod tests {
         hello: String,
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_option() {
         let (req, mut pl) =
             TestRequest::with_header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -325,7 +325,7 @@ mod tests {
         assert_eq!(r, None);
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_result() {
         let (req, mut pl) =
             TestRequest::with_header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
