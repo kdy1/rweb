@@ -51,8 +51,6 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.get_mut() {
             Payload::None => Poll::Ready(None),
-            Payload::H1(ref mut pl) => pl.readany(cx),
-            Payload::H2(ref mut pl) => Pin::new(pl).poll_next(cx),
             Payload::Stream(ref mut pl) => Pin::new(pl).poll_next(cx),
         }
     }

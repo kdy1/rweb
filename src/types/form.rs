@@ -1,11 +1,10 @@
 //! Form extractor
-
 #[cfg(feature = "compress")]
 use crate::dev::Decompress;
 use crate::{
     error::{Error, UrlencodedError},
     extract::FromRequest,
-    http::{Payload, StatusCode},
+    http::{msg::HttpMessage, Payload, StatusCode},
     responder::Responder,
     Req, Resp,
 };
