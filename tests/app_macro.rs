@@ -1,9 +1,18 @@
 use rweb::{get, App};
 
+struct Error {}
+
 #[test]
 fn app_service() {
     #[get("/")]
-    fn index() {}
+    fn index() -> Result<String, Error> {
+        Err(Error {})
+    }
 
-    App::new().service(index);
+    #[get("/foo")]
+    fn foo() -> Result<String, Error> {
+        Ok(String::new())
+    }
+
+    App::new().service(index).service(foo);
 }
