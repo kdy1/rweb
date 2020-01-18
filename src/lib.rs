@@ -7,5 +7,7 @@ pub mod encoding;
 pub mod error;
 pub mod guard;
 pub mod http;
+pub mod resource;
 mod response;
+pub mod rmap;
 pub mod service;

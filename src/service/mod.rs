@@ -1,3 +1,4 @@
+pub use self::registry::Registry;
 use crate::{
     error::Error,
     http::{MessageBody, Req, Resp},
@@ -9,9 +10,13 @@ use futures::{
 use rweb_service::{Service, ServiceFactory};
 use std::marker::PhantomData;
 
+mod registry;
+
 pub trait AppServiceFactory {}
 
-pub trait HttpServiceFactory {}
+pub trait HttpServiceFactory {
+    fn register(&self, reg: &mut Registry);
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct NoopServiceFactory<T: MessageBody>(pub(crate) PhantomData<T>);

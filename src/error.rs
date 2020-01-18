@@ -1,10 +1,10 @@
 use derive_more::{Display, From};
-use url::ParseError as UrlParseError;
+use hyper::http;
 
 pub trait ResponseError {}
 
 /// Errors which can occur when attempting to generate resource uri.
-#[derive(Debug, PartialEq, Display, From)]
+#[derive(Debug, Display, From)]
 pub enum UrlGenerationError {
     /// Resource not found
     #[display(fmt = "Resource not found")]
@@ -14,7 +14,7 @@ pub enum UrlGenerationError {
     NotEnoughElements,
     /// URL parse error
     #[display(fmt = "{}", _0)]
-    ParseError(UrlParseError),
+    ParseError(http::uri::InvalidUri),
 }
 
 /// `InternalServerError` for `UrlGeneratorError`

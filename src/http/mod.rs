@@ -6,6 +6,7 @@ pub use hyper::{header::HeaderValue, HeaderMap};
 use serde::de::DeserializeOwned;
 use std::{
     marker::PhantomData,
+    mem::replace,
     pin::Pin,
     task::{Context, Poll},
 };
@@ -79,11 +80,18 @@ where
 }
 
 #[derive(Debug)]
-pub struct Resp<Body>
+pub struct Resp<B = Body>
 where
-    Body: MessageBody,
+    B: MessageBody,
 {
-    body: Body,
+    body: B,
+}
+
+pub enum Body {
+    None,
+    Empty,
+    Bytes(Bytes),
+    Message(Box<dyn MessageBody>),
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -110,6 +118,33 @@ pub trait MessageBody {
     fn size(&self) -> BodySize;
 
     fn poll_next(&mut self, cx: &mut Context<'_>) -> Poll<Option<Result<Bytes, Error>>>;
+}
+
+impl MessageBody for Body {
+    fn size(&self) -> BodySize {
+        match self {
+            Body::None => BodySize::None,
+            Body::Empty => BodySize::Empty,
+            Body::Bytes(ref bin) => BodySize::Sized(bin.len()),
+            Body::Message(ref body) => body.size(),
+        }
+    }
+
+    fn poll_next(&mut self, cx: &mut Context<'_>) -> Poll<Option<Result<Bytes, Error>>> {
+        match self {
+            Body::None => Poll::Ready(None),
+            Body::Empty => Poll::Ready(None),
+            Body::Bytes(ref mut bin) => {
+                let len = bin.len();
+                if len == 0 {
+                    Poll::Ready(None)
+                } else {
+                    Poll::Ready(Some(Ok(replace(bin, Bytes::new()))))
+                }
+            }
+            Body::Message(ref mut body) => body.poll_next(cx),
+        }
+    }
 }
 
 impl MessageBody for () {
