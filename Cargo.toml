@@ -17,7 +17,6 @@ rweb-router = { path = "./router" }
 rweb-service = { path = "./service" }
 bytes = "0.5.3"
 hyper = "0.13"
-tokio = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 mime = "0.3"
@@ -29,3 +28,4 @@ pin-project = "0.4.6"
 log = "0.4.8"
 http = "0.2.0"
 either = "1.5.3"
+tokio = { version = "0.2.3", features = ["macros"] }

@@ -6,6 +6,7 @@ pub use self::{
 };
 pub use either::Either;
 pub use rweb_macros::{connect, delete, get, head, options, patch, post, put, trace};
+pub use tokio::{main, test};
 
 mod app;
 pub mod cookie;
