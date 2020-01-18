@@ -105,7 +105,7 @@ impl HttpMessage for Req {
 
     #[inline]
     fn take_payload(&mut self) -> Payload<Self::Stream> {
-        Rc::get_mut(&mut (self.0).0).unwrap().payload.take()
+        Rc::get_mut(&mut self.inner.body).unwrap().payload.take()
     }
 
     /// Request extensions
