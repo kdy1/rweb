@@ -1,6 +1,7 @@
 use self::error::PayloadError;
 use crate::error::Error;
 use futures::Stream;
+use http::response::Parts;
 use hyper::{body::Bytes, Method, Uri, Version};
 pub use hyper::{header::HeaderValue, HeaderMap};
 use serde::de::DeserializeOwned;
@@ -84,6 +85,7 @@ pub struct Resp<B = Body>
 where
     B: MessageBody,
 {
+    head: Parts,
     body: B,
 }
 
