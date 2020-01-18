@@ -12,4 +12,5 @@ proc-macro = true
 
 [dependencies]
 pmutil = "0.5.3"
-syn = "1"
+syn = { version = "1", features = ["full"] }
+proc-macro2 = "1"

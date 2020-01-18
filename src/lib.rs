@@ -1,6 +1,5 @@
-pub extern crate rweb_macros as macros;
-
 pub use self::{app::App, response::Response};
+pub use rweb_macros::{connect, delete, get, head, options, patch, post, put, trace};
 
 mod app;
 pub mod cookie;

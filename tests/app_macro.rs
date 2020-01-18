@@ -1,3 +1,5 @@
+use rweb::{get, App};
+
 #[test]
 fn app_service() {
     #[get("/")]
