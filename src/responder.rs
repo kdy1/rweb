@@ -454,8 +454,8 @@ where
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use actix_service::Service;
     use bytes::{Bytes, BytesMut};
+    use rweb_service::Service;
 
     use super::*;
     use crate::{

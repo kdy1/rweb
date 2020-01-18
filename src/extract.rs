@@ -97,9 +97,9 @@ where
     T: FromRequest,
     T::Future: 'static,
 {
-    type Config = T::Config;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Option<T>, Error>>;
+    type Config = T::Config;
 
     #[inline]
     fn from_request(req: &Req, payload: &mut Payload) -> Self::Future {
@@ -169,9 +169,9 @@ where
     T::Error: 'static,
     T::Future: 'static,
 {
-    type Config = T::Config;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Result<T, T::Error>, Error>>;
+    type Config = T::Config;
 
     #[inline]
     fn from_request(req: &Req, payload: &mut Payload) -> Self::Future {
@@ -186,9 +186,9 @@ where
 
 #[doc(hidden)]
 impl FromRequest for () {
-    type Config = ();
     type Error = Error;
     type Future = Ready<Result<(), Error>>;
+    type Config = ();
 
     fn from_request(_: &Req, _: &mut Payload) -> Self::Future {
         ok(())

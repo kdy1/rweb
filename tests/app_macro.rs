@@ -2,6 +2,12 @@ use rweb::{get, App};
 
 struct Error {}
 
+impl From<Error> for rweb::error::Error {
+    fn from(_: Error) -> Self {
+        unreachable!()
+    }
+}
+
 #[test]
 fn app_service() {
     #[get("/")]

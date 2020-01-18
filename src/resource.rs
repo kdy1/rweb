@@ -279,7 +279,7 @@ where
     /// response type (i.e modify response's body).
     ///
     /// ```rust
-    /// use actix_service::Service;
+    /// use rweb_service::Service;
     /// use rweb::{web, App};
     /// use rweb::http::{header::CONTENT_TYPE, HeaderValue};
     ///
@@ -541,8 +541,8 @@ mod tests {
     use std::time::Duration;
 
     use actix_rt::time::delay_for;
-    use actix_service::Service;
     use futures::future::ok;
+    use rweb_service::Service;
 
     use crate::{
         guard,
