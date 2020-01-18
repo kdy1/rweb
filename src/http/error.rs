@@ -1,3 +1,4 @@
+use crate::{error::ResponseError, http::StatusCode};
 use derive_more::Display;
 use std::io;
 
@@ -25,4 +26,17 @@ pub enum PayloadError {
     /// Io error
     #[display(fmt = "{}", _0)]
     Io(io::Error),
+}
+
+/// `PayloadError` returns two possible results:
+///
+/// - `Overflow` returns `PayloadTooLarge`
+/// - Other errors returns `BadRequest`
+impl ResponseError for PayloadError {
+    fn status_code(&self) -> StatusCode {
+        match *self {
+            PayloadError::Overflow => StatusCode::PAYLOAD_TOO_LARGE,
+            _ => StatusCode::BAD_REQUEST,
+        }
+    }
 }

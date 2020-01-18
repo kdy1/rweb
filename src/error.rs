@@ -52,6 +52,15 @@ pub struct Error {
     cause: Box<dyn ResponseError>,
 }
 
+impl<T> From<T> for Error
+where
+    T: ResponseError + 'static,
+{
+    fn from(e: T) -> Self {
+        Error { cause: Box::new(e) }
+    }
+}
+
 impl Error {
     /// Returns the reference to the underlying `ResponseError`.
     pub fn as_response_error(&self) -> &dyn ResponseError {

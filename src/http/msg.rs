@@ -3,7 +3,7 @@ use crate::{
     http::Payload,
 };
 use encoding_rs::{Encoding, UTF_8};
-use http::{header, header::HeaderName, Extensions, HeaderValue};
+use http::{header, Extensions};
 use hyper::HeaderMap;
 use mime::Mime;
 use std::{
