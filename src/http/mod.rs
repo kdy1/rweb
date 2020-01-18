@@ -16,6 +16,7 @@ use std::{
 };
 
 pub mod error;
+pub mod msg;
 
 /// Type represent streaming payload
 pub enum Payload<S = PayloadStream> {

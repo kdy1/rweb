@@ -1,7 +1,7 @@
 pub use self::{
     app::App,
     extract::FromRequest,
-    http::{Req, Resp},
+    http::{msg::HttpMessage, Req, Resp},
     response::Response,
 };
 use crate::error::Error;

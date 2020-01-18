@@ -165,7 +165,7 @@ impl<T: Serialize> Responder for Form<T> {
         };
 
         ok(Resp::builder(StatusCode::OK)
-            .set(ContentType::form_url_encoded())
+            .content_type("x-www-form-urlencoded")
             .body(body.into())
             .build())
     }

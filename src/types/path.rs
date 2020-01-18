@@ -1,6 +1,6 @@
 //! Path extractor
 use crate::{
-    error::{Error, PathError},
+    error::{Error, ErrorNotFound, PathError},
     http::Payload,
     FromRequest, Req,
 };
@@ -251,7 +251,7 @@ mod tests {
     use serde_derive::Deserialize;
 
     use super::*;
-    use crate::{error, http, test::TestRequest, HttpResponse};
+    use crate::{error, http, test::TestRequest, Resp};
 
     #[derive(Deserialize, Debug, Display)]
     #[display(fmt = "MyStruct({}, {})", key, value)]

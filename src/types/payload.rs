@@ -1,5 +1,10 @@
 //! Payload/Bytes/String extractors
-use crate::{error::Error, extract::FromRequest, http::error::PayloadError, Req};
+use crate::{
+    error::{Error, ErrorBadRequest},
+    extract::FromRequest,
+    http::error::PayloadError,
+    Req,
+};
 use bytes::{Bytes, BytesMut};
 use encoding_rs::UTF_8;
 use futures::{

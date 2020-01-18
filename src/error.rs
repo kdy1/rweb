@@ -5,14 +5,19 @@ use crate::{
 };
 use bytes::BytesMut;
 use derive_more::{Display, From};
+use http::uri::InvalidUri;
 use hyper::{header, http};
 use serde_json::error::Error as JsonError;
 use serde_urlencoded::ser::Error as FormError;
 use std::{
     any::TypeId,
+    cell::RefCell,
     convert::From,
     fmt,
     fmt::{Debug, Display},
+    io,
+    str::Utf8Error,
+    string::FromUtf8Error,
 };
 
 /// Errors which can occur when attempting to generate resource uri.
@@ -280,6 +285,566 @@ impl ResponseError for JsonError {}
 
 /// `InternalServerError` for `FormError`
 impl ResponseError for FormError {}
+
+/// A set of errors that can occur during parsing HTTP streams
+#[derive(Debug, Display)]
+pub enum ParseError {
+    /// An invalid `Method`, such as `GE.T`.
+    #[display(fmt = "Invalid Method specified")]
+    Method,
+    /// An invalid `Uri`, such as `exam ple.domain`.
+    #[display(fmt = "Uri error: {}", _0)]
+    Uri(InvalidUri),
+    /// An invalid `HttpVersion`, such as `HTP/1.1`
+    #[display(fmt = "Invalid HTTP version specified")]
+    Version,
+    /// An invalid `Header`.
+    #[display(fmt = "Invalid Header provided")]
+    Header,
+    /// A message head is too large to be reasonable.
+    #[display(fmt = "Message head is too large")]
+    TooLarge,
+    /// A message reached EOF, but is not complete.
+    #[display(fmt = "Message is incomplete")]
+    Incomplete,
+    /// An invalid `Status`, such as `1337 ELITE`.
+    #[display(fmt = "Invalid Status provided")]
+    Status,
+    /// A timeout occurred waiting for an IO event.
+    #[allow(dead_code)]
+    #[display(fmt = "Timeout")]
+    Timeout,
+    /// An `io::Error` that occurred while trying to read or write to a network
+    /// stream.
+    #[display(fmt = "IO error: {}", _0)]
+    Io(io::Error),
+    /// Parsing a field as string failed
+    #[display(fmt = "UTF8 error: {}", _0)]
+    Utf8(Utf8Error),
+}
+
+/// Return `BadRequest` for `ParseError`
+impl ResponseError for ParseError {
+    fn status_code(&self) -> StatusCode {
+        StatusCode::BAD_REQUEST
+    }
+}
+
+impl From<io::Error> for ParseError {
+    fn from(err: io::Error) -> ParseError {
+        ParseError::Io(err)
+    }
+}
+
+impl From<InvalidUri> for ParseError {
+    fn from(err: InvalidUri) -> ParseError {
+        ParseError::Uri(err)
+    }
+}
+
+impl From<Utf8Error> for ParseError {
+    fn from(err: Utf8Error) -> ParseError {
+        ParseError::Utf8(err)
+    }
+}
+
+impl From<FromUtf8Error> for ParseError {
+    fn from(err: FromUtf8Error) -> ParseError {
+        ParseError::Utf8(err.utf8_error())
+    }
+}
+
+/// Helper type that can wrap any error and generate custom response.
+///
+/// In following example any `io::Error` will be converted into "BAD REQUEST"
+/// response as opposite to *INTERNAL SERVER ERROR* which is defined by
+/// default.
+///
+/// ```rust
+/// # use std::io;
+/// # use rweb::*;
+///
+/// fn index(req: Req) -> Result<&'static str> {
+///     Err(error::ErrorBadRequest(io::Error::new(io::ErrorKind::Other, "error")))
+/// }
+/// ```
+pub struct InternalError<T> {
+    cause: T,
+    status: InternalErrorType,
+}
+
+enum InternalErrorType {
+    Status(StatusCode),
+    Response(RefCell<Option<Resp>>),
+}
+
+impl<T> InternalError<T> {
+    /// Create `InternalError` instance
+    pub fn new(cause: T, status: StatusCode) -> Self {
+        InternalError {
+            cause,
+            status: InternalErrorType::Status(status),
+        }
+    }
+
+    /// Create `InternalError` with predefined `Response`.
+    pub fn from_response(cause: T, response: Resp) -> Self {
+        InternalError {
+            cause,
+            status: InternalErrorType::Response(RefCell::new(Some(response))),
+        }
+    }
+}
+
+impl<T> fmt::Debug for InternalError<T>
+where
+    T: fmt::Debug + 'static,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.cause, f)
+    }
+}
+
+impl<T> fmt::Display for InternalError<T>
+where
+    T: fmt::Display + 'static,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.cause, f)
+    }
+}
+
+impl<T> ResponseError for InternalError<T>
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    fn status_code(&self) -> StatusCode {
+        match self.status {
+            InternalErrorType::Status(st) => st,
+            InternalErrorType::Response(ref resp) => {
+                if let Some(resp) = resp.borrow().as_ref() {
+                    resp.head().status
+                } else {
+                    StatusCode::INTERNAL_SERVER_ERROR
+                }
+            }
+        }
+    }
+
+    fn error_response(&self) -> Resp {
+        match self.status {
+            InternalErrorType::Status(st) => {
+                use std::fmt::Write;
+                let mut res = Resp::new(st);
+                let mut buf = BytesMut::new();
+                let _ = write!(&mut buf, "{}", self);
+                res.headers_mut().insert(
+                    header::CONTENT_TYPE,
+                    header::HeaderValue::from_static("text/plain; charset=utf-8"),
+                );
+                res.set_body(Body::from(buf));
+                res
+            }
+            InternalErrorType::Response(ref resp) => {
+                if let Some(resp) = resp.borrow_mut().take() {
+                    resp
+                } else {
+                    Resp::new(StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            }
+        }
+    }
+}
+
+/// Helper function that creates wrapper of any error and generate *BAD
+/// REQUEST* response.
+#[allow(non_snake_case)]
+pub fn ErrorBadRequest<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::BAD_REQUEST).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *UNAUTHORIZED* response.
+#[allow(non_snake_case)]
+pub fn ErrorUnauthorized<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::UNAUTHORIZED).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *PAYMENT_REQUIRED* response.
+#[allow(non_snake_case)]
+pub fn ErrorPaymentRequired<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::PAYMENT_REQUIRED).into()
+}
+
+/// Helper function that creates wrapper of any error and generate *FORBIDDEN*
+/// response.
+#[allow(non_snake_case)]
+pub fn ErrorForbidden<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::FORBIDDEN).into()
+}
+
+/// Helper function that creates wrapper of any error and generate *NOT FOUND*
+/// response.
+#[allow(non_snake_case)]
+pub fn ErrorNotFound<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::NOT_FOUND).into()
+}
+
+/// Helper function that creates wrapper of any error and generate *METHOD NOT
+/// ALLOWED* response.
+#[allow(non_snake_case)]
+pub fn ErrorMethodNotAllowed<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::METHOD_NOT_ALLOWED).into()
+}
+
+/// Helper function that creates wrapper of any error and generate *NOT
+/// ACCEPTABLE* response.
+#[allow(non_snake_case)]
+pub fn ErrorNotAcceptable<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::NOT_ACCEPTABLE).into()
+}
+
+/// Helper function that creates wrapper of any error and generate *PROXY
+/// AUTHENTICATION REQUIRED* response.
+#[allow(non_snake_case)]
+pub fn ErrorProxyAuthenticationRequired<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::PROXY_AUTHENTICATION_REQUIRED).into()
+}
+
+/// Helper function that creates wrapper of any error and generate *REQUEST
+/// TIMEOUT* response.
+#[allow(non_snake_case)]
+pub fn ErrorRequestTimeout<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::REQUEST_TIMEOUT).into()
+}
+
+/// Helper function that creates wrapper of any error and generate *CONFLICT*
+/// response.
+#[allow(non_snake_case)]
+pub fn ErrorConflict<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::CONFLICT).into()
+}
+
+/// Helper function that creates wrapper of any error and generate *GONE*
+/// response.
+#[allow(non_snake_case)]
+pub fn ErrorGone<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::GONE).into()
+}
+
+/// Helper function that creates wrapper of any error and generate *LENGTH
+/// REQUIRED* response.
+#[allow(non_snake_case)]
+pub fn ErrorLengthRequired<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::LENGTH_REQUIRED).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *PAYLOAD TOO LARGE* response.
+#[allow(non_snake_case)]
+pub fn ErrorPayloadTooLarge<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::PAYLOAD_TOO_LARGE).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *URI TOO LONG* response.
+#[allow(non_snake_case)]
+pub fn ErrorUriTooLong<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::URI_TOO_LONG).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *UNSUPPORTED MEDIA TYPE* response.
+#[allow(non_snake_case)]
+pub fn ErrorUnsupportedMediaType<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::UNSUPPORTED_MEDIA_TYPE).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *RANGE NOT SATISFIABLE* response.
+#[allow(non_snake_case)]
+pub fn ErrorRangeNotSatisfiable<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::RANGE_NOT_SATISFIABLE).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *IM A TEAPOT* response.
+#[allow(non_snake_case)]
+pub fn ErrorImATeapot<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::IM_A_TEAPOT).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *MISDIRECTED REQUEST* response.
+#[allow(non_snake_case)]
+pub fn ErrorMisdirectedRequest<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::MISDIRECTED_REQUEST).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *UNPROCESSABLE ENTITY* response.
+#[allow(non_snake_case)]
+pub fn ErrorUnprocessableEntity<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::UNPROCESSABLE_ENTITY).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *LOCKED* response.
+#[allow(non_snake_case)]
+pub fn ErrorLocked<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::LOCKED).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *FAILED DEPENDENCY* response.
+#[allow(non_snake_case)]
+pub fn ErrorFailedDependency<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::FAILED_DEPENDENCY).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *UPGRADE REQUIRED* response.
+#[allow(non_snake_case)]
+pub fn ErrorUpgradeRequired<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::UPGRADE_REQUIRED).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *PRECONDITION FAILED* response.
+#[allow(non_snake_case)]
+pub fn ErrorPreconditionFailed<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::PRECONDITION_FAILED).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *PRECONDITION REQUIRED* response.
+#[allow(non_snake_case)]
+pub fn ErrorPreconditionRequired<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::PRECONDITION_REQUIRED).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *TOO MANY REQUESTS* response.
+#[allow(non_snake_case)]
+pub fn ErrorTooManyRequests<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::TOO_MANY_REQUESTS).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *REQUEST HEADER FIELDS TOO LARGE* response.
+#[allow(non_snake_case)]
+pub fn ErrorRequestHeaderFieldsTooLarge<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::REQUEST_HEADER_FIELDS_TOO_LARGE).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *UNAVAILABLE FOR LEGAL REASONS* response.
+#[allow(non_snake_case)]
+pub fn ErrorUnavailableForLegalReasons<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::UNAVAILABLE_FOR_LEGAL_REASONS).into()
+}
+
+/// Helper function that creates wrapper of any error and generate
+/// *EXPECTATION FAILED* response.
+#[allow(non_snake_case)]
+pub fn ErrorExpectationFailed<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::EXPECTATION_FAILED).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *INTERNAL SERVER ERROR* response.
+#[allow(non_snake_case)]
+pub fn ErrorInternalServerError<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::INTERNAL_SERVER_ERROR).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *NOT IMPLEMENTED* response.
+#[allow(non_snake_case)]
+pub fn ErrorNotImplemented<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::NOT_IMPLEMENTED).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *BAD GATEWAY* response.
+#[allow(non_snake_case)]
+pub fn ErrorBadGateway<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::BAD_GATEWAY).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *SERVICE UNAVAILABLE* response.
+#[allow(non_snake_case)]
+pub fn ErrorServiceUnavailable<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::SERVICE_UNAVAILABLE).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *GATEWAY TIMEOUT* response.
+#[allow(non_snake_case)]
+pub fn ErrorGatewayTimeout<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::GATEWAY_TIMEOUT).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *HTTP VERSION NOT SUPPORTED* response.
+#[allow(non_snake_case)]
+pub fn ErrorHttpVersionNotSupported<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::HTTP_VERSION_NOT_SUPPORTED).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *VARIANT ALSO NEGOTIATES* response.
+#[allow(non_snake_case)]
+pub fn ErrorVariantAlsoNegotiates<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::VARIANT_ALSO_NEGOTIATES).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *INSUFFICIENT STORAGE* response.
+#[allow(non_snake_case)]
+pub fn ErrorInsufficientStorage<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::INSUFFICIENT_STORAGE).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *LOOP DETECTED* response.
+#[allow(non_snake_case)]
+pub fn ErrorLoopDetected<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::LOOP_DETECTED).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *NOT EXTENDED* response.
+#[allow(non_snake_case)]
+pub fn ErrorNotExtended<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::NOT_EXTENDED).into()
+}
+
+/// Helper function that creates wrapper of any error and
+/// generate *NETWORK AUTHENTICATION REQUIRED* response.
+#[allow(non_snake_case)]
+pub fn ErrorNetworkAuthenticationRequired<T>(err: T) -> Error
+where
+    T: fmt::Debug + fmt::Display + 'static,
+{
+    InternalError::new(err, StatusCode::NETWORK_AUTHENTICATION_REQUIRED).into()
+}
 
 #[cfg(test)]
 mod tests {
