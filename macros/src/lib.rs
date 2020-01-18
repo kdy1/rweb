@@ -1,6 +1,6 @@
 extern crate proc_macro;
 
-use pmutil::{q, Quote, ToTokensExt};
+use pmutil::{q, Quote};
 use proc_macro2::TokenStream;
 use syn::{parse_quote::parse, ItemFn, ReturnType};
 
