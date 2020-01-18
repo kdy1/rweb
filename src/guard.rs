@@ -1,5 +1,7 @@
 use crate::http::ReqInfo;
 
+pub mod http;
+
 /// Guards can prevent route from matching.
 pub trait Guard {
     fn allow(&self, req: &ReqInfo) -> bool;
