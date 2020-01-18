@@ -1,15 +1,15 @@
-use std::future::Future;
-use std::marker::PhantomData;
-use std::task::{Context, Poll};
+use std::{
+    future::Future,
+    marker::PhantomData,
+    task::{Context, Poll},
+};
 
 use futures_util::future::{ok, Ready};
 
 use crate::{IntoService, IntoServiceFactory, Service, ServiceFactory};
 
 /// Create `ServiceFactory` for function that can act as a `Service`
-pub fn fn_service<F, Fut, Req, Res, Err, Cfg>(
-    f: F,
-) -> FnServiceFactory<F, Fut, Req, Res, Err, Cfg>
+pub fn fn_service<F, Fut, Req, Res, Err, Cfg>(f: F) -> FnServiceFactory<F, Fut, Req, Res, Err, Cfg>
 where
     F: FnMut(Req) -> Fut + Clone,
     Fut: Future<Output = Result<Res, Err>>,
@@ -35,7 +35,7 @@ where
 ///     }
 /// }
 ///
-/// #[actix_rt::main]
+/// #[rweb::main]
 /// async fn main() -> io::Result<()> {
 ///     // Create service factory that produces `div` services
 ///     let factory = fn_factory(|| {
@@ -62,10 +62,11 @@ where
     FnServiceNoConfig::new(f)
 }
 
-/// Create `ServiceFactory` for function that accepts config argument and can produce services
+/// Create `ServiceFactory` for function that accepts config argument and can
+/// produce services
 ///
-/// Any function that has following form `Fn(Config) -> Future<Output = Service>` could
-/// act as a `ServiceFactory`.
+/// Any function that has following form `Fn(Config) -> Future<Output =
+/// Service>` could act as a `ServiceFactory`.
 ///
 /// # Example
 ///
@@ -74,7 +75,7 @@ where
 /// use actix_service::{fn_factory_with_config, fn_service, Service, ServiceFactory};
 /// use futures_util::future::ok;
 ///
-/// #[actix_rt::main]
+/// #[rweb::main]
 /// async fn main() -> io::Result<()> {
 ///     // Create service factory. factory uses config argument for
 ///     // services it generates.
@@ -92,9 +93,7 @@ where
 ///     Ok(())
 /// }
 /// ```
-pub fn fn_factory_with_config<F, Fut, Cfg, Srv, Err>(
-    f: F,
-) -> FnServiceConfig<F, Fut, Cfg, Srv, Err>
+pub fn fn_factory_with_config<F, Fut, Cfg, Srv, Err>(f: F) -> FnServiceConfig<F, Fut, Cfg, Srv, Err>
 where
     F: Fn(Cfg) -> Fut,
     Fut: Future<Output = Result<Srv, Err>>,
@@ -228,8 +227,8 @@ where
     }
 }
 
-impl<F, Fut, Req, Res, Err, Cfg>
-    IntoServiceFactory<FnServiceFactory<F, Fut, Req, Res, Err, Cfg>> for F
+impl<F, Fut, Req, Res, Err, Cfg> IntoServiceFactory<FnServiceFactory<F, Fut, Req, Res, Err, Cfg>>
+    for F
 where
     F: Fn(Req) -> Fut + Clone,
     Fut: Future<Output = Result<Res, Err>>,

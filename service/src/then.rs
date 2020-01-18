@@ -1,8 +1,10 @@
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use std::rc::Rc;
-use std::cell::RefCell;
+use std::{
+    cell::RefCell,
+    future::Future,
+    pin::Pin,
+    rc::Rc,
+    task::{Context, Poll},
+};
 
 use super::{Service, ServiceFactory};
 
@@ -22,7 +24,10 @@ impl<A, B> ThenService<A, B> {
         A: Service,
         B: Service<Request = Result<A::Response, A::Error>, Error = A::Error>,
     {
-        Self { a, b: Rc::new(RefCell::new(b)) }
+        Self {
+            a,
+            b: Rc::new(RefCell::new(b)),
+        }
     }
 }
 
@@ -161,10 +166,7 @@ where
     type Future = ThenServiceFactoryResponse<A, B>;
 
     fn new_service(&self, cfg: A::Config) -> Self::Future {
-        ThenServiceFactoryResponse::new(
-            self.a.new_service(cfg.clone()),
-            self.b.new_service(cfg),
-        )
+        ThenServiceFactoryResponse::new(self.a.new_service(cfg.clone()), self.b.new_service(cfg))
     }
 }
 
@@ -258,9 +260,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::cell::Cell;
-    use std::rc::Rc;
-    use std::task::{Context, Poll};
+    use std::{
+        cell::Cell,
+        rc::Rc,
+        task::{Context, Poll},
+    };
 
     use futures_util::future::{err, lazy, ok, ready, Ready};
 
@@ -309,7 +313,7 @@ mod tests {
         }
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_poll_ready() {
         let cnt = Rc::new(Cell::new(0));
         let mut srv = pipeline(Srv1(cnt.clone())).then(Srv2(cnt.clone()));
@@ -318,7 +322,7 @@ mod tests {
         assert_eq!(cnt.get(), 2);
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_call() {
         let cnt = Rc::new(Cell::new(0));
         let mut srv = pipeline(Srv1(cnt.clone())).then(Srv2(cnt));
@@ -332,7 +336,7 @@ mod tests {
         assert_eq!(res.unwrap(), (("srv2", "err")));
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_factory() {
         let cnt = Rc::new(Cell::new(0));
         let cnt2 = cnt.clone();

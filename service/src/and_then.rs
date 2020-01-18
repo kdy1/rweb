@@ -1,8 +1,10 @@
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use std::rc::Rc;
-use std::cell::RefCell;
+use std::{
+    cell::RefCell,
+    future::Future,
+    pin::Pin,
+    rc::Rc,
+    task::{Context, Poll},
+};
 
 use super::{Service, ServiceFactory};
 
@@ -162,10 +164,7 @@ where
     type Future = AndThenServiceFactoryResponse<A, B>;
 
     fn new_service(&self, cfg: A::Config) -> Self::Future {
-        AndThenServiceFactoryResponse::new(
-            self.a.new_service(cfg.clone()),
-            self.b.new_service(cfg),
-        )
+        AndThenServiceFactoryResponse::new(self.a.new_service(cfg.clone()), self.b.new_service(cfg))
     }
 }
 
@@ -251,9 +250,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::cell::Cell;
-    use std::rc::Rc;
-    use std::task::{Context, Poll};
+    use std::{
+        cell::Cell,
+        rc::Rc,
+        task::{Context, Poll},
+    };
 
     use futures_util::future::{lazy, ok, ready, Ready};
 
@@ -296,7 +297,7 @@ mod tests {
         }
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_poll_ready() {
         let cnt = Rc::new(Cell::new(0));
         let mut srv = pipeline(Srv1(cnt.clone())).and_then(Srv2(cnt.clone()));
@@ -305,7 +306,7 @@ mod tests {
         assert_eq!(cnt.get(), 2);
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_call() {
         let cnt = Rc::new(Cell::new(0));
         let mut srv = pipeline(Srv1(cnt.clone())).and_then(Srv2(cnt));
@@ -314,13 +315,12 @@ mod tests {
         assert_eq!(res.unwrap(), (("srv1", "srv2")));
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_new_service() {
         let cnt = Rc::new(Cell::new(0));
         let cnt2 = cnt.clone();
-        let new_srv =
-            pipeline_factory(fn_factory(move || ready(Ok::<_, ()>(Srv1(cnt2.clone())))))
-                .and_then(move || ready(Ok(Srv2(cnt.clone()))));
+        let new_srv = pipeline_factory(fn_factory(move || ready(Ok::<_, ()>(Srv1(cnt2.clone())))))
+            .and_then(move || ready(Ok(Srv2(cnt.clone()))));
 
         let mut srv = new_srv.new_service(()).await.unwrap();
         let res = srv.call("srv1").await;

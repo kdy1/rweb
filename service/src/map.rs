@@ -1,7 +1,9 @@
-use std::future::Future;
-use std::marker::PhantomData;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::{
+    future::Future,
+    marker::PhantomData,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use super::{Service, ServiceFactory};
 
@@ -219,14 +221,14 @@ mod tests {
         }
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_poll_ready() {
         let mut srv = Srv.map(|_| "ok");
         let res = lazy(|cx| srv.poll_ready(cx)).await;
         assert_eq!(res, Poll::Ready(Ok(())));
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_call() {
         let mut srv = Srv.map(|_| "ok");
         let res = srv.call(()).await;
@@ -234,7 +236,7 @@ mod tests {
         assert_eq!(res.unwrap(), "ok");
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_new_service() {
         let new_srv = (|| ok::<_, ()>(Srv)).into_factory().map(|_| "ok");
         let mut srv = new_srv.new_service(&()).await.unwrap();

@@ -1,9 +1,11 @@
-use std::future::Future;
-use std::marker::PhantomData;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use std::rc::Rc;
-use std::cell::RefCell;
+use std::{
+    cell::RefCell,
+    future::Future,
+    marker::PhantomData,
+    pin::Pin,
+    rc::Rc,
+    task::{Context, Poll},
+};
 
 use crate::{Service, ServiceFactory};
 
@@ -169,9 +171,9 @@ where
     /// Create new `ApplyNewService` new service instance
     pub(crate) fn new(a: A, b: B, f: F) -> Self {
         Self {
-            a: a,
-            b: b,
-            f: f,
+            a,
+            b,
+            f,
             r: PhantomData,
         }
     }
@@ -248,8 +250,7 @@ where
     Fut: Future<Output = Result<Res, Err>>,
     Err: From<A::Error> + From<B::Error>,
 {
-    type Output =
-        Result<AndThenApplyFn<A::Service, B::Service, F, Fut, Res, Err>, A::InitError>;
+    type Output = Result<AndThenApplyFn<A::Service, B::Service, F, Fut, Res, Err>, A::InitError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
@@ -303,7 +304,7 @@ mod tests {
         }
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_service() {
         let mut srv = pipeline(|r: &'static str| ok(r))
             .and_then_apply_fn(Srv, |req: &'static str, s| {
@@ -317,7 +318,7 @@ mod tests {
         assert_eq!(res.unwrap(), ("srv", ()));
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_service_factory() {
         let new_srv = pipeline_factory(|| ok::<_, ()>(fn_service(|r: &'static str| ok(r))))
             .and_then_apply_fn(

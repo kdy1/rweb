@@ -1,7 +1,9 @@
-use std::future::Future;
-use std::marker::PhantomData;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::{
+    future::Future,
+    marker::PhantomData,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use super::{IntoService, IntoServiceFactory, Service, ServiceFactory};
 
@@ -228,7 +230,7 @@ mod tests {
         }
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_call() {
         let mut srv = pipeline(apply_fn(Srv, |req: &'static str, srv| {
             let fut = srv.call(());
@@ -245,7 +247,7 @@ mod tests {
         assert_eq!(res.unwrap(), (("srv", ())));
     }
 
-    #[actix_rt::test]
+    #[rweb::test]
     async fn test_new_service() {
         let new_srv = pipeline_factory(apply_fn_factory(
             || ok::<_, ()>(Srv),

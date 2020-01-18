@@ -12,3 +12,7 @@ edition = "2018"
 [dependencies]
 futures-util = "0.3.1"
 pin-project = "0.4.6"
+
+
+[dev-dependencies]
+tokio = { version = "0.2.3", features = ["macros"] }
