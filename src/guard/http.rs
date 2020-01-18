@@ -4,6 +4,10 @@ use super::Guard;
 use crate::http::ReqInfo;
 use hyper::Method;
 
+pub fn method(m: Method) -> impl Guard {
+    MethodGuard(m)
+}
+
 pub fn get() -> impl Guard {
     MethodGuard(Method::GET)
 }
