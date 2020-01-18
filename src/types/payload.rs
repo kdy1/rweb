@@ -1,15 +1,12 @@
 //! Payload/Bytes/String extractors
-use crate::{extract::FromRequest, http::header};
-use actix_http::{
-    error::{Error, ErrorBadRequest, PayloadError},
-    HttpMessage,
-};
+use crate::{error::Error, extract::FromRequest, http::error::PayloadError, Req};
 use bytes::{Bytes, BytesMut};
 use encoding_rs::UTF_8;
 use futures::{
     future::{err, ok, Either, FutureExt, LocalBoxFuture, Ready},
     Stream, StreamExt,
 };
+use hyper::header;
 use mime::Mime;
 use std::{
     future::Future,
@@ -45,11 +42,11 @@ use std::{
 ///     );
 /// }
 /// ```
-pub struct Payload(pub crate::dev::Payload);
+pub struct Payload(pub crate::http::Payload);
 
 impl Payload {
     /// Deconstruct to a inner value
-    pub fn into_inner(self) -> crate::dev::Payload {
+    pub fn into_inner(self) -> crate::http::Payload {
         self.0
     }
 }
@@ -91,12 +88,12 @@ impl Stream for Payload {
 /// }
 /// ```
 impl FromRequest for Payload {
-    type Config = PayloadConfig;
     type Error = Error;
     type Future = Ready<Result<Payload, Error>>;
+    type Config = PayloadConfig;
 
     #[inline]
-    fn from_request(_: &HttpRequest, payload: &mut dev::Payload) -> Self::Future {
+    fn from_request(_: &Req, payload: &mut crate::http::Payload) -> Self::Future {
         ok(Payload(payload.take()))
     }
 }
@@ -127,13 +124,13 @@ impl FromRequest for Payload {
 /// }
 /// ```
 impl FromRequest for Bytes {
-    type Config = PayloadConfig;
     type Error = Error;
     type Future =
         Either<LocalBoxFuture<'static, Result<Bytes, Error>>, Ready<Result<Bytes, Error>>>;
+    type Config = PayloadConfig;
 
     #[inline]
-    fn from_request(req: &HttpRequest, payload: &mut dev::Payload) -> Self::Future {
+    fn from_request(req: &Req, payload: &mut crate::http::Payload) -> Self::Future {
         let tmp;
         let cfg = if let Some(cfg) = req.app_data::<PayloadConfig>() {
             cfg
@@ -186,7 +183,7 @@ impl FromRequest for String {
         Either<LocalBoxFuture<'static, Result<String, Error>>, Ready<Result<String, Error>>>;
 
     #[inline]
-    fn from_request(req: &HttpRequest, payload: &mut dev::Payload) -> Self::Future {
+    fn from_request(req: &Req, payload: &mut crate::http::Payload) -> Self::Future {
         let tmp;
         let cfg = if let Some(cfg) = req.app_data::<PayloadConfig>() {
             cfg
@@ -255,7 +252,7 @@ impl PayloadConfig {
         self
     }
 
-    fn check_mimetype(&self, req: &HttpRequest) -> Result<(), Error> {
+    fn check_mimetype(&self, req: &Req) -> Result<(), Error> {
         // check content-type
         if let Some(ref mt) = self.mimetype {
             match req.mime_type() {
@@ -296,16 +293,16 @@ pub struct HttpMessageBody {
     limit: usize,
     length: Option<usize>,
     #[cfg(feature = "compress")]
-    stream: Option<dev::Decompress<dev::Payload>>,
+    stream: Option<dev::Decompress<crate::http::Payload>>,
     #[cfg(not(feature = "compress"))]
-    stream: Option<dev::Payload>,
+    stream: Option<crate::http::Payload>,
     err: Option<PayloadError>,
     fut: Option<LocalBoxFuture<'static, Result<Bytes, PayloadError>>>,
 }
 
 impl HttpMessageBody {
     /// Create `MessageBody` for request.
-    pub fn new(req: &HttpRequest, payload: &mut dev::Payload) -> HttpMessageBody {
+    pub fn new(req: &Req, payload: &mut crate::http::Payload) -> HttpMessageBody {
         let mut len = None;
         if let Some(l) = req.headers().get(&header::CONTENT_LENGTH) {
             if let Ok(s) = l.to_str() {
@@ -397,8 +394,9 @@ mod tests {
 
     use super::*;
     use crate::{http::header, test::TestRequest};
+    use hyper::header;
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_payload_config() {
         let req = TestRequest::default().to_http_request();
         let cfg = PayloadConfig::default().mimetype(mime::APPLICATION_JSON);
@@ -414,7 +412,7 @@ mod tests {
         assert!(cfg.check_mimetype(&req).is_ok());
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_bytes() {
         let (req, mut pl) = TestRequest::with_header(header::CONTENT_LENGTH, "11")
             .set_payload(Bytes::from_static(b"hello=world"))
@@ -424,7 +422,7 @@ mod tests {
         assert_eq!(s, Bytes::from_static(b"hello=world"));
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_string() {
         let (req, mut pl) = TestRequest::with_header(header::CONTENT_LENGTH, "11")
             .set_payload(Bytes::from_static(b"hello=world"))
@@ -434,7 +432,7 @@ mod tests {
         assert_eq!(s, "hello=world");
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_message_body() {
         let (req, mut pl) = TestRequest::with_header(header::CONTENT_LENGTH, "xxxx")
             .to_srv_request()

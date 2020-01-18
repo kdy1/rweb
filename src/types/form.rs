@@ -3,21 +3,19 @@
 #[cfg(feature = "compress")]
 use crate::dev::Decompress;
 use crate::{
-    error::UrlencodedError,
+    error::{Error, UrlencodedError},
     extract::FromRequest,
-    http::{
-        header::{ContentType, CONTENT_LENGTH},
-        StatusCode,
-    },
+    http::{Payload, StatusCode},
     responder::Responder,
+    Req, Resp,
 };
-use actix_http::{Error, HttpMessage, Payload, Response};
 use bytes::BytesMut;
 use encoding_rs::{Encoding, UTF_8};
 use futures::{
     future::{err, ok, FutureExt, LocalBoxFuture, Ready},
     StreamExt,
 };
+use hyper::header::CONTENT_LENGTH;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     fmt,
@@ -116,12 +114,12 @@ impl<T> FromRequest for Form<T>
 where
     T: DeserializeOwned + 'static,
 {
-    type Config = FormConfig;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self, Error>>;
+    type Config = FormConfig;
 
     #[inline]
-    fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
+    fn from_request(req: &Req, payload: &mut Payload) -> Self::Future {
         let req2 = req.clone();
         let (limit, err) = req
             .app_data::<FormConfig>()
@@ -158,17 +156,18 @@ impl<T: fmt::Display> fmt::Display for Form<T> {
 
 impl<T: Serialize> Responder for Form<T> {
     type Error = Error;
-    type Future = Ready<Result<Response, Error>>;
+    type Future = Ready<Result<Resp, Error>>;
 
-    fn respond_to(self, _: &HttpRequest) -> Self::Future {
+    fn respond_to(self, _: &Req) -> Self::Future {
         let body = match serde_urlencoded::to_string(&self.0) {
             Ok(body) => body,
             Err(e) => return err(e.into()),
         };
 
-        ok(Response::build(StatusCode::OK)
+        ok(Resp::builder(StatusCode::OK)
             .set(ContentType::form_url_encoded())
-            .body(body))
+            .body(body.into())
+            .build())
     }
 }
 
@@ -203,7 +202,7 @@ impl<T: Serialize> Responder for Form<T> {
 #[derive(Clone)]
 pub struct FormConfig {
     limit: usize,
-    ehandler: Option<Rc<dyn Fn(UrlencodedError, &HttpRequest) -> Error>>,
+    ehandler: Option<Rc<dyn Fn(UrlencodedError, &Req) -> Error>>,
 }
 
 impl FormConfig {
@@ -216,7 +215,7 @@ impl FormConfig {
     /// Set custom error handler
     pub fn error_handler<F>(mut self, f: F) -> Self
     where
-        F: Fn(UrlencodedError, &HttpRequest) -> Error + 'static,
+        F: Fn(UrlencodedError, &Req) -> Error + 'static,
     {
         self.ehandler = Some(Rc::new(f));
         self
@@ -256,7 +255,7 @@ pub struct UrlEncoded<U> {
 
 impl<U> UrlEncoded<U> {
     /// Create a new future to URL encode a request
-    pub fn new(req: &HttpRequest, payload: &mut Payload) -> UrlEncoded<U> {
+    pub fn new(req: &Req, payload: &mut Payload) -> UrlEncoded<U> {
         // check content type
         if req.content_type().to_lowercase() != "application/x-www-form-urlencoded" {
             return Self::err(UrlencodedError::ContentType);
@@ -388,7 +387,7 @@ mod tests {
         counter: i64,
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_form() {
         let (req, mut pl) =
             TestRequest::with_header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -424,7 +423,7 @@ mod tests {
         }
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_urlencoded_error() {
         let (req, mut pl) =
             TestRequest::with_header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -450,7 +449,7 @@ mod tests {
         assert!(eq(info.err().unwrap(), UrlencodedError::ContentType));
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_urlencoded() {
         let (req, mut pl) =
             TestRequest::with_header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -485,7 +484,7 @@ mod tests {
         );
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_responder() {
         let req = TestRequest::default().to_http_request();
 

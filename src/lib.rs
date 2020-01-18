@@ -4,10 +4,13 @@ pub use self::{
     http::{Req, Resp},
     response::Response,
 };
+use crate::error::Error;
 pub use either::Either;
 pub use rweb_macros::{connect, delete, get, head, options, patch, post, put, trace};
 pub use rweb_router::Path;
 pub use tokio::{main, test};
+
+pub type Result<T> = ::std::result::Result<T, Error>;
 
 mod app;
 pub mod cookie;

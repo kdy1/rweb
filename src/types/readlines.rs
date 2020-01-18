@@ -1,5 +1,5 @@
 use crate::{
-    error::{PayloadError, ReadlinesError},
+    error::ReadlinesError,
     http::{error::PayloadError, Payload},
     HttpMessage,
 };
@@ -176,7 +176,7 @@ mod tests {
     use super::*;
     use crate::test::TestRequest;
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_readlines() {
         let mut req = TestRequest::default()
             .set_payload(Bytes::from_static(

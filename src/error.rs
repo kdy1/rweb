@@ -1,3 +1,4 @@
+pub use crate::http::error::PayloadError;
 use crate::{
     http::{Body, StatusCode},
     Resp,
@@ -5,6 +6,8 @@ use crate::{
 use bytes::BytesMut;
 use derive_more::{Display, From};
 use hyper::{header, http};
+use serde_json::error::Error as JsonError;
+use serde_urlencoded::ser::Error as FormError;
 use std::{
     any::TypeId,
     convert::From,
@@ -121,5 +124,199 @@ impl std::error::Error for Error {
 
     fn cause(&self) -> Option<&dyn std::error::Error> {
         None
+    }
+}
+
+/// A set of errors that can occur during parsing urlencoded payloads
+#[derive(Debug, Display, From)]
+pub enum UrlencodedError {
+    /// Can not decode chunked transfer encoding
+    #[display(fmt = "Can not decode chunked transfer encoding")]
+    Chunked,
+    /// Payload size is bigger than allowed. (default: 256kB)
+    #[display(
+        fmt = "Urlencoded payload size is bigger ({} bytes) than allowed (default: {} bytes)",
+        size,
+        limit
+    )]
+    Overflow { size: usize, limit: usize },
+    /// Payload size is now known
+    #[display(fmt = "Payload size is now known")]
+    UnknownLength,
+    /// Content type error
+    #[display(fmt = "Content type error")]
+    ContentType,
+    /// Parse error
+    #[display(fmt = "Parse error")]
+    Parse,
+    /// Payload error
+    #[display(fmt = "Error that occur during reading payload: {}", _0)]
+    Payload(PayloadError),
+}
+
+/// Return `BadRequest` for `UrlencodedError`
+impl ResponseError for UrlencodedError {
+    fn status_code(&self) -> StatusCode {
+        match *self {
+            UrlencodedError::Overflow { .. } => StatusCode::PAYLOAD_TOO_LARGE,
+            UrlencodedError::UnknownLength => StatusCode::LENGTH_REQUIRED,
+            _ => StatusCode::BAD_REQUEST,
+        }
+    }
+}
+
+/// A set of errors that can occur during parsing json payloads
+#[derive(Debug, Display, From)]
+pub enum JsonPayloadError {
+    /// Payload size is bigger than allowed. (default: 32kB)
+    #[display(fmt = "Json payload size is bigger than allowed")]
+    Overflow,
+    /// Content type error
+    #[display(fmt = "Content type error")]
+    ContentType,
+    /// Deserialize error
+    #[display(fmt = "Json deserialize error: {}", _0)]
+    Deserialize(JsonError),
+    /// Payload error
+    #[display(fmt = "Error that occur during reading payload: {}", _0)]
+    Payload(PayloadError),
+}
+
+/// Return `BadRequest` for `JsonPayloadError`
+impl ResponseError for JsonPayloadError {
+    fn error_response(&self) -> Resp {
+        match *self {
+            JsonPayloadError::Overflow => Resp::new(StatusCode::PAYLOAD_TOO_LARGE),
+            _ => Resp::new(StatusCode::BAD_REQUEST),
+        }
+    }
+}
+
+/// A set of errors that can occur during parsing request paths
+#[derive(Debug, Display, From)]
+pub enum PathError {
+    /// Deserialize error
+    #[display(fmt = "Path deserialize error: {}", _0)]
+    Deserialize(serde::de::value::Error),
+}
+
+/// Return `BadRequest` for `PathError`
+impl ResponseError for PathError {
+    fn status_code(&self) -> StatusCode {
+        StatusCode::BAD_REQUEST
+    }
+}
+
+/// A set of errors that can occur during parsing query strings
+#[derive(Debug, Display, From)]
+pub enum QueryPayloadError {
+    /// Deserialize error
+    #[display(fmt = "Query deserialize error: {}", _0)]
+    Deserialize(serde::de::value::Error),
+}
+
+/// Return `BadRequest` for `QueryPayloadError`
+impl ResponseError for QueryPayloadError {
+    fn status_code(&self) -> StatusCode {
+        StatusCode::BAD_REQUEST
+    }
+}
+
+/// Error type returned when reading body as lines.
+#[derive(From, Display, Debug)]
+pub enum ReadlinesError {
+    /// Error when decoding a line.
+    #[display(fmt = "Encoding error")]
+    /// Payload size is bigger than allowed. (default: 256kB)
+    EncodingError,
+    /// Payload error.
+    #[display(fmt = "Error that occur during reading payload: {}", _0)]
+    Payload(PayloadError),
+    /// Line limit exceeded.
+    #[display(fmt = "Line limit exceeded")]
+    LimitOverflow,
+    /// ContentType error.
+    #[display(fmt = "Content-type error")]
+    ContentTypeError(ContentTypeError),
+}
+
+/// Return `BadRequest` for `ReadlinesError`
+impl ResponseError for ReadlinesError {
+    fn status_code(&self) -> StatusCode {
+        match *self {
+            ReadlinesError::LimitOverflow => StatusCode::PAYLOAD_TOO_LARGE,
+            _ => StatusCode::BAD_REQUEST,
+        }
+    }
+}
+
+/// A set of error that can occure during parsing content type
+#[derive(PartialEq, Debug, Display)]
+pub enum ContentTypeError {
+    /// Can not parse content type
+    #[display(fmt = "Can not parse content type")]
+    ParseError,
+    /// Unknown content encoding
+    #[display(fmt = "Unknown content encoding")]
+    UnknownEncoding,
+}
+
+/// Return `BadRequest` for `ContentTypeError`
+impl ResponseError for ContentTypeError {
+    fn status_code(&self) -> StatusCode {
+        StatusCode::BAD_REQUEST
+    }
+}
+
+#[derive(Debug, Display)]
+#[display(fmt = "UnknownError")]
+struct UnitError;
+
+/// `InternalServerError` for `UnitError`
+impl ResponseError for UnitError {}
+
+/// `InternalServerError` for `JsonError`
+impl ResponseError for JsonError {}
+
+/// `InternalServerError` for `FormError`
+impl ResponseError for FormError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_urlencoded_error() {
+        let resp: HttpResponse = UrlencodedError::Overflow { size: 0, limit: 0 }.error_response();
+        assert_eq!(resp.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        let resp: HttpResponse = UrlencodedError::UnknownLength.error_response();
+        assert_eq!(resp.status(), StatusCode::LENGTH_REQUIRED);
+        let resp: HttpResponse = UrlencodedError::ContentType.error_response();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn test_json_payload_error() {
+        let resp: HttpResponse = JsonPayloadError::Overflow.error_response();
+        assert_eq!(resp.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        let resp: HttpResponse = JsonPayloadError::ContentType.error_response();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn test_query_payload_error() {
+        let resp: HttpResponse = QueryPayloadError::Deserialize(
+            serde_urlencoded::from_str::<i32>("bad query").unwrap_err(),
+        )
+        .error_response();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn test_readlines_error() {
+        let resp: HttpResponse = ReadlinesError::LimitOverflow.error_response();
+        assert_eq!(resp.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        let resp: HttpResponse = ReadlinesError::EncodingError.error_response();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }
 }

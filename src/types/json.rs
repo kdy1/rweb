@@ -1,9 +1,5 @@
 //! Json extractor/responder
 
-use actix_http::{
-    http::{header::CONTENT_LENGTH, StatusCode},
-    HttpMessage, Payload, Response,
-};
 use bytes::BytesMut;
 use futures::{
     future::{err, ok, FutureExt, LocalBoxFuture, Ready},
@@ -25,9 +21,11 @@ use crate::dev::Decompress;
 use crate::{
     error::{Error, JsonPayloadError},
     extract::FromRequest,
-    http::StatusCode,
+    http::{Payload, StatusCode},
     responder::Responder,
+    Req, Resp,
 };
+use hyper::header::CONTENT_LENGTH;
 
 /// Json helper
 ///
@@ -79,7 +77,7 @@ use crate::{
 ///     name: String,
 /// }
 ///
-/// fn index(req: HttpRequest) -> Result<web::Json<MyObj>> {
+/// fn index(req: Req) -> Result<web::Json<MyObj>> {
 ///     Ok(web::Json(MyObj {
 ///         name: req.match_info().get("name").unwrap().to_string(),
 ///     }))
@@ -131,15 +129,16 @@ impl<T: Serialize> Responder for Json<T> {
     type Error = Error;
     type Future = Ready<Result<Resp, Error>>;
 
-    fn respond_to(self, _: &HttpRequest) -> Self::Future {
+    fn respond_to(self, _: &Req) -> Self::Future {
         let body = match serde_json::to_string(&self.0) {
             Ok(body) => body,
             Err(e) => return err(e.into()),
         };
 
-        ok(Response::build(StatusCode::OK)
+        ok(Resp::builder(StatusCode::OK)
             .content_type("application/json")
-            .body(body))
+            .body(body.into())
+            .build())
     }
 }
 
@@ -184,7 +183,7 @@ where
     type Config = JsonConfig;
 
     #[inline]
-    fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
+    fn from_request(req: &Req, payload: &mut Payload) -> Self::Future {
         let req2 = req.clone();
         let (limit, err, ctype) = req
             .app_data::<Self::Config>()
@@ -249,7 +248,7 @@ where
 #[derive(Clone)]
 pub struct JsonConfig {
     limit: usize,
-    ehandler: Option<Arc<dyn Fn(JsonPayloadError, &HttpRequest) -> Error + Send + Sync>>,
+    ehandler: Option<Arc<dyn Fn(JsonPayloadError, &Req) -> Error + Send + Sync>>,
     content_type: Option<Arc<dyn Fn(mime::Mime) -> bool + Send + Sync>>,
 }
 
@@ -263,7 +262,7 @@ impl JsonConfig {
     /// Set custom error handler
     pub fn error_handler<F>(mut self, f: F) -> Self
     where
-        F: Fn(JsonPayloadError, &HttpRequest) -> Error + Send + Sync + 'static,
+        F: Fn(JsonPayloadError, &Req) -> Error + Send + Sync + 'static,
     {
         self.ehandler = Some(Arc::new(f));
         self
@@ -314,7 +313,7 @@ where
 {
     /// Create `JsonBody` for request.
     pub fn new(
-        req: &HttpRequest,
+        req: &Req,
         payload: &mut Payload,
         ctype: Option<Arc<dyn Fn(mime::Mime) -> bool + Send + Sync>>,
     ) -> Self {
@@ -440,7 +439,7 @@ mod tests {
         }
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_responder() {
         let req = TestRequest::default().to_http_request();
 
@@ -458,7 +457,7 @@ mod tests {
         assert_eq!(resp.body().bin_ref(), b"{\"name\":\"test\"}");
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_custom_error_responder() {
         let (req, mut pl) = TestRequest::default()
             .header(
@@ -488,7 +487,7 @@ mod tests {
         assert_eq!(msg.name, "invalid request");
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_extract() {
         let (req, mut pl) = TestRequest::default()
             .header(
@@ -549,7 +548,7 @@ mod tests {
         assert!(format!("{}", s.err().unwrap()).contains("Content type error"));
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_json_body() {
         let (req, mut pl) = TestRequest::default().to_http_parts();
         let json = JsonBody::<MyObject>::new(&req, &mut pl, None).await;
@@ -601,7 +600,7 @@ mod tests {
         );
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_with_json_and_bad_content_type() {
         let (req, mut pl) = TestRequest::with_header(
             header::CONTENT_TYPE,
@@ -619,7 +618,7 @@ mod tests {
         assert!(s.is_err())
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_with_json_and_good_custom_content_type() {
         let (req, mut pl) = TestRequest::with_header(
             header::CONTENT_TYPE,
@@ -639,7 +638,7 @@ mod tests {
         assert!(s.is_ok())
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_with_json_and_bad_custom_content_type() {
         let (req, mut pl) = TestRequest::with_header(
             header::CONTENT_TYPE,

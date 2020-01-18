@@ -1,7 +1,11 @@
 //! Query extractor
 
-use crate::{error::QueryPayloadError, extract::FromRequest};
-use actix_http::error::Error;
+use crate::{
+    error::{Error, QueryPayloadError},
+    extract::FromRequest,
+    http::Payload,
+    Req,
+};
 use futures::future::{err, ok, Ready};
 use serde::de;
 use serde_urlencoded;
@@ -134,7 +138,7 @@ where
     type Config = QueryConfig;
 
     #[inline]
-    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
+    fn from_request(req: &Req, _: &mut Payload) -> Self::Future {
         let error_handler = req
             .app_data::<Self::Config>()
             .map(|c| c.ehandler.clone())
@@ -195,14 +199,14 @@ where
 /// ```
 #[derive(Clone)]
 pub struct QueryConfig {
-    ehandler: Option<Arc<dyn Fn(QueryPayloadError, &HttpRequest) -> Error + Send + Sync>>,
+    ehandler: Option<Arc<dyn Fn(QueryPayloadError, &Req) -> Error + Send + Sync>>,
 }
 
 impl QueryConfig {
     /// Set custom error handler
     pub fn error_handler<F>(mut self, f: F) -> Self
     where
-        F: Fn(QueryPayloadError, &HttpRequest) -> Error + Send + Sync + 'static,
+        F: Fn(QueryPayloadError, &Req) -> Error + Send + Sync + 'static,
     {
         self.ehandler = Some(Arc::new(f));
         self
@@ -229,7 +233,7 @@ mod tests {
         id: String,
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_service_request_extract() {
         let req = TestRequest::with_uri("/name/user1/").to_srv_request();
         assert!(Query::<Id>::from_query(&req.query_string()).is_err());
@@ -245,7 +249,7 @@ mod tests {
         assert_eq!(s.id, "test1");
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_request_extract() {
         let req = TestRequest::with_uri("/name/user1/").to_srv_request();
         let (req, mut pl) = req.into_parts();
@@ -263,7 +267,7 @@ mod tests {
         assert_eq!(s.id, "test1");
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_custom_error_responder() {
         let req = TestRequest::with_uri("/name/user1/")
             .app_data(QueryConfig::default().error_handler(|e, _| {

@@ -2,11 +2,10 @@
 use crate::{
     error::{Error, PathError},
     http::Payload,
-    FromRequest,
+    FromRequest, Req,
 };
-use actix_http::error::{Error, ErrorNotFound};
-use actix_router::PathDeserializer;
 use futures::future::{ready, Ready};
+use rweb_router::PathDeserializer;
 use serde::de;
 use std::{fmt, ops, sync::Arc};
 
@@ -40,7 +39,7 @@ use std::{fmt, ops, sync::Arc};
 /// implements `Deserialize` trait from *serde*.
 ///
 /// ```rust
-/// use rweb::{web, App, Error};
+/// use rweb::{web, App, error::Error};
 /// use serde_derive::Deserialize;
 ///
 /// #[derive(Deserialize)]
@@ -135,7 +134,7 @@ impl<T: fmt::Display> fmt::Display for Path<T> {
 /// implements `Deserialize` trait from *serde*.
 ///
 /// ```rust
-/// use rweb::{web, App, Error};
+/// use rweb::{web, App, error::Error};
 /// use serde_derive::Deserialize;
 ///
 /// #[derive(Deserialize)]
@@ -164,7 +163,7 @@ where
     type Config = PathConfig;
 
     #[inline]
-    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
+    fn from_request(req: &Req, _: &mut Payload) -> Self::Future {
         let error_handler = req
             .app_data::<Self::Config>()
             .map(|c| c.ehandler.clone())
@@ -225,14 +224,14 @@ where
 /// ```
 #[derive(Clone)]
 pub struct PathConfig {
-    ehandler: Option<Arc<dyn Fn(PathError, &HttpRequest) -> Error + Send + Sync>>,
+    ehandler: Option<Arc<dyn Fn(PathError, &Req) -> Error + Send + Sync>>,
 }
 
 impl PathConfig {
     /// Set custom error handler
     pub fn error_handler<F>(mut self, f: F) -> Self
     where
-        F: Fn(PathError, &HttpRequest) -> Error + Send + Sync + 'static,
+        F: Fn(PathError, &Req) -> Error + Send + Sync + 'static,
     {
         self.ehandler = Some(Arc::new(f));
         self
@@ -247,8 +246,8 @@ impl Default for PathConfig {
 
 #[cfg(test)]
 mod tests {
-    use actix_router::ResourceDef;
     use derive_more::Display;
+    use rweb_router::ResourceDef;
     use serde_derive::Deserialize;
 
     use super::*;
@@ -267,7 +266,7 @@ mod tests {
         value: u32,
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_extract_path_single() {
         let resource = ResourceDef::new("/{value}/");
 
@@ -279,7 +278,7 @@ mod tests {
         assert!(Path::<MyStruct>::from_request(&req, &mut pl).await.is_err());
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_tuple_extract() {
         let resource = ResourceDef::new("/{key}/{value}/");
 
@@ -304,7 +303,7 @@ mod tests {
         let () = <()>::from_request(&req, &mut pl).await.unwrap();
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_request_extract() {
         let mut req = TestRequest::with_uri("/name/user1/?id=test").to_srv_request();
 
@@ -352,7 +351,7 @@ mod tests {
         assert_eq!(res[1], "32".to_owned());
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_custom_err_handler() {
         let (req, mut pl) = TestRequest::with_uri("/name/user1/")
             .app_data(PathConfig::default().error_handler(|err, _| {
