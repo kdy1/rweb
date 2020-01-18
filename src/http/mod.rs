@@ -1,4 +1,5 @@
-use hyper::{HeaderMap, Method, Uri, Version};
+pub use hyper::{header::HeaderValue, HeaderMap};
+use hyper::{Method, Uri, Version};
 use serde::de::DeserializeOwned;
 use std::marker::PhantomData;
 

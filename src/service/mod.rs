@@ -1,3 +1,3 @@
-pub trait HttpServiceFactory {}
+pub trait AppServiceFactory {}
 
-pub(crate) trait AppServiceFactory {}
+pub trait HttpServiceFactory {}

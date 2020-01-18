@@ -1,11 +1,14 @@
 #![deny(rust_2018_idioms, warnings)]
 #![allow(clippy::type_complexity)]
+#![forbid(unsafe_code)]
 
-use std::cell::RefCell;
-use std::future::Future;
-use std::rc::Rc;
-use std::sync::Arc;
-use std::task::{self, Context, Poll};
+use std::{
+    cell::RefCell,
+    future::Future,
+    rc::Rc,
+    sync::Arc,
+    task::{self, Context, Poll},
+};
 
 mod and_then;
 mod and_then_apply_fn;
@@ -22,25 +25,28 @@ mod then;
 mod transform;
 mod transform_err;
 
-pub use self::apply::{apply_fn, apply_fn_factory};
-pub use self::apply_cfg::{apply_cfg, apply_cfg_factory};
-pub use self::fn_service::{fn_factory, fn_factory_with_config, fn_service};
-pub use self::map_config::{map_config, unit_config};
-pub use self::pipeline::{pipeline, pipeline_factory, Pipeline, PipelineFactory};
-pub use self::transform::{apply, Transform};
+pub use self::{
+    apply::{apply_fn, apply_fn_factory},
+    apply_cfg::{apply_cfg, apply_cfg_factory},
+    fn_service::{fn_factory, fn_factory_with_config, fn_service},
+    map_config::{map_config, unit_config},
+    pipeline::{pipeline, pipeline_factory, Pipeline, PipelineFactory},
+    transform::{apply, Transform},
+};
 
 /// An asynchronous function from `Request` to a `Response`.
 ///
-/// `Service` represents a service that represanting interation, taking requests and giving back
-/// replies. You can think about service as a function with one argument and result as a return
-/// type. In general form it looks like `async fn(Req) -> Result<Res, Err>`. `Service`
-/// trait just generalizing form of this function. Each parameter described as an assotiated type.
+/// `Service` represents a service that represanting interation, taking requests
+/// and giving back replies. You can think about service as a function with one
+/// argument and result as a return type. In general form it looks like `async
+/// fn(Req) -> Result<Res, Err>`. `Service` trait just generalizing form of this
+/// function. Each parameter described as an assotiated type.
 ///
 /// Services provides a symmetric and uniform API, same abstractions represents
 /// clients and servers. Services describe only `transforamtion` operation
 /// which encorouge to simplify api surface and phrases `value transformation`.
-/// That leads to simplier design of each service. That also allows better testability
-/// and better composition.
+/// That leads to simplier design of each service. That also allows better
+/// testability and better composition.
 ///
 /// Services could be represented in several different forms. In general,
 /// Service is a type that implements `Service` trait.
@@ -91,9 +97,11 @@ pub trait Service {
     ///
     /// There are several notes to consider:
     ///
-    /// 1. `.poll_ready()` might be called on different task from actual service call.
+    /// 1. `.poll_ready()` might be called on different task from actual service
+    /// call.
     ///
-    /// 2. In case of chained services, `.poll_ready()` get called for all services at once.
+    /// 2. In case of chained services, `.poll_ready()` get called for all
+    /// services at once.
     fn poll_ready(&mut self, ctx: &mut task::Context<'_>) -> Poll<Result<(), Self::Error>>;
 
     /// Process the request and return the response asynchronously.
@@ -164,11 +172,7 @@ pub trait ServiceFactory {
     type Config;
 
     /// The `Service` value created by this factory
-    type Service: Service<
-        Request = Self::Request,
-        Response = Self::Response,
-        Error = Self::Error,
-    >;
+    type Service: Service<Request = Self::Request, Response = Self::Response, Error = Self::Error>;
 
     /// Errors produced while building a service.
     type InitError;
@@ -198,7 +202,8 @@ pub trait ServiceFactory {
         crate::map_err::MapErrServiceFactory::new(self, f)
     }
 
-    /// Map this factory's init error to a different error, returning a new service.
+    /// Map this factory's init error to a different error, returning a new
+    /// service.
     fn map_init_err<F, E>(self, f: F) -> crate::map_init_err::MapInitErr<Self, F, E>
     where
         Self: Sized,
@@ -360,18 +365,18 @@ where
 }
 
 pub mod dev {
-    pub use crate::and_then::{AndThenService, AndThenServiceFactory};
-    pub use crate::and_then_apply_fn::{AndThenApplyFn, AndThenApplyFnFactory};
-    pub use crate::apply::{Apply, ApplyServiceFactory};
-    pub use crate::apply_cfg::{ApplyConfigService, ApplyConfigServiceFactory};
-    pub use crate::fn_service::{
-        FnService, FnServiceConfig, FnServiceFactory, FnServiceNoConfig,
+    pub use crate::{
+        and_then::{AndThenService, AndThenServiceFactory},
+        and_then_apply_fn::{AndThenApplyFn, AndThenApplyFnFactory},
+        apply::{Apply, ApplyServiceFactory},
+        apply_cfg::{ApplyConfigService, ApplyConfigServiceFactory},
+        fn_service::{FnService, FnServiceConfig, FnServiceFactory, FnServiceNoConfig},
+        map::{Map, MapServiceFactory},
+        map_config::{MapConfig, UnitConfig},
+        map_err::{MapErr, MapErrServiceFactory},
+        map_init_err::MapInitErr,
+        then::{ThenService, ThenServiceFactory},
+        transform::ApplyTransform,
+        transform_err::TransformMapInitErr,
     };
-    pub use crate::map::{Map, MapServiceFactory};
-    pub use crate::map_config::{MapConfig, UnitConfig};
-    pub use crate::map_err::{MapErr, MapErrServiceFactory};
-    pub use crate::map_init_err::MapInitErr;
-    pub use crate::then::{ThenService, ThenServiceFactory};
-    pub use crate::transform::ApplyTransform;
-    pub use crate::transform_err::TransformMapInitErr;
 }
