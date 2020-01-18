@@ -15,6 +15,7 @@ edition = "2018"
 rweb-macros = { path = "./macros" }
 rweb-router = { path = "./router" }
 rweb-service = { path = "./service" }
+bytes = "0.5.3"
 hyper = "0.13"
 tokio = "0.2"
 serde = { version = "1", features = ["derive"] }
@@ -22,3 +23,5 @@ serde_json = "1"
 mime = "0.3"
 derive_more = "0.99.2"
 futures = "0.3.1"
+fxhash = "0.2.1"
+url = "2.1.1"
