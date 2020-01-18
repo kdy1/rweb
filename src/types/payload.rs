@@ -3,7 +3,7 @@ use crate::{
     error::{Error, ErrorBadRequest},
     extract::FromRequest,
     http::error::PayloadError,
-    Req,
+    HttpMessage, Req,
 };
 use bytes::{Bytes, BytesMut};
 use encoding_rs::UTF_8;
@@ -137,9 +137,13 @@ impl FromRequest for Bytes {
     #[inline]
     fn from_request(req: &Req, payload: &mut crate::http::Payload) -> Self::Future {
         let tmp;
-        let cfg = if let Some(cfg) = req.app_data::<PayloadConfig>() {
-            cfg
-        } else {
+        //        let cfg = if let Some(cfg) = req.app_data::<PayloadConfig>() {
+        //            cfg
+        //        } else {
+        //            tmp = PayloadConfig::default();
+        //            &tmp
+        //        };
+        let cfg = {
             tmp = PayloadConfig::default();
             &tmp
         };
@@ -182,17 +186,21 @@ impl FromRequest for Bytes {
 /// }
 /// ```
 impl FromRequest for String {
-    type Config = PayloadConfig;
     type Error = Error;
     type Future =
         Either<LocalBoxFuture<'static, Result<String, Error>>, Ready<Result<String, Error>>>;
+    type Config = PayloadConfig;
 
     #[inline]
     fn from_request(req: &Req, payload: &mut crate::http::Payload) -> Self::Future {
         let tmp;
-        let cfg = if let Some(cfg) = req.app_data::<PayloadConfig>() {
-            cfg
-        } else {
+        //        let cfg = if let Some(cfg) = req.app_data::<PayloadConfig>() {
+        //            cfg
+        //        } else {
+        //            tmp = PayloadConfig::default();
+        //            &tmp
+        //        };
+        let cfg = {
             tmp = PayloadConfig::default();
             &tmp
         };

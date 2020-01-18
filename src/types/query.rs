@@ -221,8 +221,8 @@ impl Default for QueryConfig {
 
 #[cfg(test)]
 mod tests {
-    use actix_http::http::StatusCode;
     use derive_more::Display;
+    use rweb::http::StatusCode;
     use serde_derive::Deserialize;
 
     use super::*;

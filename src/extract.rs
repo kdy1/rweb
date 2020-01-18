@@ -270,8 +270,8 @@ mod m {
 
 #[cfg(test)]
 mod tests {
-    use actix_http::http::header;
     use bytes::Bytes;
+    use rweb::http::header;
     use serde_derive::Deserialize;
 
     use super::*;

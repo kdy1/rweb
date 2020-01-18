@@ -1,13 +1,9 @@
 use crate::{
-    cookie::Cookie,
-    error::{ContentTypeError, CookieParseError, ParseError},
-    extensions::Extensions,
-    header::{Header, HeaderMap},
+    error::{ContentTypeError, ParseError},
     http::Payload,
-    payload::Payload,
 };
 use encoding_rs::{Encoding, UTF_8};
-use http::{header, Extensions};
+use http::{header, header::HeaderName, Extensions, HeaderValue};
 use hyper::HeaderMap;
 use mime::Mime;
 use std::{
@@ -15,7 +11,7 @@ use std::{
     str,
 };
 
-struct Cookies(Vec<Cookie<'static>>);
+//struct Cookies(Vec<Cookie<'static>>);
 
 /// Trait that implements general purpose operations on http messages
 pub trait HttpMessage: Sized {
@@ -33,19 +29,6 @@ pub trait HttpMessage: Sized {
 
     /// Mutable reference to a the request's extensions container
     fn extensions_mut(&self) -> RefMut<'_, Extensions>;
-
-    #[doc(hidden)]
-    /// Get a header
-    fn get_header<H: Header>(&self) -> Option<H>
-    where
-        Self: Sized,
-    {
-        if self.headers().contains_key(H::name()) {
-            H::parse(self).ok()
-        } else {
-            None
-        }
-    }
 
     /// Read the request content type. If request does not contain
     /// *Content-Type* header, empty str get returned.
@@ -105,37 +88,39 @@ pub trait HttpMessage: Sized {
         }
     }
 
-    /// Load request cookies.
-    #[inline]
-    fn cookies(&self) -> Result<Ref<'_, Vec<Cookie<'static>>>, CookieParseError> {
-        if self.extensions().get::<Cookies>().is_none() {
-            let mut cookies = Vec::new();
-            for hdr in self.headers().get_all(header::COOKIE) {
-                let s = str::from_utf8(hdr.as_bytes()).map_err(CookieParseError::from)?;
-                for cookie_str in s.split(';').map(|s| s.trim()) {
-                    if !cookie_str.is_empty() {
-                        cookies.push(Cookie::parse_encoded(cookie_str)?.into_owned());
-                    }
-                }
-            }
-            self.extensions_mut().insert(Cookies(cookies));
-        }
-        Ok(Ref::map(self.extensions(), |ext| {
-            &ext.get::<Cookies>().unwrap().0
-        }))
-    }
-
-    /// Return request cookie.
-    fn cookie(&self, name: &str) -> Option<Cookie<'static>> {
-        if let Ok(cookies) = self.cookies() {
-            for cookie in cookies.iter() {
-                if cookie.name() == name {
-                    return Some(cookie.to_owned());
-                }
-            }
-        }
-        None
-    }
+    //    /// Load request cookies.
+    //    #[inline]
+    //    fn cookies(&self) -> Result<Ref<'_, Vec<Cookie<'static>>>,
+    // CookieParseError> {        if self.extensions().get::<Cookies>().
+    // is_none() {            let mut cookies = Vec::new();
+    //            for hdr in self.headers().get_all(header::COOKIE) {
+    //                let s =
+    // str::from_utf8(hdr.as_bytes()).map_err(CookieParseError::from)?;
+    //                for cookie_str in s.split(';').map(|s| s.trim()) {
+    //                    if !cookie_str.is_empty() {
+    //
+    // cookies.push(Cookie::parse_encoded(cookie_str)?.into_owned());
+    //                    }
+    //                }
+    //            }
+    //            self.extensions_mut().insert(Cookies(cookies));
+    //        }
+    //        Ok(Ref::map(self.extensions(), |ext| {
+    //            &ext.get::<Cookies>().unwrap().0
+    //        }))
+    //    }
+    //
+    //    /// Return request cookie.
+    //    fn cookie(&self, name: &str) -> Option<Cookie<'static>> {
+    //        if let Ok(cookies) = self.cookies() {
+    //            for cookie in cookies.iter() {
+    //                if cookie.name() == name {
+    //                    return Some(cookie.to_owned());
+    //                }
+    //            }
+    //        }
+    //        None
+    //    }
 }
 
 impl<'a, T> HttpMessage for &'a mut T

@@ -13,7 +13,6 @@ pub use tokio::{main, test};
 pub type Result<T> = ::std::result::Result<T, Error>;
 
 mod app;
-pub mod cookie;
 pub mod encoding;
 pub mod error;
 mod extract;

@@ -1,13 +1,14 @@
 use self::error::PayloadError;
-use crate::error::Error;
+use crate::{error::Error, HttpMessage};
 use bytes::BytesMut;
 use futures::Stream;
-use http::{header::Entry, response::Parts};
+use http::{header::Entry, response::Parts, Extensions};
 use hyper::{body::Bytes, Method, Uri, Version};
 pub use hyper::{header::HeaderValue, http::StatusCode, HeaderMap};
 use pin_project::pin_project;
 use serde::de::DeserializeOwned;
 use std::{
+    cell::{Ref, RefMut},
     marker::PhantomData,
     mem::replace,
     pin::Pin,
@@ -18,15 +19,44 @@ use std::{
 pub mod error;
 pub mod msg;
 
+/// Type represent boxed payload
+pub type PayloadStream = Pin<Box<dyn Stream<Item = Result<Bytes, PayloadError>>>>;
+
 /// Type represent streaming payload
 pub enum Payload<S = PayloadStream> {
     None,
-    // TODO: http 1 payload
-    // TODO: http 2 payload
     Stream(S),
 }
 
-type PayloadStream = Pin<Box<dyn Stream<Item = Result<Bytes, PayloadError>>>>;
+impl From<PayloadStream> for Payload {
+    fn from(pl: PayloadStream) -> Self {
+        Payload::Stream(pl)
+    }
+}
+
+impl<S> Payload<S> {
+    /// Takes current payload and replaces it with `None` value
+    pub fn take(&mut self) -> Payload<S> {
+        std::mem::replace(self, Payload::None)
+    }
+}
+
+impl<S> Stream for Payload<S>
+where
+    S: Stream<Item = Result<Bytes, PayloadError>> + Unpin,
+{
+    type Item = Result<Bytes, PayloadError>;
+
+    #[inline]
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        match self.get_mut() {
+            Payload::None => Poll::Ready(None),
+            Payload::H1(ref mut pl) => pl.readany(cx),
+            Payload::H2(ref mut pl) => Pin::new(pl).poll_next(cx),
+            Payload::Stream(ref mut pl) => Pin::new(pl).poll_next(cx),
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct Req {
@@ -51,6 +81,33 @@ impl Req {
     #[inline]
     pub fn error_response<E: Into<Error>>(self, err: E) -> Resp {
         Resp::from_err(err, self)
+    }
+}
+
+impl HttpMessage for Req {
+    type Stream = PayloadStream;
+
+    #[inline]
+    /// Returns Request's headers.
+    fn headers(&self) -> &HeaderMap {
+        &self.head().headers
+    }
+
+    #[inline]
+    fn take_payload(&mut self) -> Payload<Self::Stream> {
+        Rc::get_mut(&mut (self.0).0).unwrap().payload.take()
+    }
+
+    /// Request extensions
+    #[inline]
+    fn extensions(&self) -> Ref<'_, Extensions> {
+        self.inner.extensions()
+    }
+
+    /// Mutable reference to a the request's extensions
+    #[inline]
+    fn extensions_mut(&self) -> RefMut<'_, Extensions> {
+        self.inner.extensions_mut()
     }
 }
 
