@@ -1,4 +1,10 @@
-pub use self::{app::App, extract::FromRequest, response::Response};
+pub use self::{
+    app::App,
+    extract::FromRequest,
+    http::{Req, Resp},
+    response::Response,
+};
+pub use either::Either;
 pub use rweb_macros::{connect, delete, get, head, options, patch, post, put, trace};
 
 mod app;
@@ -7,9 +13,12 @@ pub mod encoding;
 pub mod error;
 mod extract;
 pub mod guard;
+pub mod handler;
 pub mod http;
 pub mod resource;
+mod responder;
 mod response;
 pub mod rmap;
+pub mod route;
 pub mod service;
 mod util;

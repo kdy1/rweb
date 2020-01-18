@@ -2,7 +2,7 @@ use self::error::PayloadError;
 use crate::error::Error;
 use bytes::BytesMut;
 use futures::Stream;
-use http::response::Parts;
+use http::{header::Entry, response::Parts};
 use hyper::{body::Bytes, Method, Uri, Version};
 pub use hyper::{header::HeaderValue, http::StatusCode, HeaderMap};
 use pin_project::pin_project;
@@ -11,6 +11,7 @@ use std::{
     marker::PhantomData,
     mem::replace,
     pin::Pin,
+    rc::Rc,
     task::{Context, Poll},
 };
 
@@ -26,14 +27,33 @@ pub enum Payload<S = PayloadStream> {
 
 type PayloadStream = Pin<Box<dyn Stream<Item = Result<Bytes, PayloadError>>>>;
 
+#[derive(Clone)]
 pub struct Req {
+    inner: Rc<ReqInner>,
+}
+
+struct ReqInner {
     info: ReqInfo,
     body: Payload,
 }
 
 impl Req {
     pub fn head(&self) -> &ReqInfo {
-        &self.info
+        &self.inner.info
+    }
+
+    pub fn parts(&self) -> (&ReqInfo, &Payload) {
+        (&self.inner.info, &self.inner.body)
+    }
+
+    /// Create service response for error
+    #[inline]
+    pub fn error_response<B, E: Into<Error>>(self, err: E) -> Resp<B>
+    where
+        B: MessageBody,
+    {
+        let res: Resp<B> = err.into().into();
+        res
     }
 }
 
@@ -95,12 +115,102 @@ where
     body: Option<B>,
 }
 
+macro_rules! static_resp {
+    ($name:ident, $status:expr) => {
+        pub fn $name() -> RespBuilder<Body> {
+            Resp::builder($status)
+        }
+    };
+}
+
+impl Resp {
+    static_resp!(ok, StatusCode::OK);
+    static_resp!(created, StatusCode::CREATED);
+    static_resp!(accepted, StatusCode::ACCEPTED);
+    static_resp!(
+        non_authoritative_information,
+        StatusCode::NON_AUTHORITATIVE_INFORMATION
+    );
+
+    static_resp!(no_content, StatusCode::NO_CONTENT);
+    static_resp!(reset_content, StatusCode::RESET_CONTENT);
+    static_resp!(partial_content, StatusCode::PARTIAL_CONTENT);
+    static_resp!(multi_status, StatusCode::MULTI_STATUS);
+    static_resp!(already_reported, StatusCode::ALREADY_REPORTED);
+
+    static_resp!(multiple_choices, StatusCode::MULTIPLE_CHOICES);
+    static_resp!(moved_permanently, StatusCode::MOVED_PERMANENTLY);
+    static_resp!(found, StatusCode::FOUND);
+    static_resp!(see_other, StatusCode::SEE_OTHER);
+    static_resp!(not_modified, StatusCode::NOT_MODIFIED);
+    static_resp!(use_proxy, StatusCode::USE_PROXY);
+    static_resp!(temporary_redirect, StatusCode::TEMPORARY_REDIRECT);
+    static_resp!(permanent_redirect, StatusCode::PERMANENT_REDIRECT);
+
+    static_resp!(bad_request, StatusCode::BAD_REQUEST);
+    static_resp!(not_found, StatusCode::NOT_FOUND);
+    static_resp!(unauthorized, StatusCode::UNAUTHORIZED);
+    static_resp!(payment_required, StatusCode::PAYMENT_REQUIRED);
+    static_resp!(forbidden, StatusCode::FORBIDDEN);
+    static_resp!(method_not_allowed, StatusCode::METHOD_NOT_ALLOWED);
+    static_resp!(not_acceptable, StatusCode::NOT_ACCEPTABLE);
+    static_resp!(
+        proxy_authentication_required,
+        StatusCode::PROXY_AUTHENTICATION_REQUIRED
+    );
+    static_resp!(request_timeout, StatusCode::REQUEST_TIMEOUT);
+    static_resp!(conflict, StatusCode::CONFLICT);
+    static_resp!(gone, StatusCode::GONE);
+    static_resp!(length_required, StatusCode::LENGTH_REQUIRED);
+    static_resp!(precondition_failed, StatusCode::PRECONDITION_FAILED);
+    static_resp!(precondition_required, StatusCode::PRECONDITION_REQUIRED);
+    static_resp!(payload_too_large, StatusCode::PAYLOAD_TOO_LARGE);
+    static_resp!(uri_too_long, StatusCode::URI_TOO_LONG);
+    static_resp!(unsupported_media_type, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+    static_resp!(range_not_satisfiable, StatusCode::RANGE_NOT_SATISFIABLE);
+    static_resp!(expectation_failed, StatusCode::EXPECTATION_FAILED);
+    static_resp!(unprocessable_entity, StatusCode::UNPROCESSABLE_ENTITY);
+    static_resp!(too_many_requests, StatusCode::TOO_MANY_REQUESTS);
+
+    static_resp!(internal_server_error, StatusCode::INTERNAL_SERVER_ERROR);
+    static_resp!(not_implemented, StatusCode::NOT_IMPLEMENTED);
+    static_resp!(bad_gateway, StatusCode::BAD_GATEWAY);
+    static_resp!(service_unavailable, StatusCode::SERVICE_UNAVAILABLE);
+    static_resp!(gateway_timeout, StatusCode::GATEWAY_TIMEOUT);
+    static_resp!(
+        version_not_supported,
+        StatusCode::HTTP_VERSION_NOT_SUPPORTED
+    );
+    static_resp!(variant_also_negotiates, StatusCode::VARIANT_ALSO_NEGOTIATES);
+    static_resp!(insufficient_storage, StatusCode::INSUFFICIENT_STORAGE);
+    static_resp!(loop_detected, StatusCode::LOOP_DETECTED);
+}
+
 impl<B> Resp<B>
 where
     B: MessageBody,
 {
-    pub fn build(status: StatusCode) -> RespBuilder<B> {
-        RespBuilder { status, body: None }
+    pub fn new(status: StatusCode) -> Resp<B> {
+        let (head, _) = http::response::Builder::new()
+            .status(status)
+            .body::<Option<B>>(None)
+            .expect("This cannot fail")
+            .into_parts();
+        Resp { head, body: None }
+    }
+
+    pub fn builder(status: StatusCode) -> RespBuilder<B> {
+        let (head, _) = http::response::Builder::new()
+            .status(status)
+            .body::<Option<B>>(None)
+            .expect("This cannot fail")
+            .into_parts();
+
+        RespBuilder { head, body: None }
+    }
+
+    pub fn status_mut(&mut self) -> &mut StatusCode {
+        &mut self.head.status
     }
 
     pub fn headers(&mut self) -> &HeaderMap {
@@ -110,14 +220,18 @@ where
     pub fn headers_mut(&mut self) -> &mut HeaderMap {
         &mut self.head.headers
     }
+
+    pub fn set_body(&mut self, body: B) {
+        self.body = Some(body);
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct RespBuilder<B>
 where
     B: MessageBody,
 {
-    status: StatusCode,
+    head: Parts,
     body: Option<B>,
 }
 
@@ -128,6 +242,35 @@ where
     pub fn body(mut self, body: B) -> Self {
         self.body = Some(body);
         self
+    }
+
+    pub fn content_type(mut self, s: &str) -> Self {
+        match self.head.headers.entry("Content-Type") {
+            Entry::Occupied(mut e) => {
+                e.insert(HeaderValue::from_str(s).expect("invalid content type"));
+            }
+            Entry::Vacant(e) => {
+                e.insert(HeaderValue::from_str(s).expect("invalid content type"));
+            }
+        };
+
+        self
+    }
+
+    pub fn build(self) -> Resp<B> {
+        self.into()
+    }
+}
+
+impl<B> From<RespBuilder<B>> for Resp<B>
+where
+    B: MessageBody,
+{
+    fn from(b: RespBuilder<B>) -> Self {
+        Resp {
+            head: b.head,
+            body: b.body,
+        }
     }
 }
 

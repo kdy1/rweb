@@ -6,9 +6,11 @@ use crate::{
     http::{Req, Resp},
     responder::Responder,
     route::{CreateRouteService, Route, RouteService},
-    service::HttpServiceFactory,
+    service::{HttpServiceFactory, Registry},
+    util::insert_slash,
 };
 use futures::future::{ok, Either, LocalBoxFuture, Ready};
+use http::StatusCode;
 use rweb_router::{IntoPattern, ResourceDef};
 use rweb_service::{
     apply, apply_fn_factory,
@@ -40,7 +42,7 @@ type HttpService = BoxService<Req, Resp, Error>;
 /// guards, route considered matched and route handler get called.
 ///
 /// ```rust
-/// use actix_web::{web, App, HttpResponse};
+/// use rweb::{web, App, HttpResponse};
 ///
 /// fn main() {
 ///     let app = App::new().service(
@@ -73,7 +75,7 @@ impl Resource {
             endpoint: ResourceEndpoint::new(fref.clone()),
             factory_ref: fref,
             guards: Vec::new(),
-            data: None,
+            //            data: None,
             default: Rc::new(RefCell::new(None)),
         }
     }
@@ -94,7 +96,7 @@ where
     /// Add match guard to a resource.
     ///
     /// ```rust
-    /// use actix_web::{web, guard, App, HttpResponse};
+    /// use rweb::{web, guard, App, HttpResponse};
     ///
     /// async fn index(data: web::Path<(String, String)>) -> &'static str {
     ///     "Welcome!"
@@ -127,7 +129,7 @@ where
     /// Register a new route.
     ///
     /// ```rust
-    /// use actix_web::{web, guard, App, HttpResponse};
+    /// use rweb::{web, guard, App, HttpResponse};
     ///
     /// fn main() {
     ///     let app = App::new().service(
@@ -144,7 +146,7 @@ where
     /// match guards for route selection.
     ///
     /// ```rust
-    /// use actix_web::{web, guard, App};
+    /// use rweb::{web, guard, App};
     ///
     /// fn main() {
     ///     let app = App::new().service(
@@ -154,9 +156,9 @@ where
     ///              .route(web::delete().to(delete_handler))
     ///     );
     /// }
-    /// # async fn get_handler() -> impl actix_web::Responder { actix_web::HttpResponse::Ok() }
-    /// # async fn post_handler() -> impl actix_web::Responder { actix_web::HttpResponse::Ok() }
-    /// # async fn delete_handler() -> impl actix_web::Responder { actix_web::HttpResponse::Ok() }
+    /// # async fn get_handler() -> impl rweb::Responder { rweb::HttpResponse::Ok() }
+    /// # async fn post_handler() -> impl rweb::Responder { rweb::HttpResponse::Ok() }
+    /// # async fn delete_handler() -> impl rweb::Responder { rweb::HttpResponse::Ok() }
     /// ```
     pub fn route(mut self, route: Route) -> Self {
         self.routes.push(route);
@@ -170,7 +172,7 @@ where
     //    /// method.
     //    ///
     //    /// ```rust
-    //    /// use actix_web::{web, App, FromRequest};
+    //    /// use rweb::{web, App, FromRequest};
     //    ///
     //    /// /// extract text data from request
     //    /// async fn index(body: String) -> String {
@@ -210,7 +212,7 @@ where
     /// Register a new route and add handler. This route matches all requests.
     ///
     /// ```rust
-    /// use actix_web::*;
+    /// use rweb::*;
     ///
     /// fn index(req: HttpRequest) -> HttpResponse {
     ///     unimplemented!()
@@ -223,7 +225,7 @@ where
     ///
     /// ```rust
     /// # extern crate actix_web;
-    /// # use actix_web::*;
+    /// # use rweb::*;
     /// # fn index(req: HttpRequest) -> HttpResponse { unimplemented!() }
     /// App::new().service(web::resource("/").route(web::route().to(index)));
     /// ```
@@ -262,7 +264,7 @@ where
             guards: self.guards,
             routes: self.routes,
             default: self.default,
-            data: self.data,
+            //            data: self.data,
             factory_ref: self.factory_ref,
         }
     }
@@ -278,8 +280,8 @@ where
     ///
     /// ```rust
     /// use actix_service::Service;
-    /// use actix_web::{web, App};
-    /// use actix_web::http::{header::CONTENT_TYPE, HeaderValue};
+    /// use rweb::{web, App};
+    /// use rweb::http::{header::CONTENT_TYPE, HeaderValue};
     ///
     /// async fn index() -> &'static str {
     ///     "Welcome!"
@@ -318,7 +320,7 @@ where
             guards: self.guards,
             routes: self.routes,
             default: self.default,
-            data: self.data,
+            //            data: self.data,
             factory_ref: self.factory_ref,
         }
     }
@@ -347,7 +349,7 @@ where
     T: ServiceFactory<Config = (), Request = Req, Response = Resp, Error = Error, InitError = ()>
         + 'static,
 {
-    fn register(mut self, config: &mut AppService) {
+    fn register(&self, config: &mut Registry) {
         let guards = if self.guards.is_empty() {
             None
         } else {
@@ -362,9 +364,9 @@ where
             *rdef.name_mut() = name.clone();
         }
         // custom app data storage
-        if let Some(ref mut ext) = self.data {
-            config.set_service_data(ext);
-        }
+        //        if let Some(ref mut ext) = self.data {
+        //            config.set_service_data(ext);
+        //        }
         config.register_service(rdef, guards, self, None)
     }
 }
@@ -376,7 +378,7 @@ where
     fn into_factory(self) -> T {
         *self.factory_ref.borrow_mut() = Some(ResourceFactory {
             routes: self.routes,
-            data: self.data.map(Rc::new),
+            //            data: self.data.map(Rc::new),
             default: self.default,
         });
 
@@ -412,7 +414,7 @@ impl ServiceFactory for ResourceFactory {
                 .iter()
                 .map(|route| CreateRouteServiceItem::Future(route.new_service(())))
                 .collect(),
-            data: self.data.clone(),
+            //            data: self.data.clone(),
             default: None,
             default_fut,
         }
@@ -468,7 +470,7 @@ impl Future for CreateResourceService {
                 .collect();
             Poll::Ready(Ok(ResourceService {
                 routes,
-                data: self.data.clone(),
+                //                data: self.data.clone(),
                 default: self.default.take(),
             }))
         } else {
@@ -495,17 +497,17 @@ impl Service for ResourceService {
     fn call(&mut self, mut req: Req) -> Self::Future {
         for route in self.routes.iter_mut() {
             if route.check(&mut req) {
-                if let Some(ref data) = self.data {
-                    req.set_data_container(data.clone());
-                }
+                //                if let Some(ref data) = self.data {
+                //                    req.set_data_container(data.clone());
+                //                }
                 return Either::Right(route.call(req));
             }
         }
         if let Some(ref mut default) = self.default {
             Either::Right(default.call(req))
         } else {
-            let req = req.into_parts().0;
-            Either::Left(ok(Resp::new(req, Response::MethodNotAllowed().finish())))
+            let req = req.parts().0;
+            Either::Left(ok(Resp::new(StatusCode::METHOD_NOT_ALLOWED)))
         }
     }
 }

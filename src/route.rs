@@ -4,7 +4,7 @@ use crate::{
     guard::{self, Guard},
     handler::{Extract, Factory, Handler},
     responder::Responder,
-    service::{ServiceRequest, ServiceResponse},
+    Req, Resp,
 };
 use futures::future::{ready, FutureExt, LocalBoxFuture};
 use hyper::Method;
@@ -42,7 +42,7 @@ type BoxedRouteNewService<Req, Res> = Box<
 /// Route uses builder-like pattern for configuration.
 /// If handler is not explicitly set, default *404 Not Found* handler is used.
 pub struct Route {
-    service: BoxedRouteNewService<ServiceRequest, ServiceResponse>,
+    service: BoxedRouteNewService<Req, Resp>,
     guards: Rc<Vec<Box<dyn Guard>>>,
 }
 
@@ -51,7 +51,7 @@ impl Route {
     pub fn new() -> Route {
         Route {
             service: Box::new(RouteNewService::new(Extract::new(Handler::new(|| {
-                ready(Resp::NotFound())
+                ready(Resp::not_found().build())
             })))),
             guards: Rc::new(Vec::new()),
         }
@@ -63,12 +63,12 @@ impl Route {
 }
 
 impl ServiceFactory for Route {
-    type Config = ();
-    type Request = ServiceRequest;
-    type Response = ServiceResponse;
+    type Request = Req;
+    type Response = Resp;
     type Error = Error;
-    type InitError = ();
+    type Config = ();
     type Service = RouteService;
+    type InitError = ();
     type Future = CreateRouteService;
 
     fn new_service(&self, _: ()) -> Self::Future {
@@ -79,8 +79,7 @@ impl ServiceFactory for Route {
     }
 }
 
-type RouteFuture =
-    LocalBoxFuture<'static, Result<BoxedRouteService<ServiceRequest, ServiceResponse>, ()>>;
+type RouteFuture = LocalBoxFuture<'static, Result<BoxedRouteService<Req, Resp>, ()>>;
 
 #[pin_project::pin_project]
 pub struct CreateRouteService {
@@ -106,14 +105,14 @@ impl Future for CreateRouteService {
 }
 
 pub struct RouteService {
-    service: BoxedRouteService<ServiceRequest, ServiceResponse>,
+    service: BoxedRouteService<Req, Resp>,
     guards: Rc<Vec<Box<dyn Guard>>>,
 }
 
 impl RouteService {
-    pub fn check(&self, req: &mut ServiceRequest) -> bool {
+    pub fn check(&self, req: &mut Req) -> bool {
         for f in self.guards.iter() {
-            if !f.check(req.head()) {
+            if !f.allow(req.head()) {
                 return false;
             }
         }
@@ -122,8 +121,8 @@ impl RouteService {
 }
 
 impl Service for RouteService {
-    type Request = ServiceRequest;
-    type Response = ServiceResponse;
+    type Request = Req;
+    type Response = Resp;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
@@ -131,7 +130,7 @@ impl Service for RouteService {
         self.service.poll_ready(cx)
     }
 
-    fn call(&mut self, req: ServiceRequest) -> Self::Future {
+    fn call(&mut self, req: Req) -> Self::Future {
         self.service.call(req).boxed_local()
     }
 }
@@ -140,7 +139,7 @@ impl Route {
     /// Add method guard to the route.
     ///
     /// ```rust
-    /// # use actix_web::*;
+    /// # use rweb::*;
     /// # fn main() {
     /// App::new().service(web::resource("/path").route(
     ///     web::get()
@@ -160,7 +159,7 @@ impl Route {
     /// Add guard to the route.
     ///
     /// ```rust
-    /// # use actix_web::*;
+    /// # use rweb::*;
     /// # fn main() {
     /// App::new().service(web::resource("/path").route(
     ///     web::route()
@@ -178,7 +177,7 @@ impl Route {
     /// Set handler function, use request extractors for parameters.
     ///
     /// ```rust
-    /// use actix_web::{web, http, App};
+    /// use rweb::{web, http, App};
     /// use serde_derive::Deserialize;
     ///
     /// #[derive(Deserialize)]
@@ -204,7 +203,7 @@ impl Route {
     /// ```rust
     /// # use std::collections::HashMap;
     /// # use serde_derive::Deserialize;
-    /// use actix_web::{web, App};
+    /// use rweb::{web, App};
     ///
     /// #[derive(Deserialize)]
     /// struct Info {
@@ -237,19 +236,14 @@ impl Route {
 
 struct RouteNewService<T>
 where
-    T: ServiceFactory<Request = ServiceRequest, Error = (Error, ServiceRequest)>,
+    T: ServiceFactory<Request = Req, Error = (Error, Req)>,
 {
     service: T,
 }
 
 impl<T> RouteNewService<T>
 where
-    T: ServiceFactory<
-        Config = (),
-        Request = ServiceRequest,
-        Response = ServiceResponse,
-        Error = (Error, ServiceRequest),
-    >,
+    T: ServiceFactory<Config = (), Request = Req, Response = Resp, Error = (Error, Req)>,
     T::Future: 'static,
     T::Service: 'static,
     <T::Service as Service>::Future: 'static,
@@ -261,22 +255,17 @@ where
 
 impl<T> ServiceFactory for RouteNewService<T>
 where
-    T: ServiceFactory<
-        Config = (),
-        Request = ServiceRequest,
-        Response = ServiceResponse,
-        Error = (Error, ServiceRequest),
-    >,
+    T: ServiceFactory<Config = (), Request = Req, Response = Resp, Error = (Error, Req)>,
     T::Future: 'static,
     T::Service: 'static,
     <T::Service as Service>::Future: 'static,
 {
     type Config = ();
-    type Request = ServiceRequest;
-    type Response = ServiceResponse;
+    type Request = Req;
+    type Response = Resp;
     type Error = Error;
     type InitError = ();
-    type Service = BoxedRouteService<ServiceRequest, Self::Response>;
+    type Service = BoxedRouteService<Req, Self::Response>;
     type Future = LocalBoxFuture<'static, Result<Self::Service, Self::InitError>>;
 
     fn new_service(&self, _: ()) -> Self::Future {
@@ -301,14 +290,10 @@ struct RouteServiceWrapper<T: Service> {
 impl<T> Service for RouteServiceWrapper<T>
 where
     T::Future: 'static,
-    T: Service<
-        Request = ServiceRequest,
-        Response = ServiceResponse,
-        Error = (Error, ServiceRequest),
-    >,
+    T: Service<Request = Req, Response = Resp, Error = (Error, Req)>,
 {
-    type Request = ServiceRequest;
-    type Response = ServiceResponse;
+    type Request = Req;
+    type Response = Resp;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
@@ -316,7 +301,7 @@ where
         self.service.poll_ready(cx).map_err(|(e, _)| e)
     }
 
-    fn call(&mut self, req: ServiceRequest) -> Self::Future {
+    fn call(&mut self, req: Req) -> Self::Future {
         // let mut fut = self.service.call(req);
         self.service
             .call(req)

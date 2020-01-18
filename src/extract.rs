@@ -124,8 +124,8 @@ where
 /// ## Example
 ///
 /// ```rust
-/// use actix_web::{web, dev, App, Result, Error, Req, FromRequest};
-/// use actix_web::error::ErrorBadRequest;
+/// use rweb::{web, dev, App, Result, Error, Req, FromRequest};
+/// use rweb::error::ErrorBadRequest;
 /// use futures::future::{ok, err, Ready};
 /// use serde_derive::Deserialize;
 /// use rand;
