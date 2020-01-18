@@ -12,3 +12,4 @@ pub mod resource;
 mod response;
 pub mod rmap;
 pub mod service;
+mod util;
