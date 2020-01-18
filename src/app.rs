@@ -1,7 +1,7 @@
 use crate::{
     error::Error,
     http::{MessageBody, Req, Resp},
-    service::{AppServiceFactory, NoopServiceFactory},
+    service::{AppServiceFactory, HttpServiceFactory, NoopServiceFactory, ServiceFactoryWrapper},
 };
 use rweb_service::{apply, ServiceFactory, Transform};
 
@@ -44,8 +44,9 @@ where
     >,
     Body: MessageBody,
 {
-    pub fn service(mut self, svc: impl 'static + AppServiceFactory) -> Self {
-        self.services.push(Box::new(svc));
+    pub fn service(mut self, svc: impl 'static + HttpServiceFactory) -> Self {
+        self.services
+            .push(Box::new(ServiceFactoryWrapper::new(svc)));
         self
     }
 

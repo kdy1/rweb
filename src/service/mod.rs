@@ -12,7 +12,32 @@ use std::marker::PhantomData;
 
 mod registry;
 
-pub trait AppServiceFactory {}
+pub(crate) struct ServiceFactoryWrapper<T> {
+    factory: Option<T>,
+}
+
+impl<T> ServiceFactoryWrapper<T> {
+    pub fn new(factory: T) -> Self {
+        Self {
+            factory: Some(factory),
+        }
+    }
+}
+
+impl<T> AppServiceFactory for ServiceFactoryWrapper<T>
+where
+    T: HttpServiceFactory,
+{
+    fn register(&mut self, config: &mut Registry) {
+        if let Some(item) = self.factory.take() {
+            item.register(config)
+        }
+    }
+}
+
+pub(crate) trait AppServiceFactory {
+    fn register(&mut self, config: &mut Registry);
+}
 
 pub trait HttpServiceFactory {
     fn register(self, reg: &mut Registry);
