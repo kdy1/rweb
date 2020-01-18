@@ -1,7 +1,7 @@
 use self::error::PayloadError;
 use crate::error::Error;
 use futures::Stream;
-use http::response::Parts;
+use http::{response::Parts, StatusCode};
 use hyper::{body::Bytes, Method, Uri, Version};
 pub use hyper::{header::HeaderValue, HeaderMap};
 use serde::de::DeserializeOwned;
@@ -86,7 +86,35 @@ where
     B: MessageBody,
 {
     head: Parts,
-    body: B,
+    body: Option<B>,
+}
+
+impl<B> Resp<B>
+where
+    B: MessageBody,
+{
+    pub fn build(status: StatusCode) -> RespBuilder<B> {
+        RespBuilder { status, body: None }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RespBuilder<B>
+where
+    B: MessageBody,
+{
+    status: StatusCode,
+    body: Option<B>,
+}
+
+impl<B> RespBuilder<B>
+where
+    B: MessageBody,
+{
+    pub fn body(mut self, body: B) -> Self {
+        self.body = Some(body);
+        self
+    }
 }
 
 pub enum Body {
