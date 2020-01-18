@@ -1,6 +1,6 @@
 use crate::{
-    dev::Payload,
     error::{PayloadError, ReadlinesError},
+    http::{error::PayloadError, Payload},
     HttpMessage,
 };
 use bytes::{Bytes, BytesMut};

@@ -1,5 +1,9 @@
 //! Path extractor
-use crate::{error::PathError, request::HttpRequest, FromRequest, Payload};
+use crate::{
+    error::{Error, PathError},
+    http::Payload,
+    FromRequest,
+};
 use actix_http::error::{Error, ErrorNotFound};
 use actix_router::PathDeserializer;
 use futures::future::{ready, Ready};

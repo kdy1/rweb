@@ -17,7 +17,6 @@ mod extract;
 pub mod guard;
 pub mod handler;
 pub mod http;
-pub mod middleware;
 pub mod resource;
 mod responder;
 mod response;

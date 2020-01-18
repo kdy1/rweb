@@ -9,7 +9,6 @@ use crate::{
         header::{ContentType, CONTENT_LENGTH},
         StatusCode,
     },
-    request::HttpRequest,
     responder::Responder,
 };
 use actix_http::{Error, HttpMessage, Payload, Response};

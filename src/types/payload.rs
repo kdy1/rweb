@@ -1,5 +1,5 @@
 //! Payload/Bytes/String extractors
-use crate::{extract::FromRequest, http::header, request::HttpRequest};
+use crate::{extract::FromRequest, http::header};
 use actix_http::{
     error::{Error, ErrorBadRequest, PayloadError},
     HttpMessage,

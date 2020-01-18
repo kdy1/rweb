@@ -1,6 +1,6 @@
 //! Query extractor
 
-use crate::{dev::Payload, error::QueryPayloadError, extract::FromRequest, request::HttpRequest};
+use crate::{error::QueryPayloadError, extract::FromRequest};
 use actix_http::error::Error;
 use futures::future::{err, ok, Ready};
 use serde::de;
