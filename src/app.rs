@@ -1,4 +1,7 @@
-use crate::service::{AppServiceFactory, HttpServiceFactory};
+use crate::{
+    error::Error,
+    service::{AppServiceFactory, HttpServiceFactory},
+};
 use hyper::{service::HttpService, Request};
 use rweb_service::{Service, ServiceFactory, Transform};
 use std::process::Output;
