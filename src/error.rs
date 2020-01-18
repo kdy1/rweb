@@ -432,7 +432,7 @@ where
             InternalErrorType::Status(st) => st,
             InternalErrorType::Response(ref resp) => {
                 if let Some(resp) = resp.borrow().as_ref() {
-                    resp.head().status
+                    resp.status()
                 } else {
                     StatusCode::INTERNAL_SERVER_ERROR
                 }

@@ -75,6 +75,18 @@ impl Req {
         (&self.inner.info, &self.inner.body)
     }
 
+    pub fn path(&self) -> &str {
+        self.inner.info.uri.path()
+    }
+
+    pub fn query_string(&self) -> Option<&str> {
+        self.inner.info.uri.query()
+    }
+
+    pub fn headers(&self) -> &HeaderMap {
+        &self.inner.info.headers
+    }
+
     /// Create service response for error
     #[inline]
     pub fn error_response<E: Into<Error>>(self, err: E) -> Resp {
@@ -268,6 +280,10 @@ where
             .into_parts();
 
         RespBuilder { head, body: None }
+    }
+
+    pub fn status(&self) -> StatusCode {
+        self.head.status
     }
 
     pub fn status_mut(&mut self) -> &mut StatusCode {
