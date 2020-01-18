@@ -3,7 +3,6 @@ use fxhash::FxHashMap;
 use hyper::{Request, Uri};
 use rweb_router::ResourceDef;
 use std::{cell::RefCell, rc::Rc};
-use url::Url;
 
 #[derive(Clone, Debug)]
 pub struct ResourceMap {
