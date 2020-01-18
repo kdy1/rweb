@@ -7,6 +7,8 @@ pub trait Guard {
     fn allow(&self, req: &ReqInfo) -> bool;
 }
 
+pub type Guards = Vec<Box<dyn Guard>>;
+
 #[derive(Debug, Default, Copy, Clone)]
 pub struct AllowAll;
 
