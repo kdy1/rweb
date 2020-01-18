@@ -97,7 +97,7 @@ fn expand_route(method: Quote, path: TokenStream, fn_item: TokenStream) -> proc_
 
             impl rweb::service::HttpServiceFactory for Item {
                 fn register(self, config: &mut rweb::service::Registry) {
-                    async fn Item(_info: rweb::web::Path<()>) -> Ret {
+                    async fn Item(_info: rweb::Path<()>) -> Ret {
                         body
                     }
 

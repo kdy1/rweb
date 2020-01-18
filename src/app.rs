@@ -1,6 +1,6 @@
 use crate::{
     error::Error,
-    http::{MessageBody, Req, Resp},
+    http::{Body, MessageBody, Req, Resp},
     service::{AppServiceFactory, HttpServiceFactory, NoopServiceFactory, ServiceFactoryWrapper},
 };
 use rweb_service::{apply, ServiceFactory, Transform};
@@ -21,10 +21,7 @@ where
     services: Vec<Box<dyn AppServiceFactory>>,
 }
 
-impl<Body> App<NoopServiceFactory<Body>, Body>
-where
-    Body: MessageBody,
-{
+impl App<NoopServiceFactory<Body>, Body> {
     pub fn new() -> Self {
         App {
             endpoint: NoopServiceFactory(Default::default()),
