@@ -1,35 +1,49 @@
 use crate::{
     error::Error,
-    service::{AppServiceFactory, HttpServiceFactory},
+    http::{MessageBody, Req, Resp},
+    service::{AppServiceFactory, NoopServiceFactory},
 };
-use hyper::{service::HttpService, Request};
-use rweb_service::{Service, ServiceFactory, Transform};
-use std::process::Output;
+use rweb_service::{apply, ServiceFactory, Transform};
 
 /// An application builder.
-#[derive(Default)]
 pub struct App<S, Body>
 where
-    S: HttpService<Body>,
+    S: ServiceFactory<
+        Config = (),
+        Request = Req,
+        Response = Resp<Body>,
+        Error = Error,
+        InitError = (),
+    >,
+    Body: MessageBody,
 {
     endpoint: S,
     services: Vec<Box<dyn AppServiceFactory>>,
+}
+
+impl<Body> App<NoopServiceFactory<Body>, Body>
+where
+    Body: MessageBody,
+{
+    pub fn new() -> Self {
+        App {
+            endpoint: NoopServiceFactory(Default::default()),
+            services: Default::default(),
+        }
+    }
 }
 
 impl<S, Body> App<S, Body>
 where
     S: ServiceFactory<
         Config = (),
-        Request = ServiceRequest,
-        Response = ServiceResponse<B>,
+        Request = Req,
+        Response = Resp<Body>,
         Error = Error,
         InitError = (),
     >,
+    Body: MessageBody,
 {
-    pub fn new() -> Self {
-        Default::default()
-    }
-
     pub fn service(mut self, svc: impl 'static + AppServiceFactory) -> Self {
         self.services.push(Box::new(svc));
         self
@@ -71,21 +85,15 @@ where
     ) -> App<
         impl ServiceFactory<
             Config = (),
-            Request = ServiceRequest,
-            Response = ServiceResponse<B1>,
+            Request = Req,
+            Response = Resp<B1>,
             Error = Error,
             InitError = (),
         >,
         B1,
     >
     where
-        M: Transform<
-            S::Service,
-            Request = ServiceRequest,
-            Response = ServiceResponse<B1>,
-            Error = Error,
-            InitError = (),
-        >,
+        M: Transform<S::Service, Request = Req, Response = Resp<B1>, Error = Error, InitError = ()>,
         B1: MessageBody,
     {
         App {
