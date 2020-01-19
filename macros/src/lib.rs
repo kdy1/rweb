@@ -77,6 +77,7 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
     let f: ItemFn = parse(f);
     let sig = &f.sig;
 
+    // Apply method filter
     let expr: Expr = q!(
         Vars {
             http_method: method,
