@@ -9,7 +9,7 @@ use crate::error::Error;
 pub use either::Either;
 pub use rweb_macros::{delete, get, head, options, patch, post, put};
 pub use tokio::{main, test};
-pub use warp::{self, filters};
+pub use warp::{self, filters, Filter};
 
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 
@@ -26,5 +26,4 @@ mod response;
 pub mod route;
 pub mod service;
 mod types;
-mod util;
 pub mod warp_ext;

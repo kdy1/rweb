@@ -8,17 +8,15 @@ impl From<Error> for rweb::error::Error {
     }
 }
 
-#[test]
-fn app_service() {
-    #[get("/")]
-    fn index() -> Result<String, Error> {
-        Err(Error {})
-    }
-
-    #[get("/foo")]
-    fn foo() -> Result<String, Error> {
-        Ok(String::new())
-    }
-
-    App::new().service(index).service(foo);
+#[get("/")]
+pub fn index() -> Result<String, Error> {
+    Err(Error {})
 }
+
+#[get("/foo")]
+pub fn foo() -> Result<String, Error> {
+    Ok(String::new())
+}
+
+#[test]
+fn app_service() {}
