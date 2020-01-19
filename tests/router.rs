@@ -1,3 +1,5 @@
+use futures::future::ok;
+use http::StatusCode;
 use rweb::*;
 
 #[get("/sum/{a}/{b}")]
@@ -20,9 +22,9 @@ async fn router() {
     let value = warp::test::request()
         .path("/math/sum/1/2")
         .reply(&filter)
-        .await
-        .into_body();
-    assert_eq!(value, b"3"[..]);
+        .await;
+    assert_eq!(value.status(), StatusCode::OK);
+    assert_eq!(value.into_body(), b"3"[..]);
 }
 
 #[get("/no-arg")]
@@ -33,14 +35,20 @@ fn no_arg() -> String {
 #[router("/math/complex", services(sum, mul, no_arg))]
 struct Complex;
 
+fn complex() -> impl Clone + rweb::Filter<Extract = impl rweb::Reply, Error = rweb::Rejection> {
+    rweb::filters::path::path("math")
+        .and(rweb::filters::path::path("complex"))
+        .and(sum().or(mul()).or(no_arg()))
+}
+
 #[tokio::test]
 async fn complex_router() {
-    let filter = Complex();
+    let filter = complex();
 
     let value = warp::test::request()
         .path("/math/complex/sum/1/2")
         .reply(&filter)
-        .await
-        .into_body();
-    assert_eq!(value, b"3"[..]);
+        .await;
+    assert_eq!(value.status(), StatusCode::OK);
+    assert_eq!(value.into_body(), b"3"[..]);
 }

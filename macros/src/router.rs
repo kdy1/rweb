@@ -4,7 +4,8 @@ use proc_macro2::TokenStream;
 use syn::{
     parse::{Parse, ParseStream},
     parse_quote::parse,
-    Error, ItemFn, ItemStruct, LitStr, Meta, Token,
+    punctuated::{Pair, Punctuated},
+    Error, Expr, ItemFn, ItemStruct, LitStr, Meta, Token,
 };
 
 struct Input {
@@ -34,13 +35,20 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let attr: Input = parse(attr);
 
     let (mut expr, _) = compile(None, attr.path.dump(), None, false);
+    let mut exprs: Punctuated<Expr, Token![.]> = Punctuated::default();
 
     match attr.services {
         Meta::List(list) => {
             if list.path.is_ident("services") {
                 for name in list.nested.into_iter() {
-                    expr = q!(Vars { name, expr }, { expr.or(name()) }).parse();
+                    if exprs.is_empty() {
+                        exprs.push(q!(Vars { name }, { name() }).parse());
+                    } else {
+                        exprs.push(q!(Vars { name }, { or(name()) }).parse());
+                    }
                 }
+
+                expr = q!(Vars { exprs, expr }, { expr.and(exprs) }).parse();
             } else {
                 panic!("Unknown path {}", list.path.dump())
             }
@@ -57,8 +65,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
         {
             use rweb::{rt::StatusCode, Filter};
 
-            expr.and(rweb::filters::path::end())
-                .map(|_| StatusCode::from_u16(404).unwrap())
+            expr
         }
     })
     .parse()
