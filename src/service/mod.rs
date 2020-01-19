@@ -1,4 +1,3 @@
-pub use self::registry::Registry;
 use crate::{
     error::Error,
     http::{MessageBody, Req, Resp},
@@ -9,39 +8,6 @@ use futures::{
 };
 use rweb_service::{Service, ServiceFactory};
 use std::marker::PhantomData;
-
-mod registry;
-
-pub(crate) struct ServiceFactoryWrapper<T> {
-    factory: Option<T>,
-}
-
-impl<T> ServiceFactoryWrapper<T> {
-    pub fn new(factory: T) -> Self {
-        Self {
-            factory: Some(factory),
-        }
-    }
-}
-
-impl<T> AppServiceFactory for ServiceFactoryWrapper<T>
-where
-    T: HttpServiceFactory,
-{
-    fn register(&mut self, config: &mut Registry) {
-        if let Some(item) = self.factory.take() {
-            item.register(config)
-        }
-    }
-}
-
-pub(crate) trait AppServiceFactory {
-    fn register(&mut self, config: &mut Registry);
-}
-
-pub trait HttpServiceFactory {
-    fn register(self, reg: &mut Registry);
-}
 
 #[derive(Debug, Clone, Copy)]
 pub struct NoopServiceFactory<T: MessageBody>(pub(crate) PhantomData<T>);
