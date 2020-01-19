@@ -21,12 +21,12 @@ pub fn foo() -> Result<String, Error> {
 
 #[get("/param/{foo}")]
 pub fn param(foo: String) -> Result<String, Error> {
-    Ok(String::new())
+    Ok(foo)
 }
 
 #[get("/param/{v}")]
 pub fn param_typed(v: u32) -> Result<String, Error> {
-    Ok(String::new())
+    Ok(v.to_string())
 }
 
 #[test]
