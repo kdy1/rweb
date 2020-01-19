@@ -4,7 +4,8 @@ extern crate proc_macro;
 
 use pmutil::{q, Quote};
 use proc_macro2::TokenStream;
-use syn::{parse_quote::parse, ItemFn, ReturnType, Visibility};
+use std::mem::swap;
+use syn::{parse_quote::parse, FnArg, ItemFn, Pat, ReturnType, Signature, Visibility};
 
 mod path;
 
@@ -68,23 +69,39 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
     let f: ItemFn = parse(f);
     let sig = &f.sig;
 
-    let (path, _) = path::compile(path, sig);
+    let (path, map) = path::compile(path, sig);
 
-    let handler_fn = ItemFn {
-        attrs: vec![],
-        vis: Visibility::Inherited,
-        sig: f.sig.clone(),
-        block: f.block,
+    let handler_fn = {
+        let mut sig = f.sig.clone();
+
+        for (orig_idx, (name, idx)) in map.into_iter().enumerate() {
+            match &f.sig.inputs[idx] {
+                FnArg::Typed(pat) => match *pat.pat {
+                    Pat::Ident(ref i) if i.ident == name && orig_idx != idx => {
+                        sig.inputs[orig_idx] = f.sig.inputs[idx].clone();
+                        sig.inputs[idx] = f.sig.inputs[orig_idx].clone();
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+        }
+
+        ItemFn {
+            attrs: f.attrs,
+            vis: Visibility::Inherited,
+            sig: Signature {
+                asyncness: None,
+                ..sig
+            },
+            block: f.block,
+        }
     };
 
     q!(
         Vars {
             http_method: method,
             http_path: &path,
-            Ret: match sig.output {
-                ReturnType::Default => q!({ () }),
-                ReturnType::Type(_, ref ty) => q!(Vars { ty }, { ty }),
-            },
             handler: &sig.ident,
             handler_fn,
         },
