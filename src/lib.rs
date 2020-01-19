@@ -11,7 +11,7 @@ pub use rweb_macros::{connect, delete, get, head, options, patch, post, put, tra
 pub use rweb_router::Path;
 pub use tokio::{main, test};
 
-pub type Result<T> = ::std::result::Result<T, Error>;
+pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 
 mod app;
 pub mod data;
