@@ -77,7 +77,15 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
     let f: ItemFn = parse(f);
     let sig = &f.sig;
 
-    let (path, vars) = path::compile(path, sig);
+    let expr: Expr = q!(
+        Vars {
+            http_method: method,
+        },
+        { rweb::filters::method::http_method() }
+    )
+    .parse();
+
+    let (expr, vars) = path::compile(expr, path, sig);
 
     let handler_fn = {
         let mut inputs = f.sig.inputs.clone();
@@ -121,25 +129,11 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
         }
     };
 
-    let filter_expr: Expr = q!(
-        Vars {
-            http_method: method,
-            http_path: &path,
-            handler: &sig.ident,
-        },
-        {
-            http_path
-                .and(rweb::filters::method::http_method())
-                .map(handler)
-        }
-    )
-    .parse();
-
     q!(
         Vars {
+            expr,
             handler: &sig.ident,
             handler_fn,
-            filter_expr,
         },
         {
             #[allow(non_camel_case_types)]
@@ -150,7 +144,7 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
 
                 handler_fn
 
-                filter_expr
+                expr.map(handler)
             }
         }
     )
