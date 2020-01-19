@@ -248,8 +248,11 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
         }
     };
 
+    let vis = f.vis;
+
     q!(
         Vars {
+            vis,
             expr,
             handler: &sig.ident,
             Ret: ret,
@@ -257,7 +260,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
         },
         {
             #[allow(non_camel_case_types)]
-            fn handler(
+            vis fn handler(
             ) -> impl rweb::Filter<Extract = (Ret,), Error = rweb::warp::Rejection>
                    + rweb::rt::Clone {
                 use rweb::Filter;
@@ -276,4 +279,5 @@ fn is_rweb_attr(a: &Attribute) -> bool {
         || a.path.is_ident("form")
         || a.path.is_ident("body")
         || a.path.is_ident("query")
+        || a.path.is_ident("filter")
 }
