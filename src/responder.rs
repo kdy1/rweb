@@ -3,6 +3,7 @@ use crate::{
     http::{Req, Resp},
 };
 use bytes::{Bytes, BytesMut};
+use either::Either;
 use futures::{
     future::{err, ok, Either as EitherFuture, Ready},
     ready,
@@ -337,37 +338,6 @@ impl<T: Responder> Future for CustomResponderFut<T> {
     }
 }
 
-/// Combines two different responder types into a single type
-///
-/// ```rust
-/// use rweb::{Either, error::Error, HttpResponse};
-///
-/// type RegisterResult = Either<HttpResponse, Result<HttpResponse, Error>>;
-///
-/// fn index() -> RegisterResult {
-///     if is_a_variant() {
-///         // <- choose left variant
-///         Either::A(HttpResponse::BadRequest().body("Bad data"))
-///     } else {
-///         Either::B(
-///             // <- Right variant
-///             Ok(HttpResponse::Ok()
-///                 .content_type("text/html")
-///                 .body("Hello!"))
-///         )
-///     }
-/// }
-/// # fn is_a_variant() -> bool { true }
-/// # fn main() {}
-/// ```
-#[derive(Debug, PartialEq)]
-pub enum Either<A, B> {
-    /// First branch of the type
-    A(A),
-    /// Second branch of the type
-    B(B),
-}
-
 impl<A, B> Responder for Either<A, B>
 where
     A: Responder,
@@ -378,8 +348,8 @@ where
 
     fn respond_to(self, req: &Req) -> Self::Future {
         match self {
-            Either::A(a) => EitherResponder::A(a.respond_to(req)),
-            Either::B(b) => EitherResponder::B(b.respond_to(req)),
+            Either::Left(a) => EitherResponder::A(a.respond_to(req)),
+            Either::Right(b) => EitherResponder::B(b.respond_to(req)),
         }
     }
 }
