@@ -8,7 +8,6 @@ pub use hyper::{header::HeaderValue, http::StatusCode, HeaderMap};
 use pin_project::pin_project;
 use serde::de::DeserializeOwned;
 use std::{
-    cell::{Ref, RefMut},
     marker::PhantomData,
     mem::replace,
     pin::Pin,
@@ -104,13 +103,13 @@ impl HttpMessage for Req {
 
     /// Request extensions
     #[inline]
-    fn extensions(&self) -> Ref<'_, Extensions> {
+    fn extensions(&self) -> &Extensions {
         self.inner.extensions()
     }
 
     /// Mutable reference to a the request's extensions
     #[inline]
-    fn extensions_mut(&self) -> RefMut<'_, Extensions> {
+    fn extensions_mut(&mut self) -> &mut Extensions {
         self.inner.extensions_mut()
     }
 }

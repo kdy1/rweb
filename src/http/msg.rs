@@ -6,10 +6,7 @@ use encoding_rs::{Encoding, UTF_8};
 use http::{header, Extensions};
 use hyper::HeaderMap;
 use mime::Mime;
-use std::{
-    cell::{Ref, RefMut},
-    str,
-};
+use std::str;
 
 //struct Cookies(Vec<Cookie<'static>>);
 
@@ -25,10 +22,10 @@ pub trait HttpMessage: Sized {
     fn take_payload(&mut self) -> Payload<Self::Stream>;
 
     /// Request's extensions container
-    fn extensions(&self) -> Ref<'_, Extensions>;
+    fn extensions(&self) -> &Extensions;
 
     /// Mutable reference to a the request's extensions container
-    fn extensions_mut(&self) -> RefMut<'_, Extensions>;
+    fn extensions_mut(&mut self) -> &mut Extensions;
 
     /// Read the request content type. If request does not contain
     /// *Content-Type* header, empty str get returned.
@@ -139,12 +136,12 @@ where
     }
 
     /// Request's extensions container
-    fn extensions(&self) -> Ref<'_, Extensions> {
+    fn extensions(&self) -> &Extensions {
         (**self).extensions()
     }
 
     /// Mutable reference to a the request's extensions container
-    fn extensions_mut(&self) -> RefMut<'_, Extensions> {
+    fn extensions_mut(&mut self) -> &mut Extensions {
         (**self).extensions_mut()
     }
 }
