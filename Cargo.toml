@@ -2,21 +2,24 @@
 
 [package]
 name = "rweb"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["강동윤 <kdy1997.dev@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/kdy1/rweb.git"
 description = "Yet another web server framework for rust"
 edition = "2018"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-
+default = ["multipart", "websocket"]
+multipart = ["warp/multipart"]
+websocket = ["warp/websocket"]
+tls = ["warp/rustls"]
 
 [dependencies]
-rweb-macros = { version = "0.2", path = "./macros" }
+rweb-macros = { version = "0.2.1", path = "./macros" }
 tokio = { version = "0.2", features = ["macros"] }
 warp = "0.2"
+http = "0.2"
 
 [dev-dependencies]
 bytes = "0.5"
@@ -24,7 +27,10 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 http = "0.2"
 hyper = "0.13"
+pretty_env_logger = "0.3"
+log = "0.4"
+futures = "0.3"
 
-
-[patch.crates-io]
-warp = { git = "https://github.com/kdy1/warp.git" }
+[[example]]
+name = "todo_websockets"
+required-features = ["websocket"]

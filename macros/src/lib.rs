@@ -1,27 +1,24 @@
-//! A macro to convert a function to rweb handler.
-//!
-//! # Attribute on parameters
-//!
-//! ## `#[body]`
-//! Parses request body.
-
 extern crate proc_macro;
-use pmutil::{q, smart_quote, Quote};
+use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
 use std::collections::HashSet;
 use syn::{
-    parse_quote::parse, punctuated::Punctuated, spanned::Spanned, Attribute, Expr, FnArg, ItemFn,
-    Pat, Signature, Visibility,
+    parse::{Parse, ParseStream},
+    parse_quote::parse,
+    punctuated::Punctuated,
+    Attribute, Expr, FnArg, ItemFn, LitStr, Pat, Path, ReturnType, Signature, Token, Type,
+    Visibility,
 };
 
 mod path;
+mod router;
 
 #[proc_macro_attribute]
 pub fn get(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_route(q!({ get }), path.into(), fn_item.into())
+    expand_http_method(q!({ get }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -29,7 +26,7 @@ pub fn post(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_route(q!({ post }), path.into(), fn_item.into())
+    expand_http_method(q!({ post }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -37,7 +34,7 @@ pub fn put(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_route(q!({ put }), path.into(), fn_item.into())
+    expand_http_method(q!({ put }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -45,7 +42,7 @@ pub fn delete(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_route(q!({ delete }), path.into(), fn_item.into())
+    expand_http_method(q!({ delete }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -53,7 +50,7 @@ pub fn head(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_route(q!({ head }), path.into(), fn_item.into())
+    expand_http_method(q!({ head }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -61,7 +58,7 @@ pub fn options(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_route(q!({ options }), path.into(), fn_item.into())
+    expand_http_method(q!({ options }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -69,13 +66,40 @@ pub fn patch(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_route(q!({ patch }), path.into(), fn_item.into())
+    expand_http_method(q!({ patch }), path.into(), fn_item.into())
 }
 
-fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro::TokenStream {
+/// Creates a router. Useful for modularizing codes.
+///
+///
+/// # Note
+///
+/// Currently router returns 404 error if there is a no matching rule.
+#[proc_macro_attribute]
+pub fn router(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    router::router(attr.into(), item.into()).dump().into()
+}
+
+struct FilterInput {
+    _eq: Token![=],
+    path: LitStr,
+}
+
+impl Parse for FilterInput {
+    fn parse(input: ParseStream) -> Result<Self, syn::Error> {
+        Ok(FilterInput {
+            _eq: input.parse()?,
+            path: input.parse()?,
+        })
+    }
+}
+
+fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro::TokenStream {
     let f: ItemFn = parse(f);
     let sig = &f.sig;
-    let block = &f.block;
 
     // Apply method filter
     let expr: Expr = q!(
@@ -86,7 +110,7 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
     )
     .parse();
 
-    let (mut expr, vars) = path::compile(expr, path, sig);
+    let (mut expr, vars) = path::compile(Some(expr), path, Some(sig), true);
 
     let handler_fn = {
         let mut inputs: Punctuated<FnArg, _> = f.sig.inputs.clone();
@@ -115,19 +139,23 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
             }
         }
 
-        {
+        let inputs = {
+            let mut actual_inputs = vec![];
+
             // Handle annotated parameters.
-            for i in inputs.pairs_mut() {
-                match i.into_value() {
+            for mut i in inputs.into_pairs() {
+                match i.value_mut() {
                     FnArg::Receiver(_) => continue,
-                    FnArg::Typed(pat) => {
+                    FnArg::Typed(ref mut pat) => {
                         if pat.attrs.is_empty() {
+                            actual_inputs.push(i);
                             continue;
                         }
 
                         let is_rweb_attr = pat.attrs.iter().any(is_rweb_attr);
                         if !is_rweb_attr {
                             // We don't care about this parameter.
+                            actual_inputs.push(i);
                             continue;
                         }
 
@@ -149,55 +177,121 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
                             expr = q!(Vars { expr }, { expr.and(rweb::filters::body::bytes()) })
                                 .parse()
                         } else if attr.path.is_ident("query") {
+                            expr =
+                                q!(Vars { expr }, { expr.and(rweb::filters::query::raw()) }).parse()
+                        } else if attr.path.is_ident("header") {
+                            if let Ok(header_name) = syn::parse2::<FilterInput>(attr.tokens.clone())
+                            {
+                                expr = q!(
+                                    Vars {
+                                        expr,
+                                        header_name: header_name.path
+                                    },
+                                    { expr.and(rweb::filters::header::header(header_name)) }
+                                )
+                                .parse();
+                            } else {
+                                unimplemented!("header {:?}", attr.tokens)
+                            }
+                        } else if attr.path.is_ident("filter") {
+                            let filter_path: FilterInput = parse(attr.tokens.clone());
+                            let filter_path = filter_path.path.value();
+                            let tts: TokenStream = filter_path.parse().expect("failed tokenize");
+                            let filter_path: Path = parse(tts);
+
+                            expr =
+                                q!(Vars { expr, filter_path }, { expr.and(filter_path()) }).parse();
+
+                            // Don't add unit type to argument list
+                            match i.value() {
+                                FnArg::Typed(pat) => match &*pat.ty {
+                                    Type::Tuple(tuple) if tuple.elems.is_empty() => continue,
+                                    _ => {}
+                                },
+                                _ => {}
+                            }
                         }
+
+                        actual_inputs.push(i);
                     }
                 }
             }
-        }
+
+            actual_inputs.into_iter().collect()
+        };
 
         ItemFn {
             attrs: f.attrs,
             vis: Visibility::Inherited,
+
             sig: Signature {
-                asyncness: None,
+                //                asyncness: None,
                 inputs,
                 ..f.sig.clone()
             },
-            block: if sig.asyncness.is_none() {
-                f.block
-            } else {
-                Quote::new(sig.asyncness.unwrap().span())
-                    .quote_with(smart_quote!(Vars { body: block }, {
-                        {
-                            rweb::rt::tokio::runtime::Builder::new()
-                                .basic_scheduler()
-                                .enable_all()
-                                .build()
-                                .unwrap()
-                                .block_on(async { body })
-                        }
-                    }))
-                    .parse()
-            },
+            block: f.block,
         }
     };
 
+    //    let args: Punctuated<Ident, Token![,]> = sig
+    //        .inputs
+    //        .pairs()
+    //        .enumerate()
+    //        .map(|(i, pair)| {
+    //            let (arg, comma) = pair.into_tuple();
+    //
+    //            Pair::new(Ident::new(&format!("arg{}", i), arg.span()),
+    // comma.clone())        })
+    //        .collect();
+
+    let expr = if sig.asyncness.is_some() {
+        q!(
+            Vars {
+                handler: &sig.ident,
+                expr
+            },
+            { expr.and_then(handler) }
+        )
+    } else {
+        q!(
+            Vars {
+                handler: &sig.ident,
+                expr
+            },
+            { expr.map(handler) }
+        )
+    }
+    .parse::<Expr>();
+
+    let ret = if sig.asyncness.is_some() {
+        q!((impl rweb::Reply)).dump()
+    } else {
+        match sig.output {
+            ReturnType::Default => panic!("http handler should return type"),
+            ReturnType::Type(_, ref ty) => ty.dump(),
+        }
+    };
+
+    let vis = f.vis;
+
     q!(
         Vars {
+            vis,
             expr,
             handler: &sig.ident,
+            Ret: ret,
             handler_fn,
         },
         {
             #[allow(non_camel_case_types)]
-            fn handler(
-            ) -> impl rweb::Filter<Extract = impl rweb::reply::Reply, Error = rweb::warp::Rejection>
+            vis fn handler(
+            ) -> impl rweb::Filter<Extract = (Ret,), Error = rweb::warp::Rejection>
                    + rweb::rt::Clone {
                 use rweb::Filter;
 
                 handler_fn
 
-                expr.map(handler)
+                expr
             }
         }
     )
@@ -209,4 +303,6 @@ fn is_rweb_attr(a: &Attribute) -> bool {
         || a.path.is_ident("form")
         || a.path.is_ident("body")
         || a.path.is_ident("query")
+        || a.path.is_ident("header")
+        || a.path.is_ident("filter")
 }
