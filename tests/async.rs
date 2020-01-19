@@ -30,7 +30,7 @@ async fn foo_test() {
     let filter = assert_filter(foo());
 
     let value = warp::test::request()
-        .path("/")
+        .path("/foo")
         .reply(&filter)
         .await
         .into_body();
