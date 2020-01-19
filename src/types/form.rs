@@ -21,7 +21,7 @@ use std::{
     future::Future,
     ops,
     pin::Pin,
-    rc::Rc,
+    sync::Arc,
     task::{Context, Poll},
 };
 
@@ -201,7 +201,7 @@ impl<T: Serialize> Responder for Form<T> {
 #[derive(Clone)]
 pub struct FormConfig {
     limit: usize,
-    ehandler: Option<Rc<dyn Fn(UrlencodedError, &Req) -> Error>>,
+    ehandler: Option<Arc<dyn Send + Sync + Fn(UrlencodedError, &Req) -> Error>>,
 }
 
 impl FormConfig {
@@ -214,9 +214,9 @@ impl FormConfig {
     /// Set custom error handler
     pub fn error_handler<F>(mut self, f: F) -> Self
     where
-        F: Fn(UrlencodedError, &Req) -> Error + 'static,
+        F: Fn(UrlencodedError, &Req) -> Error + 'static + Send + Sync,
     {
-        self.ehandler = Some(Rc::new(f));
+        self.ehandler = Some(Arc::new(f));
         self
     }
 }

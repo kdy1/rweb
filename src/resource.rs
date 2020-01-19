@@ -1,4 +1,5 @@
 use crate::{
+    data::Data,
     error::Error,
     extract::FromRequest,
     guard::Guard,
@@ -10,7 +11,7 @@ use crate::{
     util::insert_slash,
 };
 use futures::future::{ok, Either, LocalBoxFuture, Ready};
-use http::StatusCode;
+use http::{Extensions, StatusCode};
 use rweb_router::{IntoPattern, ResourceDef};
 use rweb_service::{
     apply, apply_fn_factory,
@@ -58,7 +59,7 @@ pub struct Resource<T = ResourceEndpoint> {
     rdef: Vec<String>,
     name: Option<String>,
     routes: Vec<Route>,
-    //    data: Option<Extensions>,
+    data: Option<Extensions>,
     guards: Vec<Box<dyn Guard>>,
     default: Rc<RefCell<Option<Rc<HttpNewService>>>>,
     factory_ref: Rc<RefCell<Option<ResourceFactory>>>,
@@ -75,7 +76,7 @@ impl Resource {
             endpoint: ResourceEndpoint::new(fref.clone()),
             factory_ref: fref,
             guards: Vec::new(),
-            //            data: None,
+            data: None,
             default: Rc::new(RefCell::new(None)),
         }
     }
@@ -165,49 +166,49 @@ where
         self
     }
 
-    //    /// Provide resource specific data. This method allows to add extractor
-    //    /// configuration or specific state available via `Data<T>` extractor.
-    //    /// Provided data is available for all routes registered for the current
-    //    /// resource. Resource data overrides data registered by `App::data()`
-    //    /// method.
-    //    ///
-    //    /// ```rust
-    //    /// use rweb::{web, App, FromRequest};
-    //    ///
-    //    /// /// extract text data from request
-    //    /// async fn index(body: String) -> String {
-    //    ///     format!("Body {}!", body)
-    //    /// }
-    //    ///
-    //    /// fn main() {
-    //    ///     let app = App::new().service(
-    //    ///         web::resource("/index.html")
-    //    ///           // limit size of the payload
-    //    ///           .data(String::configure(|cfg| {
-    //    ///                cfg.limit(4096)
-    //    ///           }))
-    //    ///           .route(
-    //    ///               web::get()
-    //    ///                  // register handler
-    //    ///                  .to(index)
-    //    ///           ));
-    //    /// }
-    //    /// ```
-    //    pub fn data<U: 'static>(self, data: U) -> Self {
-    //        self.app_data(Data::new(data))
-    //    }
+    /// Provide resource specific data. This method allows to add extractor
+    /// configuration or specific state available via `Data<T>` extractor.
+    /// Provided data is available for all routes registered for the current
+    /// resource. Resource data overrides data registered by `App::data()`
+    /// method.
+    ///
+    /// ```rust
+    /// use rweb::{web, App, FromRequest};
+    ///
+    /// /// extract text data from request
+    /// async fn index(body: String) -> String {
+    ///     format!("Body {}!", body)
+    /// }
+    ///
+    /// fn main() {
+    ///     let app = App::new().service(
+    ///         web::resource("/index.html")
+    ///           // limit size of the payload
+    ///           .data(String::configure(|cfg| {
+    ///                cfg.limit(4096)
+    ///           }))
+    ///           .route(
+    ///               web::get()
+    ///                  // register handler
+    ///                  .to(index)
+    ///           ));
+    /// }
+    /// ```
+    pub fn data<U: 'static + Send + Sync>(self, data: U) -> Self {
+        self.app_data(Data::new(data))
+    }
 
-    //    /// Set or override application data.
-    //    ///
-    //    /// This method overrides data stored with
-    //    /// [`App::app_data()`](#method.app_data)
-    //    pub fn app_data<U: 'static>(mut self, data: U) -> Self {
-    //        //        if self.data.is_none() {
-    //        //            self.data = Some(Extensions::new());
-    //        //        }
-    //        self.data.as_mut().unwrap().insert(data);
-    //        self
-    //    }
+    /// Set or override application data.
+    ///
+    /// This method overrides data stored with
+    /// [`App::app_data()`](#method.app_data)
+    pub fn app_data<U: 'static + Send + Sync>(mut self, data: U) -> Self {
+        //        if self.data.is_none() {
+        //            self.data = Some(Extensions::new());
+        //        }
+        self.data.as_mut().unwrap().insert(data);
+        self
+    }
 
     /// Register a new route and add handler. This route matches all requests.
     ///
@@ -224,7 +225,6 @@ where
     /// This is shortcut for:
     ///
     /// ```rust
-    /// # extern crate actix_web;
     /// # use rweb::*;
     /// # fn index(req: HttpRequest) -> HttpResponse { unimplemented!() }
     /// App::new().service(web::resource("/").route(web::route().to(index)));
@@ -264,7 +264,7 @@ where
             guards: self.guards,
             routes: self.routes,
             default: self.default,
-            //            data: self.data,
+            data: self.data,
             factory_ref: self.factory_ref,
         }
     }
@@ -320,7 +320,7 @@ where
             guards: self.guards,
             routes: self.routes,
             default: self.default,
-            //            data: self.data,
+            data: self.data,
             factory_ref: self.factory_ref,
         }
     }

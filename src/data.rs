@@ -4,7 +4,7 @@ use crate::{
     http::Payload,
     Req,
 };
-use futures::future::{err, ok, Ready};
+use futures::future::{err, ok, LocalBoxFuture, Ready};
 use http::Extensions;
 use std::{ops::Deref, sync::Arc};
 
@@ -12,6 +12,9 @@ use std::{ops::Deref, sync::Arc};
 pub(crate) trait DataFactory {
     fn create(&self, extensions: &mut Extensions) -> bool;
 }
+
+pub(crate) type FnDataFactory =
+    Box<dyn Fn() -> LocalBoxFuture<'static, Result<Box<dyn DataFactory>, ()>>>;
 
 /// Application data.
 ///
@@ -99,7 +102,10 @@ impl<T> Clone for Data<T> {
     }
 }
 
-impl<T: 'static> FromRequest for Data<T> {
+impl<T: 'static> FromRequest for Data<T>
+where
+    T: Send + Sync,
+{
     type Error = Error;
     type Future = Ready<Result<Self, Error>>;
     type Config = ();
@@ -120,9 +126,12 @@ impl<T: 'static> FromRequest for Data<T> {
     }
 }
 
-impl<T: 'static> DataFactory for Data<T> {
+impl<T> DataFactory for Data<T>
+where
+    T: 'static + Sync + Send,
+{
     fn create(&self, extensions: &mut Extensions) -> bool {
-        if !extensions.contains::<Data<T>>() {
+        if extensions.get::<Data<T>>().is_none() {
             extensions.insert(Data(self.0.clone()));
             true
         } else {

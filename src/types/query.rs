@@ -144,7 +144,7 @@ where
             .map(|c| c.ehandler.clone())
             .unwrap_or(None);
 
-        serde_urlencoded::from_str::<T>(req.query_string())
+        serde_urlencoded::from_str::<T>(req.query_string().unwrap_or(""))
             .map(|val| ok(Query(val)))
             .unwrap_or_else(move |e| {
                 let e = QueryPayloadError::Deserialize(e);

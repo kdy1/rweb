@@ -3,7 +3,7 @@ use crate::{error::Error, HttpMessage};
 use bytes::BytesMut;
 use futures::Stream;
 use http::{header::Entry, response::Parts, Extensions};
-use hyper::{body::Bytes, Method, Uri, Version};
+use hyper::{body::Bytes, Method, Request, Uri, Version};
 pub use hyper::{header::HeaderValue, http::StatusCode, HeaderMap};
 use pin_project::pin_project;
 use serde::de::DeserializeOwned;
@@ -58,33 +58,27 @@ where
 
 #[derive(Clone)]
 pub struct Req {
-    inner: Rc<ReqInner>,
-}
-
-struct ReqInner {
-    info: ReqInfo,
-    body: Payload,
+    inner: Rc<Request<Payload>>,
 }
 
 impl Req {
-    pub fn head(&self) -> &ReqInfo {
-        &self.inner.info
-    }
-
-    pub fn parts(&self) -> (&ReqInfo, &Payload) {
-        (&self.inner.info, &self.inner.body)
+    pub fn app_data<T>(&self) -> Option<&T>
+    where
+        T: 'static + Send + Sync,
+    {
+        self.inner.extensions().get()
     }
 
     pub fn path(&self) -> &str {
-        self.inner.info.uri.path()
+        self.inner.uri().path()
     }
 
     pub fn query_string(&self) -> Option<&str> {
-        self.inner.info.uri.query()
+        self.inner.uri().query()
     }
 
     pub fn headers(&self) -> &HeaderMap {
-        &self.inner.info.headers
+        &self.inner.headers()
     }
 
     /// Create service response for error
@@ -100,12 +94,12 @@ impl HttpMessage for Req {
     #[inline]
     /// Returns Request's headers.
     fn headers(&self) -> &HeaderMap {
-        &self.head().headers
+        self.inner.headers()
     }
 
     #[inline]
     fn take_payload(&mut self) -> Payload<Self::Stream> {
-        Rc::get_mut(&mut self.inner.body).unwrap().payload.take()
+        self.inner.body_mut().take()
     }
 
     /// Request extensions

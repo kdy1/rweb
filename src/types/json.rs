@@ -23,7 +23,7 @@ use crate::{
     extract::FromRequest,
     http::{Payload, StatusCode},
     responder::Responder,
-    Req, Resp,
+    HttpMessage, Req, Resp,
 };
 use hyper::header::CONTENT_LENGTH;
 
