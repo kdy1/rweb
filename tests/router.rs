@@ -17,3 +17,16 @@ struct MathRouter;
 fn router() {
     serve(MathRouter());
 }
+
+#[get("/no-arg")]
+fn no_arg() -> String {
+    String::new()
+}
+
+#[router("/math/complex", services(sum, mul, no_arg))]
+struct Complex;
+
+#[test]
+fn complex_router() {
+    serve(Complex());
+}

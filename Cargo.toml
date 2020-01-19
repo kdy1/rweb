@@ -19,6 +19,7 @@ tls = ["warp/rustls"]
 rweb-macros = { version = "0.2.1", path = "./macros" }
 tokio = { version = "0.2", features = ["macros"] }
 warp = "0.2"
+http = "0.2"
 
 [dev-dependencies]
 bytes = "0.5"
