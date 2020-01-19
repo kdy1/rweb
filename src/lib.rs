@@ -3,6 +3,7 @@ pub use self::{
     extract::FromRequest,
     http::{msg::HttpMessage, Req, Resp},
     response::Response,
+    types::*,
 };
 use crate::error::Error;
 pub use either::Either;
