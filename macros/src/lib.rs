@@ -177,8 +177,8 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                             expr = q!(Vars { expr }, { expr.and(rweb::filters::body::bytes()) })
                                 .parse()
                         } else if attr.path.is_ident("query") {
-                            expr = q!(Vars { expr }, { expr.and(rweb::filters::query::query()) })
-                                .parse()
+                            expr =
+                                q!(Vars { expr }, { expr.and(rweb::filters::query::raw()) }).parse()
                         } else if attr.path.is_ident("header") {
                             if let Ok(header_name) = syn::parse2::<FilterInput>(attr.tokens.clone())
                             {

@@ -19,6 +19,7 @@ fn handler_guard(#[filter = "accept_all_header"] _header: ()) -> String {
 async fn handler_guard_test() {
     let value = warp::test::request()
         .path("/")
+        .header("accept", "*/*")
         .reply(&handler_guard())
         .await
         .into_body();
@@ -35,11 +36,12 @@ fn handler_value(#[filter = "host_header"] addr: SocketAddr) -> String {
 async fn handler_value_test() {
     let value = warp::test::request()
         .path("/")
+        .header("host", "127.0.0.1:8080")
         .reply(&handler_value())
         .await
         .into_body();
 
-    assert_eq!(value, b"127.0.0.1"[..]);
+    assert_eq!(value, b"127.0.0.1:8080"[..]);
 }
 
 #[get("/")]
@@ -54,9 +56,11 @@ fn handler_mixed(
 async fn handler_mixed_test() {
     let value = warp::test::request()
         .path("/")
+        .header("accept", "*/*")
+        .header("host", "127.0.0.1:8080")
         .reply(&handler_mixed())
         .await
         .into_body();
 
-    assert_eq!(value, b"127.0.0.1"[..]);
+    assert_eq!(value, b"127.0.0.1:8080"[..]);
 }
