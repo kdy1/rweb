@@ -19,5 +19,4 @@ pub mod handler;
 pub mod http;
 mod responder;
 mod response;
-pub mod service;
 mod types;
