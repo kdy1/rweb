@@ -45,7 +45,7 @@ fn multiple_param_unordered(value: u8, name: String) -> Result<String, Error> {
 }
 
 #[test]
-fn app_service() {
+fn bind() {
     rweb::serve(
         index()
             .or(foo())
