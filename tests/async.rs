@@ -1,5 +1,5 @@
 use http::Error;
-use rweb::{get, serve};
+use rweb::get;
 
 async fn task() -> Result<String, Error> {
     Ok(String::from("TEST"))
