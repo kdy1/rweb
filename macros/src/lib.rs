@@ -6,7 +6,7 @@
 //! Parses request body.
 
 extern crate proc_macro;
-use pmutil::{q, smart_quote, Quote};
+use pmutil::{q, smart_quote, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
 use std::collections::HashSet;
 use syn::{
@@ -15,6 +15,7 @@ use syn::{
 };
 
 mod path;
+mod router;
 
 #[proc_macro_attribute]
 pub fn get(
@@ -70,6 +71,14 @@ pub fn patch(
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     expand_http_method(q!({ patch }), path.into(), fn_item.into())
+}
+
+#[proc_macro_attribute]
+pub fn router(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    router::router(attr.into(), item.into()).dump().into()
 }
 
 fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro::TokenStream {
