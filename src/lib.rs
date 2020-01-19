@@ -10,6 +10,7 @@ pub use either::Either;
 pub use rweb_macros::{connect, delete, get, head, options, patch, post, put, trace};
 pub use rweb_router::Path;
 pub use tokio::{main, test};
+pub use warp;
 
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 
@@ -29,3 +30,4 @@ pub mod route;
 pub mod service;
 mod types;
 mod util;
+pub mod warp_ext;
