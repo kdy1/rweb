@@ -32,3 +32,28 @@ async fn test_body_after_path_param() {
 
     assert_eq!(value, b"foo"[..]);
 }
+
+#[get("/param/{foo}")]
+fn path_param_after_body(#[json] body: LoginForm, foo: String) -> Result<String, Error> {
+    assert_eq!(body.id, "TEST_ID");
+    assert_eq!(body.password, "TEST_PASSWORD");
+    Ok(foo)
+}
+
+#[tokio::test]
+async fn test_path_param_after_body() {
+    let value = warp::test::request()
+        .path("/param/foo")
+        .body(
+            serde_json::to_vec(&LoginForm {
+                id: "TEST_ID".into(),
+                password: "TEST_PASSWORD".into(),
+            })
+            .unwrap(),
+        )
+        .reply(&path_param_after_body())
+        .await
+        .into_body();
+
+    assert_eq!(value, b"foo"[..]);
+}
