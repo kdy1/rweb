@@ -1,4 +1,3 @@
-use futures::future::ok;
 use http::StatusCode;
 use rweb::*;
 

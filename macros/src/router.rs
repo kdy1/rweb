@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use syn::{
     parse::{Parse, ParseStream},
     parse_quote::parse,
-    punctuated::{Pair, Punctuated},
+    punctuated::Punctuated,
     Error, Expr, ItemFn, ItemStruct, LitStr, Meta, Token,
 };
 
