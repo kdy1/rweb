@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use rweb::Filter;
+use rweb::{get, Filter};
 use std::{convert::Infallible, str::FromStr, time::Duration};
 
 #[tokio::main]
@@ -13,8 +13,9 @@ async fn main() {
     rweb::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }
 
-async fn sleepy(Seconds(seconds): Seconds) -> Result<impl rweb::Reply, Infallible> {
-    tokio::time::delay_for(Duration::from_secs(seconds)).await;
+#[get("/{seconds}")]
+async fn sleepy(seconds: Seconds) -> Result<impl rweb::Reply, Infallible> {
+    tokio::time::delay_for(Duration::from_secs(seconds.0)).await;
     Ok(format!("I waited {} seconds!", seconds))
 }
 
