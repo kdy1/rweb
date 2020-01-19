@@ -1,14 +1,12 @@
 #![deny(warnings)]
 
-use rweb::{get, Filter};
+use rweb::get;
 use std::{convert::Infallible, str::FromStr, time::Duration};
 
 #[tokio::main]
 async fn main() {
     // Match `/:Seconds`...
-    let routes = rweb::path::param()
-        // and_then create a `Future` that will simply wait N seconds...
-        .and_then(sleepy);
+    let routes = sleepy();
 
     rweb::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }
@@ -16,7 +14,7 @@ async fn main() {
 #[get("/{seconds}")]
 async fn sleepy(seconds: Seconds) -> Result<impl rweb::Reply, Infallible> {
     tokio::time::delay_for(Duration::from_secs(seconds.0)).await;
-    Ok(format!("I waited {} seconds!", seconds))
+    Ok(format!("I waited {} seconds!", seconds.0))
 }
 
 /// A newtype to enforce our maximum allowed seconds.

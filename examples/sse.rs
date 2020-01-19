@@ -1,6 +1,5 @@
 use futures::StreamExt;
-use http::Error;
-use rweb::{get, sse::ServerSentEvent, Filter, Reply};
+use rweb::{get, sse::ServerSentEvent, Reply};
 use std::{convert::Infallible, time::Duration};
 use tokio::time::interval;
 
@@ -10,7 +9,7 @@ fn sse_counter(counter: u64) -> Result<impl ServerSentEvent, Infallible> {
 }
 
 #[get("/ticks")]
-fn ticks() -> Result<impl Reply, Error> {
+fn ticks() -> impl Reply {
     let mut counter: u64 = 0;
     // create server event source
     let event_stream = interval(Duration::from_secs(1)).map(move |_| {

@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use rweb::{post, Filter, Reply};
+use rweb::{post, Reply};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
