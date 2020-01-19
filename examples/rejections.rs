@@ -1,24 +1,22 @@
 #![deny(warnings)]
 
+use rweb::{get, http::StatusCode, reject, Filter, Rejection, Reply};
+use serde::Serialize;
 use std::{convert::Infallible, num::NonZeroU16};
 
-use rweb::{http::StatusCode, reject, Filter, Rejection, Reply};
-use serde::Serialize;
+#[get("/math/{num}")]
+fn math(num: u16, #[filter = "div_by"] denom: NonZeroU16) -> impl Reply {
+    rweb::reply::json(&Math {
+        op: format!("{} / {}", num, denom),
+        output: num / denom.get(),
+    })
+}
 
 /// Rejections represent cases where a filter should not continue processing
 /// the request, but a different filter *could* process it.
 #[tokio::main]
 async fn main() {
-    let math = rweb::path!("math" / u16)
-        .and(div_by())
-        .map(|num: u16, denom: NonZeroU16| {
-            rweb::reply::json(&Math {
-                op: format!("{} / {}", num, denom),
-                output: num / denom.get(),
-            })
-        });
-
-    let routes = rweb::get().and(math).recover(handle_rejection);
+    let routes = rweb::get().and(math()).recover(handle_rejection);
 
     rweb::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }
