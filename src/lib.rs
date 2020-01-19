@@ -7,9 +7,9 @@ pub use self::{
 };
 use crate::error::Error;
 pub use either::Either;
-pub use rweb_macros::{connect, delete, get, head, options, patch, post, put, trace};
+pub use rweb_macros::{delete, get, head, options, patch, post, put};
 pub use tokio::{main, test};
-pub use warp;
+pub use warp::{self, filters};
 
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 

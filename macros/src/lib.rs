@@ -45,27 +45,11 @@ pub fn head(
 }
 
 #[proc_macro_attribute]
-pub fn connect(
-    path: proc_macro::TokenStream,
-    fn_item: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    expand_route(q!({ connect }), path.into(), fn_item.into())
-}
-
-#[proc_macro_attribute]
 pub fn options(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     expand_route(q!({ options }), path.into(), fn_item.into())
-}
-
-#[proc_macro_attribute]
-pub fn trace(
-    path: proc_macro::TokenStream,
-    fn_item: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    expand_route(q!({ trace }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -88,21 +72,21 @@ fn expand_route(method: Quote, path: TokenStream, fn_item: TokenStream) -> proc_
                 ReturnType::Default => q!({ () }),
                 ReturnType::Type(_, ref ty) => q!(Vars { ty }, { ty }),
             },
-            Item: &sig.ident,
+            handler: &sig.ident,
             body: &fn_item.block
         },
         {
             #[allow(non_camel_case_types)]
-            fn Item<PrevFilter>(prev: PrevFilter) -> impl warp::Filter {
-                async fn Item() -> Ret {
+            fn handler<PrevFilter>(prev: PrevFilter) -> impl warp::Filter {
+                use warp::Filter;
+
+                async fn handler() -> Ret {
                     body
                 }
 
-                let resource = rweb::resource::Resource::new(http_path)
-                    .name(stringify!(Item))
-                    .guard(rweb::guard::http::http_method())
-                    .to(Item);
-                rweb::service::HttpServiceFactory::register(resource, config)
+                rweb::filters::path::path(http_path)
+                    .and(rweb::filters::method::http_method())
+                    .map(handler)
             }
         }
     )
