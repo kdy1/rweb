@@ -275,10 +275,7 @@ mod tests {
     use serde_derive::Deserialize;
 
     use super::*;
-    use crate::{
-        test::TestRequest,
-        types::{Form, FormConfig},
-    };
+    use crate::types::{Form, FormConfig};
 
     #[derive(Deserialize, Debug, PartialEq)]
     struct Info {

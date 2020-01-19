@@ -153,7 +153,6 @@ mod tests {
     use mime;
 
     use super::*;
-    use crate::test::TestRequest;
 
     #[test]
     fn test_content_type() {
