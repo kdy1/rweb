@@ -3,9 +3,9 @@ use proc_macro2::TokenStream;
 use syn::{parse_quote::parse, punctuated::Punctuated, Expr, FnArg, LitStr, Pat, Signature, Token};
 
 pub fn compile(
-    base: Expr,
+    base: Option<Expr>,
     path: TokenStream,
-    sig: &Signature,
+    sig: Option<&Signature>,
     end: bool,
 ) -> (Expr, Vec<(String, usize)>) {
     let path: LitStr = parse(path);
@@ -23,37 +23,45 @@ pub fn compile(
     }
 
     let mut exprs: Punctuated<Expr, Token![.]> = Default::default();
-    exprs.push(base);
+    exprs.extend(base);
     let mut vars = vec![];
 
     for segment in segments {
         let expr = if segment.starts_with('{') {
             let v = &segment[1..segment.len() - 1];
 
-            let ty = sig
-                .inputs
-                .iter()
-                .enumerate()
-                .filter_map(|(idx, arg)| match arg {
-                    FnArg::Typed(ty) => match *ty.pat {
-                        Pat::Ident(ref i) if i.ident == v => {
-                            vars.push((v.to_string(), idx));
-                            Some(&ty.ty)
-                        }
+            if let Some(sig) = sig {
+                let ty = sig
+                    .inputs
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(idx, arg)| match arg {
+                        FnArg::Typed(ty) => match *ty.pat {
+                            Pat::Ident(ref i) if i.ident == v => {
+                                vars.push((v.to_string(), idx));
+                                Some(&ty.ty)
+                            }
+                            _ => None,
+                        },
+
                         _ => None,
-                    },
+                    })
+                    .next()
+                    .unwrap_or_else(|| panic!("failed to find parameter named `{}`", v));
 
-                    _ => None,
-                })
-                .next()
-                .unwrap_or_else(|| panic!("failed to find parameter named `{}`", v));
-
-            q!(Vars { ty }, { rweb::filters::path::param::<ty>() })
+                q!(Vars { ty }, { rweb::filters::path::param::<ty>() })
+            } else {
+                panic!("path parameters are not allowed here (currently)")
+            }
         } else {
             q!(Vars { segment }, { rweb::filters::path::path(segment) })
         };
 
-        exprs.push(q!(Vars { expr }, { and(expr) }).parse());
+        if exprs.is_empty() {
+            exprs.push(q!(Vars { expr }, { expr }).parse());
+        } else {
+            exprs.push(q!(Vars { expr }, { and(expr) }).parse());
+        }
     }
 
     if end {

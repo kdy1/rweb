@@ -15,5 +15,5 @@ struct MathRouter;
 
 #[test]
 fn router() {
-    serve(MathRouter);
+    serve(MathRouter());
 }
