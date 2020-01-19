@@ -3,7 +3,16 @@
 //! # Attribute on parameters
 //!
 //! ## `#[body]`
+//! Parses request body
+//
+//! ## `#[form]`
+//! Parses request body
+//
+//! ## `#[json]`
 //! Parses request body.
+//!
+//! ## `#[query]`
+//! Parses query string.
 
 extern crate proc_macro;
 use pmutil::{q, smart_quote, Quote, ToTokensExt};
@@ -158,8 +167,8 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                             expr = q!(Vars { expr }, { expr.and(rweb::filters::body::bytes()) })
                                 .parse()
                         } else if attr.path.is_ident("query") {
-                            expr =
-                                q!(Vars { expr }, { expr.and(rweb::filters::query::raw()) }).parse()
+                            expr = q!(Vars { expr }, { expr.and(rweb::filters::query::query()) })
+                                .parse()
                         }
                     }
                 }
