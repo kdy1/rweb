@@ -20,5 +20,5 @@ pub fn foo() -> Result<String, Error> {
 
 #[test]
 fn app_service() {
-    rweb::serve(index.or(foo));
+    rweb::serve(index().or(foo()));
 }
