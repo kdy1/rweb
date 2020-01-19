@@ -16,7 +16,6 @@ edition = "2018"
 
 [dependencies]
 rweb-macros = { path = "./macros" }
-rweb-router = { path = "./router" }
 rweb-service = { path = "./service" }
 bytes = "0.5.3"
 hyper = "0.13"
