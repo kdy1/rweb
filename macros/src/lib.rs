@@ -1,19 +1,19 @@
 //! A macro to convert a function to rweb handler.
 //!
-//! # Attributes
+//! # Attribute on parameters
 //!
 //! ## `#[body]`
-//! Parse request body.
-//!
-//! ## `#[json]`
-//! Parse request body as json.
+//! Parses request body.
 
 extern crate proc_macro;
 
 use pmutil::{q, Quote};
 use proc_macro2::TokenStream;
 use std::collections::HashSet;
-use syn::{parse_quote::parse, Expr, FnArg, ItemFn, Pat, Signature, Visibility};
+use syn::{
+    parse_quote::parse, punctuated::Punctuated, Attribute, Expr, FnArg, ItemFn, Pat, Signature,
+    Visibility,
+};
 
 mod path;
 
@@ -85,10 +85,10 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
     )
     .parse();
 
-    let (expr, vars) = path::compile(expr, path, sig);
+    let (mut expr, vars) = path::compile(expr, path, sig);
 
     let handler_fn = {
-        let mut inputs = f.sig.inputs.clone();
+        let mut inputs: Punctuated<FnArg, _> = f.sig.inputs.clone();
 
         {
             // Handle path parameters
@@ -116,6 +116,42 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
 
         {
             // Handle annotated parameters.
+            for i in inputs.pairs_mut() {
+                match i.into_value() {
+                    FnArg::Receiver(_) => continue,
+                    FnArg::Typed(pat) => {
+                        if pat.attrs.is_empty() {
+                            continue;
+                        }
+
+                        let is_rweb_attr = pat.attrs.iter().any(is_rweb_attr);
+                        if !is_rweb_attr {
+                            // We don't care about this parameter.
+                            continue;
+                        }
+
+                        if pat.attrs.len() != 1 {
+                            // TODO: Support cfg?
+                            panic!("rweb currently support only one attribute on a parameter")
+                        }
+
+                        let attr = pat.attrs.iter().next().unwrap().clone();
+                        pat.attrs = vec![];
+
+                        if attr.path.is_ident("form") {
+                            expr =
+                                q!(Vars { expr }, { expr.and(rweb::filters::body::form()) }).parse()
+                        } else if attr.path.is_ident("json") {
+                            expr =
+                                q!(Vars { expr }, { expr.and(rweb::filters::body::json()) }).parse()
+                        } else if attr.path.is_ident("body") {
+                            expr = q!(Vars { expr }, { expr.and(rweb::filters::body::bytes()) })
+                                .parse()
+                        } else if attr.path.is_ident("query") {
+                        }
+                    }
+                }
+            }
         }
 
         ItemFn {
@@ -149,4 +185,11 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
         }
     )
     .into()
+}
+
+fn is_rweb_attr(a: &Attribute) -> bool {
+    a.path.is_ident("json")
+        || a.path.is_ident("form")
+        || a.path.is_ident("body")
+        || a.path.is_ident("query")
 }

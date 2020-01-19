@@ -1,7 +1,8 @@
+use bytes::Bytes;
 use http::{Response, StatusCode};
 use hyper::Body;
-use rweb::{get, reply::Reply, Filter};
-use serde::Deserialize;
+use rweb::{post, reply::Reply, Filter};
+use serde::{Deserialize, Serialize};
 
 struct Error {}
 impl Reply for Error {
@@ -10,15 +11,34 @@ impl Reply for Error {
     }
 }
 
-#[derive(Deserialize)]
-struct Req {}
-
-#[get("/")]
-fn index(#[body] body: rweb::Json<Req>) -> Result<String, Error> {
-    Err(Error {})
+#[derive(Serialize, Deserialize)]
+struct LoginForm {
+    id: String,
+    password: String,
 }
+
+#[post("/json")]
+fn json(#[json] body: LoginForm) -> Result<String, Error> {
+    Ok(serde_json::to_string(&body).unwrap())
+}
+
+#[post("/body")]
+fn body(#[body] body: Bytes) -> Result<String, Error> {
+    let _ = body;
+    Ok(String::new())
+}
+
+#[post("/form")]
+fn form(#[form] body: LoginForm) -> Result<String, Error> {
+    Ok(serde_json::to_string(&body).unwrap())
+}
+
+//#[post("/")]
+//fn query(#[query] query: rweb::Json<Req>) -> Result<String, Error> {
+//    Err(Error {})
+//}
 
 #[test]
 fn bind() {
-    rweb::serve(index());
+    rweb::serve(json().or(body()).or(form()));
 }
