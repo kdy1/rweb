@@ -27,6 +27,10 @@ pub fn compile(
     let mut vars = vec![];
 
     for segment in segments {
+        if segment == "" {
+            continue;
+        }
+
         let expr = if segment.starts_with('{') {
             let v = &segment[1..segment.len() - 1];
 
