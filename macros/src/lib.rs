@@ -13,6 +13,12 @@
 //!
 //! ## `#[query]`
 //! Parses query string.
+//!
+//! ## `#[filter = "path_to_fn"]`
+//! Calls function.
+//!
+//! **Note**: If the callee returns `()`, you should use `()` as type of
+//! parameter.
 
 extern crate proc_macro;
 use pmutil::{q, Quote, ToTokensExt};
