@@ -4,8 +4,7 @@ extern crate proc_macro;
 
 use pmutil::{q, Quote};
 use proc_macro2::TokenStream;
-use std::mem::swap;
-use syn::{parse_quote::parse, FnArg, ItemFn, Pat, ReturnType, Signature, Visibility};
+use syn::{parse_quote::parse, FnArg, ItemFn, Pat, Signature, Visibility};
 
 mod path;
 
