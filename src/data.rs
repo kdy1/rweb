@@ -4,7 +4,7 @@ use crate::{
     http::Payload,
     Req,
 };
-use futures::future::{err, ok, LocalBoxFuture, Ready};
+use futures::future::{err, ok, Ready};
 use http::Extensions;
 use std::{ops::Deref, sync::Arc};
 
@@ -12,9 +12,6 @@ use std::{ops::Deref, sync::Arc};
 pub(crate) trait DataFactory {
     fn create(&self, extensions: &mut Extensions) -> bool;
 }
-
-pub(crate) type FnDataFactory =
-    Box<dyn Fn() -> LocalBoxFuture<'static, Result<Box<dyn DataFactory>, ()>>>;
 
 /// Application data.
 ///

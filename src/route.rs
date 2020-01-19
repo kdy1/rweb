@@ -56,10 +56,6 @@ impl Route {
             guards: Rc::new(Vec::new()),
         }
     }
-
-    pub(crate) fn take_guards(&mut self) -> Vec<Box<dyn Guard>> {
-        std::mem::replace(Rc::get_mut(&mut self.guards).unwrap(), Vec::new())
-    }
 }
 
 impl ServiceFactory for Route {

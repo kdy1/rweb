@@ -93,20 +93,16 @@ fn expand_route(method: Quote, path: TokenStream, fn_item: TokenStream) -> proc_
         },
         {
             #[allow(non_camel_case_types)]
-            struct Item;
-
-            impl rweb::service::HttpServiceFactory for Item {
-                fn register(self, config: &mut rweb::service::Registry) {
-                    async fn Item(_info: rweb::Path<()>) -> Ret {
-                        body
-                    }
-
-                    let resource = rweb::resource::Resource::new(http_path)
-                        .name(stringify!(Item))
-                        .guard(rweb::guard::http::http_method())
-                        .to(Item);
-                    rweb::service::HttpServiceFactory::register(resource, config)
+            fn Item<PrevFilter>(prev: PrevFilter) -> impl warp::Filter {
+                async fn Item() -> Ret {
+                    body
                 }
+
+                let resource = rweb::resource::Resource::new(http_path)
+                    .name(stringify!(Item))
+                    .guard(rweb::guard::http::http_method())
+                    .to(Item);
+                rweb::service::HttpServiceFactory::register(resource, config)
             }
         }
     )

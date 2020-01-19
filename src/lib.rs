@@ -1,4 +1,5 @@
 pub use self::{
+    app::App,
     extract::FromRequest,
     http::{msg::HttpMessage, Req, Resp},
     response::Response,
@@ -12,6 +13,7 @@ pub use warp;
 
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 
+mod app;
 pub mod data;
 pub mod encoding;
 pub mod error;
