@@ -1,10 +1,11 @@
-use rweb::{get, Filter};
+use http::{Response, StatusCode};
+use hyper::Body;
+use rweb::{get, reply::Reply, Filter};
 
 struct Error {}
-
-impl From<Error> for rweb::error::Error {
-    fn from(_: Error) -> Self {
-        unreachable!()
+impl Reply for Error {
+    fn into_response(self) -> Response<Body> {
+        StatusCode::from_u16(500).unwrap().into_response()
     }
 }
 

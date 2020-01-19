@@ -2,7 +2,8 @@ extern crate proc_macro;
 
 use pmutil::{q, Quote};
 use proc_macro2::TokenStream;
-use syn::{parse_quote::parse, ItemFn, ReturnType};
+use std::collections::HashMap;
+use syn::{parse_quote::parse, Expr, ItemFn, LitStr, ReturnType};
 
 #[proc_macro_attribute]
 pub fn get(
@@ -64,6 +65,8 @@ fn expand_route(method: Quote, path: TokenStream, fn_item: TokenStream) -> proc_
     let fn_item: ItemFn = parse(fn_item);
     let sig = &fn_item.sig;
 
+    let (path, _) = expand_path(path);
+
     q!(
         Vars {
             http_method: method,
@@ -77,18 +80,28 @@ fn expand_route(method: Quote, path: TokenStream, fn_item: TokenStream) -> proc_
         },
         {
             #[allow(non_camel_case_types)]
-            fn handler() -> impl rweb::Filter<Error = rweb::warp::Rejection> + ::std::clone::Clone {
+            fn handler(
+            ) -> impl rweb::Filter<Extract = impl rweb::reply::Reply, Error = rweb::warp::Rejection>
+                   + ::std::clone::Clone {
                 use rweb::Filter;
 
-                async fn handler() -> Ret {
+                fn handler() -> Ret {
                     body
                 }
 
-                rweb::filters::path::path(http_path)
+                http_path
                     .and(rweb::filters::method::http_method())
                     .map(handler)
             }
         }
     )
     .into()
+}
+
+fn expand_path(path: TokenStream) -> (Expr, HashMap<String, String>) {
+    let http_path: LitStr = parse(path);
+
+    let expr = q!(Vars { http_path }, { rweb::filters::path::path(http_path) }).parse();
+
+    (expr, Default::default())
 }
