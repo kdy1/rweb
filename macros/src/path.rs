@@ -1,10 +1,7 @@
-use pmutil::{q, Quote};
+use pmutil::q;
 use proc_macro2::TokenStream;
 use std::collections::HashMap;
-use syn::{
-    parse_quote::parse, punctuated::Punctuated, Expr, FnArg, ItemFn, LitStr, Pat, PatType,
-    ReturnType, Signature, Token,
-};
+use syn::{parse_quote::parse, punctuated::Punctuated, Expr, FnArg, LitStr, Pat, Signature, Token};
 
 pub fn compile(path: TokenStream, sig: &Signature) -> (Expr, HashMap<String, String>) {
     let path: LitStr = parse(path);

@@ -1,41 +1,10 @@
 //! A macro to convert a function to rweb handler.
-//!
-//! # Examples
-//!
-//!```
-//! use serde::Deserialize;
-//!
-//! #[get("/")]
-//! fn index(){
-//! }
-//!
-//! #[get("/hello/{name}")]
-//! fn path_arg(name: String) {
-//!
-//! }
-//!
-//! #[get("/hello/{name}")]
-//! fn path_arg_types(name: u32) {
-//!
-//! }
-//!
-//! #[derive(Deserialize)]
-//! struct Body {
-//!
-//! }
-//!
-//! #[post("/body/json/{name}")]
-//! fn json_body_req(name: String, body: web::Json<Body>) {
-//!
-//! }
-//! ```
 
 extern crate proc_macro;
 
 use pmutil::{q, Quote};
 use proc_macro2::TokenStream;
-use std::collections::HashMap;
-use syn::{parse_quote::parse, Expr, ItemFn, LitStr, ReturnType, Signature};
+use syn::{parse_quote::parse, ItemFn, ReturnType};
 
 mod path;
 
