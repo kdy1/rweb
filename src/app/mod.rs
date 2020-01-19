@@ -11,6 +11,8 @@ use http::Extensions;
 use rweb_service::{apply, boxed, IntoServiceFactory, ServiceFactory, Transform};
 use std::{fmt, future::Future, rc::Rc};
 
+mod hyper;
+
 /// An application builder.
 pub struct App<S, Body>
 where
