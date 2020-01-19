@@ -16,13 +16,11 @@
 
 extern crate proc_macro;
 use pmutil::{q, smart_quote, Quote, ToTokensExt};
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use std::collections::HashSet;
 use syn::{
-    parse_quote::parse,
-    punctuated::{Pair, Punctuated},
-    spanned::Spanned,
-    Attribute, Expr, FnArg, ItemFn, Pat, ReturnType, Signature, Token, Visibility,
+    parse_quote::parse, punctuated::Punctuated, spanned::Spanned, Attribute, Expr, FnArg, ItemFn,
+    Pat, ReturnType, Signature, Visibility,
 };
 
 mod path;
@@ -241,14 +239,20 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
     }
     .parse::<Expr>();
 
+    let ret = if sig.asyncness.is_some() {
+        q!((impl rweb::Reply)).dump()
+    } else {
+        match sig.output {
+            ReturnType::Default => panic!("http handler should return type"),
+            ReturnType::Type(_, ref ty) => ty.dump(),
+        }
+    };
+
     q!(
         Vars {
             expr,
             handler: &sig.ident,
-            Ret: match sig.output {
-                ReturnType::Default => panic!("http handler should return type"),
-                ReturnType::Type(_, ref ty) => ty,
-            },
+            Ret: ret,
             handler_fn,
         },
         {
