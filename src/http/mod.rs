@@ -1,5 +1,5 @@
 use self::error::PayloadError;
-use crate::{error::Error, HttpMessage};
+use crate::{error::Error, HttpMessage, Path};
 use bytes::BytesMut;
 use futures::Stream;
 use http::{header::Entry, response::Parts, Extensions};
@@ -72,6 +72,20 @@ impl Req {
         &self.inner.0
     }
 
+    fn head_mut(&mut self) -> &mut ReqInfo {
+        &mut Rc::get_mut(&mut self.inner)
+            .expect("Rc::get_mut() failed")
+            .0
+    }
+
+    pub fn match_info(&self) -> &Path<Uri> {
+        &self.head().match_info
+    }
+
+    pub fn match_info_mut(&mut self) -> &mut Path<Uri> {
+        &mut self.head_mut().match_info
+    }
+
     pub fn path(&self) -> &str {
         self.head().uri.path()
     }
@@ -117,10 +131,7 @@ impl HttpMessage for Req {
     /// Mutable reference to a the request's extensions
     #[inline]
     fn extensions_mut(&mut self) -> &mut Extensions {
-        &mut Rc::get_mut(&mut self.inner)
-            .expect("Rc::get_mut failed")
-            .0
-            .extensions
+        &mut self.head_mut().extensions
     }
 }
 
@@ -134,6 +145,8 @@ pub struct ReqInfo {
     extensions: Extensions,
     /// The request's headers.
     pub headers: HeaderMap,
+
+    match_info: Path<Uri>,
 }
 
 impl ReqInfo {
