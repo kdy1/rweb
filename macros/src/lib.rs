@@ -86,7 +86,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
     )
     .parse();
 
-    let (mut expr, vars) = path::compile(expr, path, sig);
+    let (mut expr, vars) = path::compile(expr, path, sig, true);
 
     let handler_fn = {
         let mut inputs: Punctuated<FnArg, _> = f.sig.inputs.clone();

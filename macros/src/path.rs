@@ -2,7 +2,12 @@ use pmutil::q;
 use proc_macro2::TokenStream;
 use syn::{parse_quote::parse, punctuated::Punctuated, Expr, FnArg, LitStr, Pat, Signature, Token};
 
-pub fn compile(base: Expr, path: TokenStream, sig: &Signature) -> (Expr, Vec<(String, usize)>) {
+pub fn compile(
+    base: Expr,
+    path: TokenStream,
+    sig: &Signature,
+    end: bool,
+) -> (Expr, Vec<(String, usize)>) {
     let path: LitStr = parse(path);
     let path = path.value();
     assert!(path.starts_with('/'), "Path should start with /");
@@ -50,7 +55,10 @@ pub fn compile(base: Expr, path: TokenStream, sig: &Signature) -> (Expr, Vec<(St
 
         exprs.push(q!(Vars { expr }, { and(expr) }).parse());
     }
-    exprs.push(q!({ and(rweb::filters::path::end()) }).parse());
+
+    if end {
+        exprs.push(q!({ and(rweb::filters::path::end()) }).parse());
+    }
 
     (q!(Vars { exprs }, { exprs }).parse(), vars)
 }
