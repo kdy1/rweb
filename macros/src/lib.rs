@@ -16,11 +16,13 @@
 
 extern crate proc_macro;
 use pmutil::{q, smart_quote, Quote, ToTokensExt};
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use std::collections::HashSet;
 use syn::{
-    parse_quote::parse, punctuated::Punctuated, spanned::Spanned, Attribute, Expr, FnArg, ItemFn,
-    Pat, ReturnType, Signature, Visibility,
+    parse_quote::parse,
+    punctuated::{Pair, Punctuated},
+    spanned::Spanned,
+    Attribute, Expr, FnArg, ItemFn, Pat, ReturnType, Signature, Token, Visibility,
 };
 
 mod path;
@@ -186,11 +188,11 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
             vis: Visibility::Inherited,
 
             sig: Signature {
-                asyncness: None,
+                //                asyncness: None,
                 inputs,
                 ..f.sig.clone()
             },
-            block: if sig.asyncness.is_none() {
+            block: if true {
                 f.block
             } else {
                 Quote::new(sig.asyncness.unwrap().span())
@@ -209,14 +211,44 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
         }
     };
 
+    //    let args: Punctuated<Ident, Token![,]> = sig
+    //        .inputs
+    //        .pairs()
+    //        .enumerate()
+    //        .map(|(i, pair)| {
+    //            let (arg, comma) = pair.into_tuple();
+    //
+    //            Pair::new(Ident::new(&format!("arg{}", i), arg.span()),
+    // comma.clone())        })
+    //        .collect();
+
+    let expr = if sig.asyncness.is_some() {
+        q!(
+            Vars {
+                handler: &sig.ident,
+                expr
+            },
+            { expr.and_then(handler) }
+        )
+    } else {
+        q!(
+            Vars {
+                handler: &sig.ident,
+                expr
+            },
+            { expr.map(handler) }
+        )
+    }
+    .parse::<Expr>();
+
     q!(
         Vars {
             expr,
+            handler: &sig.ident,
             Ret: match sig.output {
                 ReturnType::Default => panic!("http handler should return type"),
                 ReturnType::Type(_, ref ty) => ty,
             },
-            handler: &sig.ident,
             handler_fn,
         },
         {
@@ -228,7 +260,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
 
                 handler_fn
 
-                expr.map(handler)
+                expr
             }
         }
     )
