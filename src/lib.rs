@@ -10,9 +10,11 @@ pub use warp::{self, filters, reject, reply, serve, test, Filter};
 
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 
+pub mod actix_handler;
 pub mod error;
 mod extract;
-pub mod handler;
 pub mod http;
 mod responder;
+#[doc(hidden)]
+pub mod rt;
 mod types;

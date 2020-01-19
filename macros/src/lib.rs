@@ -5,7 +5,7 @@ extern crate proc_macro;
 use pmutil::{q, Quote};
 use proc_macro2::TokenStream;
 use std::collections::HashSet;
-use syn::{parse_quote::parse, FnArg, ItemFn, Pat, Signature, Visibility};
+use syn::{parse_quote::parse, Expr, FnArg, ItemFn, Pat, Signature, Visibility};
 
 mod path;
 
@@ -71,12 +71,16 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
 
     let (path, vars) = path::compile(path, sig);
 
+    let mut type_arg_cnt = sig.inputs.len();
+
     let handler_fn = {
         let mut sig = f.sig.clone();
         let mut done = HashSet::new();
 
         for (orig_idx, (name, idx)) in vars.into_iter().enumerate() {
-            if orig_idx == idx || done.contains(&orig_idx) {
+            type_arg_cnt -= 1;
+
+            if done.contains(&orig_idx) {
                 continue;
             }
 
@@ -103,13 +107,43 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
             block: f.block,
         }
     };
+    let has_type_param = type_arg_cnt != 0;
+
+    let filter_expr: Expr = if has_type_param {
+        q!(
+            Vars {
+                http_method: method,
+                http_path: &path,
+                handler: &sig.ident,
+            },
+            {
+                http_path
+                    .and(rweb::filters::method::http_method())
+                    .map(rweb::rt::wrap_typed(handler))
+            }
+        )
+        .parse()
+    } else {
+        q!(
+            Vars {
+                http_method: method,
+                http_path: &path,
+                handler: &sig.ident,
+            },
+            {
+                http_path
+                    .and(rweb::filters::method::http_method())
+                    .map(handler)
+            }
+        )
+        .parse()
+    };
 
     q!(
         Vars {
-            http_method: method,
-            http_path: &path,
             handler: &sig.ident,
             handler_fn,
+            filter_expr,
         },
         {
             #[allow(non_camel_case_types)]
@@ -120,9 +154,7 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
 
                 handler_fn
 
-                http_path
-                    .and(rweb::filters::method::http_method())
-                    .map(handler)
+                filter_expr
             }
         }
     )
