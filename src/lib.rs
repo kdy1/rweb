@@ -12,7 +12,6 @@ pub use warp::{self, filters, reject, reply, serve, Filter};
 
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 
-pub mod data;
 pub mod error;
 mod extract;
 pub mod handler;
