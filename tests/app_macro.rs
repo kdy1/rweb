@@ -10,26 +10,26 @@ impl Reply for Error {
 }
 
 #[get("/")]
-pub fn index() -> Result<String, Error> {
+fn index() -> Result<String, Error> {
     Err(Error {})
 }
 
 #[get("/foo")]
-pub fn foo() -> Result<String, Error> {
+fn foo() -> Result<String, Error> {
     Ok(String::new())
 }
 
 #[get("/param/{foo}")]
-pub fn param(foo: String) -> Result<String, Error> {
+fn param(foo: String) -> Result<String, Error> {
     Ok(foo)
 }
 
 #[get("/param/{v}")]
-pub fn param_typed(v: u32) -> Result<String, Error> {
+fn param_typed(v: u32) -> Result<String, Error> {
     Ok(v.to_string())
 }
 
 #[test]
 fn app_service() {
-    rweb::serve(foo().or(index()));
+    rweb::serve(index().or(foo()).or(param()).or(param_typed()));
 }
