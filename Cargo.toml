@@ -1,5 +1,4 @@
 [workspace]
-members = ["testing"]
 
 [package]
 name = "rweb"
@@ -11,5 +10,21 @@ description = "Yet another web server framework for rust"
 edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+
+
 [dependencies]
 rweb-macros = { path = "./macros" }
+tokio = { version = "0.2", features = ["macros"] }
+warp = "0.2"
+
+[dev-dependencies]
+bytes = "0.5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+http = "0.2"
+hyper = "0.13"
+
+
+[patch.crates-io]
+warp = { git = "https://github.com/kdy1/warp.git" }
