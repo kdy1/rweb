@@ -96,7 +96,7 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
             let mut done = HashSet::new();
 
             for (orig_idx, (name, idx)) in vars.into_iter().enumerate() {
-                if done.contains(&orig_idx) {
+                if orig_idx == idx || done.contains(&orig_idx) {
                     continue;
                 }
 
