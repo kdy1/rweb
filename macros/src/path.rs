@@ -38,7 +38,7 @@ pub fn compile(path: TokenStream, sig: &Signature) -> (Expr, HashMap<String, Str
                     _ => None,
                 })
                 .next()
-                .unwrap_or_else(|| panic!("failed to find parameter named {}", v));
+                .unwrap_or_else(|| panic!("failed to find parameter named `{}`", v));
 
             q!(Vars { ty }, { rweb::filters::path::param::<ty>() })
         } else {
