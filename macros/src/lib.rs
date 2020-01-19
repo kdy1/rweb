@@ -82,6 +82,12 @@ pub fn patch(
     expand_http_method(q!({ patch }), path.into(), fn_item.into())
 }
 
+/// Creates a router. Useful for modularizing codes.
+///
+///
+/// # Note
+///
+/// Currently router returns 404 error if there is a no matching rule.
 #[proc_macro_attribute]
 pub fn router(
     attr: proc_macro::TokenStream,
