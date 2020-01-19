@@ -77,7 +77,7 @@ fn expand_route(method: Quote, path: TokenStream, fn_item: TokenStream) -> proc_
         },
         {
             #[allow(non_camel_case_types)]
-            fn handler() -> impl rweb::Filter<Error = rweb::warp::Rejection> {
+            fn handler() -> impl rweb::Filter<Error = rweb::warp::Rejection> + ::std::clone::Clone {
                 use rweb::Filter;
 
                 async fn handler() -> Ret {
