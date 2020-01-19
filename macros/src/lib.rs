@@ -1,4 +1,12 @@
 //! A macro to convert a function to rweb handler.
+//!
+//! # Attributes
+//!
+//! ## `#[body]`
+//! Parse request body.
+//!
+//! ## `#[json]`
+//! Parse request body as json.
 
 extern crate proc_macro;
 
@@ -75,25 +83,30 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
 
     let handler_fn = {
         let mut sig = f.sig.clone();
-        let mut done = HashSet::new();
 
-        for (orig_idx, (name, idx)) in vars.into_iter().enumerate() {
-            type_arg_cnt -= 1;
+        {
+            // Handle path parameters
 
-            if done.contains(&orig_idx) {
-                continue;
-            }
+            let mut done = HashSet::new();
 
-            match &f.sig.inputs[idx] {
-                FnArg::Typed(pat) => match *pat.pat {
-                    Pat::Ident(ref i) if i.ident == name => {
-                        sig.inputs[orig_idx] = f.sig.inputs[idx].clone();
-                        sig.inputs[idx] = f.sig.inputs[orig_idx].clone();
-                        done.insert(idx);
-                    }
+            for (orig_idx, (name, idx)) in vars.into_iter().enumerate() {
+                type_arg_cnt -= 1;
+
+                if done.contains(&orig_idx) {
+                    continue;
+                }
+
+                match &f.sig.inputs[idx] {
+                    FnArg::Typed(pat) => match *pat.pat {
+                        Pat::Ident(ref i) if i.ident == name => {
+                            sig.inputs[orig_idx] = f.sig.inputs[idx].clone();
+                            sig.inputs[idx] = f.sig.inputs[orig_idx].clone();
+                            done.insert(idx);
+                        }
+                        _ => {}
+                    },
                     _ => {}
-                },
-                _ => {}
+                }
             }
         }
 

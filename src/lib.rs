@@ -15,6 +15,4 @@ pub mod error;
 mod extract;
 pub mod http;
 mod responder;
-#[doc(hidden)]
-pub mod rt;
 mod types;

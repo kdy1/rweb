@@ -14,7 +14,7 @@ impl Reply for Error {
 struct Req {}
 
 #[get("/")]
-fn index(body: rweb::Json<Req>) -> Result<String, Error> {
+fn index(#[json] body: rweb::Json<Req>) -> Result<String, Error> {
     Err(Error {})
 }
 
