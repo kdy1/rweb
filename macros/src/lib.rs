@@ -1,25 +1,3 @@
-//! A macro to convert a function to rweb handler.
-//!
-//! # Attribute on parameters
-//!
-//! ## `#[body]`
-//! Parses request body
-//
-//! ## `#[form]`
-//! Parses request body
-//
-//! ## `#[json]`
-//! Parses request body.
-//!
-//! ## `#[query]`
-//! Parses query string.
-//!
-//! ## `#[filter = "path_to_fn"]`
-//! Calls function.
-//!
-//! **Note**: If the callee returns `()`, you should use `()` as type of
-//! parameter.
-
 extern crate proc_macro;
 use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
