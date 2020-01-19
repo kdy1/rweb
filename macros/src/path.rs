@@ -1,9 +1,8 @@
 use pmutil::q;
 use proc_macro2::TokenStream;
-use std::collections::HashMap;
 use syn::{parse_quote::parse, punctuated::Punctuated, Expr, FnArg, LitStr, Pat, Signature, Token};
 
-pub fn compile(path: TokenStream, sig: &Signature) -> (Expr, HashMap<String, usize>) {
+pub fn compile(path: TokenStream, sig: &Signature) -> (Expr, Vec<(String, usize)>) {
     let path: LitStr = parse(path);
     let path = path.value();
     assert!(path.starts_with('/'), "Path should start with /");
@@ -19,7 +18,7 @@ pub fn compile(path: TokenStream, sig: &Signature) -> (Expr, HashMap<String, usi
     }
 
     let mut exprs: Punctuated<Expr, Token![.]> = Default::default();
-    let mut map = HashMap::default();
+    let mut vars = vec![];
 
     for segment in segments {
         let is_empty = exprs.is_empty();
@@ -34,7 +33,7 @@ pub fn compile(path: TokenStream, sig: &Signature) -> (Expr, HashMap<String, usi
                 .filter_map(|(idx, arg)| match arg {
                     FnArg::Typed(ty) => match *ty.pat {
                         Pat::Ident(ref i) if i.ident == v => {
-                            map.insert(v.to_string(), idx);
+                            vars.push((v.to_string(), idx));
                             Some(&ty.ty)
                         }
                         _ => None,
@@ -58,5 +57,5 @@ pub fn compile(path: TokenStream, sig: &Signature) -> (Expr, HashMap<String, usi
     }
     exprs.push(q!({ and(rweb::filters::path::end()) }).parse());
 
-    (q!(Vars { exprs }, { exprs }).parse(), map)
+    (q!(Vars { exprs }, { exprs }).parse(), vars)
 }

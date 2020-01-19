@@ -4,6 +4,7 @@ extern crate proc_macro;
 
 use pmutil::{q, Quote};
 use proc_macro2::TokenStream;
+use std::collections::HashSet;
 use syn::{parse_quote::parse, FnArg, ItemFn, Pat, Signature, Visibility};
 
 mod path;
@@ -68,17 +69,23 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
     let f: ItemFn = parse(f);
     let sig = &f.sig;
 
-    let (path, map) = path::compile(path, sig);
+    let (path, vars) = path::compile(path, sig);
 
     let handler_fn = {
         let mut sig = f.sig.clone();
+        let mut done = HashSet::new();
 
-        for (orig_idx, (name, idx)) in map.into_iter().enumerate() {
+        for (orig_idx, (name, idx)) in vars.into_iter().enumerate() {
+            if orig_idx == idx || done.contains(&orig_idx) {
+                continue;
+            }
+
             match &f.sig.inputs[idx] {
                 FnArg::Typed(pat) => match *pat.pat {
-                    Pat::Ident(ref i) if i.ident == name && orig_idx != idx => {
+                    Pat::Ident(ref i) if i.ident == name => {
                         sig.inputs[orig_idx] = f.sig.inputs[idx].clone();
                         sig.inputs[idx] = f.sig.inputs[orig_idx].clone();
+                        done.insert(idx);
                     }
                     _ => {}
                 },
