@@ -2,7 +2,7 @@
 
 [package]
 name = "rweb"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["강동윤 <kdy1997.dev@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/kdy1/rweb.git"
@@ -11,6 +11,7 @@ edition = "2018"
 
 [features]
 default = ["multipart", "websocket"]
+multipart = ["warp/multipart"]
 websocket = ["warp/websocket"]
 tls = ["warp/rustls"]
 
