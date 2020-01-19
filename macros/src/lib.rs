@@ -4,7 +4,7 @@ extern crate proc_macro;
 
 use pmutil::{q, Quote};
 use proc_macro2::TokenStream;
-use syn::{parse_quote::parse, ItemFn, ReturnType};
+use syn::{parse_quote::parse, ItemFn, ReturnType, Visibility};
 
 mod path;
 
@@ -64,11 +64,18 @@ pub fn patch(
     expand_route(q!({ patch }), path.into(), fn_item.into())
 }
 
-fn expand_route(method: Quote, path: TokenStream, fn_item: TokenStream) -> proc_macro::TokenStream {
-    let fn_item: ItemFn = parse(fn_item);
-    let sig = &fn_item.sig;
+fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro::TokenStream {
+    let f: ItemFn = parse(f);
+    let sig = &f.sig;
 
     let (path, _) = path::compile(path, sig);
+
+    let handler_fn = ItemFn {
+        attrs: vec![],
+        vis: Visibility::Inherited,
+        sig: f.sig.clone(),
+        block: f.block,
+    };
 
     q!(
         Vars {
@@ -79,7 +86,7 @@ fn expand_route(method: Quote, path: TokenStream, fn_item: TokenStream) -> proc_
                 ReturnType::Type(_, ref ty) => q!(Vars { ty }, { ty }),
             },
             handler: &sig.ident,
-            body: &fn_item.block
+            handler_fn,
         },
         {
             #[allow(non_camel_case_types)]
@@ -88,9 +95,7 @@ fn expand_route(method: Quote, path: TokenStream, fn_item: TokenStream) -> proc_
                    + ::std::clone::Clone {
                 use rweb::Filter;
 
-                fn handler() -> Ret {
-                    body
-                }
+                handler_fn
 
                 http_path
                     .and(rweb::filters::method::http_method())
