@@ -19,4 +19,6 @@ pub fn foo() -> Result<String, Error> {
 }
 
 #[test]
-fn app_service() {}
+fn app_service() {
+    rweb::serve(app())
+}
