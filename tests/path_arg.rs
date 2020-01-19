@@ -30,10 +30,7 @@ fn form(#[form] body: LoginForm) -> Result<String, Error> {
 //    Err(Error {})
 //}
 
-#[test]
-fn bind() {
+#[tokio::test]
+async fn bind() {
     rweb::serve(json().or(body()).or(form()));
 }
-
-#[tokio::test]
-async fn bind2() {}

@@ -1,8 +1,8 @@
 use http::Error;
-use rweb::{get, serve, Filter};
+use rweb::{get, serve};
 
 async fn task() -> Result<String, Error> {
-    Ok(String::new())
+    Ok(String::from("TEST"))
 }
 
 #[get("/")]
@@ -21,7 +21,35 @@ async fn param(foo: String) -> Result<String, Error> {
     task().await
 }
 
-#[test]
-fn bind() {
-    serve(index().or(foo()).or(param()));
+#[tokio::test]
+async fn index_test() {
+    let value = warp::test::request()
+        .path("/")
+        .reply(&index())
+        .await
+        .into_body();
+
+    assert_eq!(value, b"TEST"[..]);
+}
+
+#[tokio::test]
+async fn foo_test() {
+    let value = warp::test::request()
+        .path("/")
+        .reply(&foo())
+        .await
+        .into_body();
+
+    assert_eq!(value, b"TEST"[..]);
+}
+
+#[tokio::test]
+async fn param_test() {
+    let value = warp::test::request()
+        .path("/param/param")
+        .reply(&param())
+        .await
+        .into_body();
+
+    assert_eq!(value, b"TEST"[..]);
 }
