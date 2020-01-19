@@ -3,7 +3,7 @@
 use std::{convert::Infallible, num::NonZeroU16};
 
 use rweb::{http::StatusCode, reject, Filter, Rejection, Reply};
-use serde_derive::Serialize;
+use serde::Serialize;
 
 /// Rejections represent cases where a filter should not continue processing
 /// the request, but a different filter *could* process it.
