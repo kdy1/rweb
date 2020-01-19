@@ -79,8 +79,6 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
 
     let (path, vars) = path::compile(path, sig);
 
-    let mut type_arg_cnt = sig.inputs.len();
-
     let handler_fn = {
         let mut sig = f.sig.clone();
 
@@ -90,8 +88,6 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
             let mut done = HashSet::new();
 
             for (orig_idx, (name, idx)) in vars.into_iter().enumerate() {
-                type_arg_cnt -= 1;
-
                 if done.contains(&orig_idx) {
                     continue;
                 }
@@ -120,37 +116,20 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
             block: f.block,
         }
     };
-    let has_type_param = type_arg_cnt != 0;
 
-    let filter_expr: Expr = if has_type_param {
-        q!(
-            Vars {
-                http_method: method,
-                http_path: &path,
-                handler: &sig.ident,
-            },
-            {
-                http_path
-                    .and(rweb::filters::method::http_method())
-                    .map(rweb::rt::wrap_typed(handler))
-            }
-        )
-        .parse()
-    } else {
-        q!(
-            Vars {
-                http_method: method,
-                http_path: &path,
-                handler: &sig.ident,
-            },
-            {
-                http_path
-                    .and(rweb::filters::method::http_method())
-                    .map(handler)
-            }
-        )
-        .parse()
-    };
+    let filter_expr: Expr = q!(
+        Vars {
+            http_method: method,
+            http_path: &path,
+            handler: &sig.ident,
+        },
+        {
+            http_path
+                .and(rweb::filters::method::http_method())
+                .map(handler)
+        }
+    )
+    .parse();
 
     q!(
         Vars {
