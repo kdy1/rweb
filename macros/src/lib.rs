@@ -15,12 +15,15 @@
 //! Parses query string.
 
 extern crate proc_macro;
-use pmutil::{q, smart_quote, Quote, ToTokensExt};
+use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
 use std::collections::HashSet;
 use syn::{
-    parse_quote::parse, punctuated::Punctuated, spanned::Spanned, Attribute, Expr, FnArg, ItemFn,
-    Pat, ReturnType, Signature, Visibility,
+    parse::{Parse, ParseStream},
+    parse_quote::parse,
+    punctuated::Punctuated,
+    Attribute, Expr, FnArg, ItemFn, LitStr, Pat, Path, ReturnType, Signature, Token, Type,
+    Visibility,
 };
 
 mod path;
@@ -96,10 +99,23 @@ pub fn router(
     router::router(attr.into(), item.into()).dump().into()
 }
 
+struct FilterInput {
+    _eq: Token![=],
+    path: LitStr,
+}
+
+impl Parse for FilterInput {
+    fn parse(input: ParseStream) -> Result<Self, syn::Error> {
+        Ok(FilterInput {
+            _eq: input.parse()?,
+            path: input.parse()?,
+        })
+    }
+}
+
 fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro::TokenStream {
     let f: ItemFn = parse(f);
     let sig = &f.sig;
-    let block = &f.block;
 
     // Apply method filter
     let expr: Expr = q!(
@@ -139,19 +155,23 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
             }
         }
 
-        {
+        let inputs = {
+            let mut actual_inputs = vec![];
+
             // Handle annotated parameters.
-            for i in inputs.pairs_mut() {
-                match i.into_value() {
+            for mut i in inputs.into_pairs() {
+                match i.value_mut() {
                     FnArg::Receiver(_) => continue,
-                    FnArg::Typed(pat) => {
+                    FnArg::Typed(ref mut pat) => {
                         if pat.attrs.is_empty() {
+                            actual_inputs.push(i);
                             continue;
                         }
 
                         let is_rweb_attr = pat.attrs.iter().any(is_rweb_attr);
                         if !is_rweb_attr {
                             // We don't care about this parameter.
+                            actual_inputs.push(i);
                             continue;
                         }
 
@@ -175,11 +195,32 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                         } else if attr.path.is_ident("query") {
                             expr = q!(Vars { expr }, { expr.and(rweb::filters::query::query()) })
                                 .parse()
+                        } else if attr.path.is_ident("filter") {
+                            let filter_path: FilterInput = parse(attr.tokens.clone());
+                            let filter_path = filter_path.path.value();
+                            let tts: TokenStream = filter_path.parse().expect("failed tokenize");
+                            let filter_path: Path = parse(tts);
+
+                            expr =
+                                q!(Vars { expr, filter_path }, { expr.and(filter_path()) }).parse();
+
+                            // Don't add unit type to argument list
+                            match i.value() {
+                                FnArg::Typed(pat) => match &*pat.ty {
+                                    Type::Tuple(tuple) if tuple.elems.is_empty() => continue,
+                                    _ => {}
+                                },
+                                _ => {}
+                            }
                         }
+
+                        actual_inputs.push(i);
                     }
                 }
             }
-        }
+
+            actual_inputs.into_iter().collect()
+        };
 
         ItemFn {
             attrs: f.attrs,
@@ -190,22 +231,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                 inputs,
                 ..f.sig.clone()
             },
-            block: if true {
-                f.block
-            } else {
-                Quote::new(sig.asyncness.unwrap().span())
-                    .quote_with(smart_quote!(Vars { body: block }, {
-                        {
-                            rweb::rt::tokio::runtime::Builder::new()
-                                .basic_scheduler()
-                                .enable_all()
-                                .build()
-                                .unwrap()
-                                .block_on(async { body })
-                        }
-                    }))
-                    .parse()
-            },
+            block: f.block,
         }
     };
 
