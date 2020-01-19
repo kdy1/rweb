@@ -3,7 +3,7 @@ use crate::{error::Error, HttpMessage};
 use bytes::BytesMut;
 use futures::Stream;
 use http::{header::Entry, response::Parts, Extensions};
-use hyper::{body::Bytes, Method, Request, Uri, Version};
+use hyper::{body::Bytes, Method, Uri, Version};
 pub use hyper::{header::HeaderValue, http::StatusCode, HeaderMap};
 use pin_project::pin_project;
 use serde::de::DeserializeOwned;
@@ -57,7 +57,7 @@ where
 
 #[derive(Clone)]
 pub struct Req {
-    inner: Rc<Request<Payload>>,
+    inner: Rc<(ReqInfo, Payload)>,
 }
 
 impl Req {
@@ -65,19 +65,23 @@ impl Req {
     where
         T: 'static + Send + Sync,
     {
-        self.inner.extensions().get()
+        self.head().extensions.get()
+    }
+
+    pub fn head(&self) -> &ReqInfo {
+        &self.inner.0
     }
 
     pub fn path(&self) -> &str {
-        self.inner.uri().path()
+        self.head().uri.path()
     }
 
     pub fn query_string(&self) -> Option<&str> {
-        self.inner.uri().query()
+        self.head().uri.query()
     }
 
     pub fn headers(&self) -> &HeaderMap {
-        &self.inner.headers()
+        &self.head().headers
     }
 
     /// Create service response for error
@@ -93,33 +97,41 @@ impl HttpMessage for Req {
     #[inline]
     /// Returns Request's headers.
     fn headers(&self) -> &HeaderMap {
-        self.inner.headers()
+        &self.head().headers
     }
 
     #[inline]
     fn take_payload(&mut self) -> Payload<Self::Stream> {
-        self.inner.body_mut().take()
+        Rc::get_mut(&mut self.inner)
+            .expect("Rc::get_mut() failed")
+            .1
+            .take()
     }
 
     /// Request extensions
     #[inline]
     fn extensions(&self) -> &Extensions {
-        self.inner.extensions()
+        &self.inner.0.extensions
     }
 
     /// Mutable reference to a the request's extensions
     #[inline]
     fn extensions_mut(&mut self) -> &mut Extensions {
-        self.inner.extensions_mut()
+        &mut Rc::get_mut(&mut self.inner)
+            .expect("Rc::get_mut failed")
+            .0
+            .extensions
     }
 }
 
 /// Request information except body.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ReqInfo {
     method: Method,
     uri: Uri,
     version: Version,
+    /// The request's extensions
+    extensions: Extensions,
     /// The request's headers.
     pub headers: HeaderMap,
 }
