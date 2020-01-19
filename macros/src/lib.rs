@@ -179,6 +179,20 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                         } else if attr.path.is_ident("query") {
                             expr = q!(Vars { expr }, { expr.and(rweb::filters::query::query()) })
                                 .parse()
+                        } else if attr.path.is_ident("header") {
+                            if let Ok(header_name) = syn::parse2::<FilterInput>(attr.tokens.clone())
+                            {
+                                expr = q!(
+                                    Vars {
+                                        expr,
+                                        header_name: header_name.path
+                                    },
+                                    { expr.and(rweb::filters::header::header(header_name)) }
+                                )
+                                .parse();
+                            } else {
+                                unimplemented!("header {:?}", attr.tokens)
+                            }
                         } else if attr.path.is_ident("filter") {
                             let filter_path: FilterInput = parse(attr.tokens.clone());
                             let filter_path = filter_path.path.value();
@@ -289,5 +303,6 @@ fn is_rweb_attr(a: &Attribute) -> bool {
         || a.path.is_ident("form")
         || a.path.is_ident("body")
         || a.path.is_ident("query")
+        || a.path.is_ident("header")
         || a.path.is_ident("filter")
 }

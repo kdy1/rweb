@@ -71,6 +71,15 @@
 //! }
 //! ```
 //!
+//! ## `#[header]`
+//! Parses query string.
+//! ```rust
+//! #[get("/")]
+//! fn ret_accept(#[header="accept"] accept: String) -> String {
+//!     accept
+//! }
+//! ```
+//!
 //! ## `#[filter = "path_to_fn"]`
 //! Calls function.
 //!
