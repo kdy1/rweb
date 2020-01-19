@@ -1,7 +1,6 @@
 pub use self::{
     extract::FromRequest,
     http::{msg::HttpMessage, Req, Resp},
-    response::Response,
     types::*,
 };
 use crate::error::Error;
@@ -17,5 +16,4 @@ mod extract;
 pub mod handler;
 pub mod http;
 mod responder;
-mod response;
 mod types;
