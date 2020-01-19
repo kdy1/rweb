@@ -2,7 +2,8 @@ use pmutil::{q, Quote};
 use proc_macro2::TokenStream;
 use std::collections::HashMap;
 use syn::{
-    parse_quote::parse, punctuated::Punctuated, Expr, ItemFn, LitStr, ReturnType, Signature, Token,
+    parse_quote::parse, punctuated::Punctuated, Expr, FnArg, ItemFn, LitStr, Pat, PatType,
+    ReturnType, Signature, Token,
 };
 
 pub fn compile(path: TokenStream, sig: &Signature) -> (Expr, HashMap<String, String>) {
@@ -26,7 +27,23 @@ pub fn compile(path: TokenStream, sig: &Signature) -> (Expr, HashMap<String, Str
         let is_empty = exprs.is_empty();
 
         let expr = if segment.starts_with('{') {
-            q!({ rweb::filters::path::param(segment) })
+            let v = &segment[1..segment.len() - 1];
+
+            let ty = sig
+                .inputs
+                .iter()
+                .filter_map(|arg| match arg {
+                    FnArg::Typed(ty) => match *ty.pat {
+                        Pat::Ident(ref i) if i.ident == v => Some(&ty.ty),
+                        _ => None,
+                    },
+
+                    _ => None,
+                })
+                .next()
+                .unwrap_or_else(|| panic!("failed to find parameter named {}", v));
+
+            q!(Vars { ty }, { rweb::filters::path::param::<ty>() })
         } else {
             q!(Vars { segment }, { rweb::filters::path::path(segment) })
         };
