@@ -31,9 +31,5 @@ log = "0.4"
 futures = "0.3"
 
 [[example]]
-name = "unix_socket"
-required-features = ["tokio/uds"]
-
-[[example]]
 name = "websockets"
 required-features = ["websocket"]
