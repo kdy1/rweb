@@ -15,7 +15,6 @@ pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 
 mod app;
 pub mod data;
-pub mod encoding;
 pub mod error;
 mod extract;
 pub mod guard;
