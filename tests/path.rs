@@ -1,17 +1,9 @@
-use http::{Response, StatusCode};
-use hyper::Body;
-use rweb::{get, reply::Reply, Filter};
-
-struct Error {}
-impl Reply for Error {
-    fn into_response(self) -> Response<Body> {
-        StatusCode::from_u16(500).unwrap().into_response()
-    }
-}
+use http::Error;
+use rweb::{get, Filter};
 
 #[get("/")]
 fn index() -> Result<String, Error> {
-    Err(Error {})
+    Ok(String::new())
 }
 
 #[get("/foo")]

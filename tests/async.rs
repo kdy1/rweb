@@ -1,13 +1,5 @@
-use http::{Response, StatusCode};
-use hyper::Body;
-use rweb::{get, reply::Reply, serve, Filter};
-
-struct Error {}
-impl Reply for Error {
-    fn into_response(self) -> Response<Body> {
-        StatusCode::from_u16(500).unwrap().into_response()
-    }
-}
+use http::Error;
+use rweb::{get, serve, Filter};
 
 async fn task() -> Result<String, Error> {
     Ok(String::new())

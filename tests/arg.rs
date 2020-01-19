@@ -1,15 +1,7 @@
 use bytes::Bytes;
-use http::{Response, StatusCode};
-use hyper::Body;
-use rweb::{post, reply::Reply, Filter};
+use http::Error;
+use rweb::{post, Filter};
 use serde::{Deserialize, Serialize};
-
-struct Error {}
-impl Reply for Error {
-    fn into_response(self) -> Response<Body> {
-        StatusCode::from_u16(500).unwrap().into_response()
-    }
-}
 
 #[derive(Serialize, Deserialize)]
 struct LoginForm {
