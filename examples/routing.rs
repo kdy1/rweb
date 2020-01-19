@@ -1,6 +1,38 @@
 #![deny(warnings)]
 
-use rweb::Filter;
+use rweb::*;
+
+#[get("/hi")]
+fn hi() -> &'static str {
+    "Hello, World!"
+}
+
+/// How about multiple segments? First, we could use the `path!` macro:
+#[get("/hello/from/warp")]
+fn hello_from_warp() -> &'static str {
+    "Hello from warp!"
+}
+
+/// Fine, but how do I handle parameters in paths?
+#[get("/sum/{a}/{b}")]
+fn sum(a: u32, b: u32) -> String {
+    format!("{} + {} = {}", a, b, a + b)
+}
+
+/// Any type that implements FromStr can be used, and in any order:
+#[get("/{a}/times/{b}")]
+fn times(a: u16, b: u16) -> String {
+    format!("{} times {} = {}", a, b, a * b)
+}
+
+/// What! And? What's that do?
+///
+/// It combines the filters in a sort of "this and then that" order. In
+/// fact, it's exactly what the `path!` macro has been doing internally.
+#[get("/byt/{name}")]
+fn bye(name: String) -> String {
+    format!("Good bye, {}!", name)
+}
 
 #[tokio::main]
 async fn main() {
@@ -9,43 +41,14 @@ async fn main() {
     // We'll start simple, and gradually show how you combine these powers
     // into super powers!
 
-    // GET /hi
-    let hi = rweb::path("hi").map(|| "Hello, World!");
-
-    // How about multiple segments? First, we could use the `path!` macro:
-    //
-    // GET /hello/from/warp
-    let hello_from_warp = rweb::path!("hello" / "from" / "warp").map(|| "Hello from warp!");
-
-    // Fine, but how do I handle parameters in paths?
-    //
-    // GET /sum/:u32/:u32
-    let sum = rweb::path!("sum" / u32 / u32).map(|a, b| format!("{} + {} = {}", a, b, a + b));
-
-    // Any type that implements FromStr can be used, and in any order:
-    //
-    // GET /:u16/times/:u16
-    let times =
-        rweb::path!(u16 / "times" / u16).map(|a, b| format!("{} times {} = {}", a, b, a * b));
-
     // Oh shoot, those math routes should be mounted at a different path,
     // is that possible? Yep.
     //
     // GET /math/sum/:u32/:u32
     // GET /math/:u16/times/:u16
     let math = rweb::path("math");
-    let _sum = math.and(sum);
-    let _times = math.and(times);
-
-    // What! And? What's that do?
-    //
-    // It combines the filters in a sort of "this and then that" order. In
-    // fact, it's exactly what the `path!` macro has been doing internally.
-    //
-    // GET /bye/:string
-    let bye = rweb::path("bye")
-        .and(rweb::path::param())
-        .map(|name: String| format!("Good bye, {}!", name));
+    let _sum = math.and(sum());
+    let _times = math.and(times());
 
     // Ah, can filters do things besides `and`?
     //
@@ -57,7 +60,7 @@ async fn main() {
     //
     // GET /math/sum/:u32/:u32
     // GET /math/:u16/times/:u16
-    let math = rweb::path("math").and(sum.or(times));
+    let math = rweb::path("math").and(sum().or(times()));
 
     // We can use the end() filter to match a shorter path
     let help = rweb::path("math")
@@ -68,9 +71,10 @@ async fn main() {
     let math = help.or(math);
 
     // Let's let people know that the `sum` and `times` routes are under `math`.
-    let sum = sum.map(|output| format!("(This route has moved to /math/sum/:u16/:u16) {}", output));
+    let sum =
+        sum().map(|output| format!("(This route has moved to /math/sum/:u16/:u16) {}", output));
     let times =
-        times.map(|output| format!("(This route has moved to /math/:u16/times/:u16) {}", output));
+        times().map(|output| format!("(This route has moved to /math/:u16/times/:u16) {}", output));
 
     // It turns out, using `or` is how you combine everything together into
     // a single API. (We also actually haven't been enforcing the that the
@@ -82,7 +86,13 @@ async fn main() {
     // GET /math/sum/:u32/:u32
     // GET /math/:u16/times/:u16
 
-    let routes = rweb::get().and(hi.or(hello_from_warp).or(bye).or(math).or(sum).or(times));
+    let routes = rweb::get().and(
+        hi().or(hello_from_warp())
+            .or(bye())
+            .or(math)
+            .or(sum)
+            .or(times),
+    );
 
     // Note that composing filters for many routes may increase compile times
     // (because it uses a lot of generics). If you wish to use dynamic dispatch
