@@ -80,7 +80,7 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
     let (path, vars) = path::compile(path, sig);
 
     let handler_fn = {
-        let mut sig = f.sig.clone();
+        let mut inputs = f.sig.inputs.clone();
 
         {
             // Handle path parameters
@@ -95,8 +95,8 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
                 match &f.sig.inputs[idx] {
                     FnArg::Typed(pat) => match *pat.pat {
                         Pat::Ident(ref i) if i.ident == name => {
-                            sig.inputs[orig_idx] = f.sig.inputs[idx].clone();
-                            sig.inputs[idx] = f.sig.inputs[orig_idx].clone();
+                            inputs[orig_idx] = f.sig.inputs[idx].clone();
+                            inputs[idx] = f.sig.inputs[orig_idx].clone();
                             done.insert(idx);
                         }
                         _ => {}
@@ -106,12 +106,16 @@ fn expand_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro:
             }
         }
 
+        {
+            // Handle annotated parameters.
+        }
+
         ItemFn {
             attrs: f.attrs,
             vis: Visibility::Inherited,
             sig: Signature {
-                asyncness: None,
-                ..sig
+                inputs,
+                ..f.sig.clone()
             },
             block: f.block,
         }
