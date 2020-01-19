@@ -77,20 +77,16 @@ fn expand_route(method: Quote, path: TokenStream, fn_item: TokenStream) -> proc_
         },
         {
             #[allow(non_camel_case_types)]
-            fn handler<PrevFilter: rweb::Filter<Error = rweb::warp::Rejection>>(
-                prev: PrevFilter,
-            ) -> impl warp::Filter<Error = rweb::warp::Rejection> {
+            fn handler() -> impl rweb::Filter<Error = rweb::warp::Rejection> {
                 use rweb::Filter;
 
                 async fn handler() -> Ret {
                     body
                 }
 
-                let filter = rweb::filters::path::path(http_path)
+                rweb::filters::path::path(http_path)
                     .and(rweb::filters::method::http_method())
-                    .map(handler);
-
-                prev.or(filter)
+                    .map(handler)
             }
         }
     )

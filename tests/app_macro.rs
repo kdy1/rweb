@@ -1,4 +1,4 @@
-use rweb::{get, App};
+use rweb::{get, Filter};
 
 struct Error {}
 
@@ -20,5 +20,5 @@ pub fn foo() -> Result<String, Error> {
 
 #[test]
 fn app_service() {
-    rweb::serve(app())
+    rweb::serve(index.or(foo));
 }
