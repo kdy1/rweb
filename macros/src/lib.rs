@@ -11,7 +11,7 @@ use proc_macro2::TokenStream;
 use std::collections::HashSet;
 use syn::{
     parse_quote::parse, punctuated::Punctuated, spanned::Spanned, Attribute, Expr, FnArg, ItemFn,
-    Pat, Signature, Visibility,
+    Pat, ReturnType, Signature, Visibility,
 };
 
 mod path;
@@ -158,6 +158,8 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                             expr = q!(Vars { expr }, { expr.and(rweb::filters::body::bytes()) })
                                 .parse()
                         } else if attr.path.is_ident("query") {
+                            expr =
+                                q!(Vars { expr }, { expr.and(rweb::filters::query::raw()) }).parse()
                         }
                     }
                 }
@@ -167,6 +169,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
         ItemFn {
             attrs: f.attrs,
             vis: Visibility::Inherited,
+
             sig: Signature {
                 asyncness: None,
                 inputs,
@@ -194,13 +197,17 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
     q!(
         Vars {
             expr,
+            Ret: match sig.output {
+                ReturnType::Default => panic!("http handler should return type"),
+                ReturnType::Type(_, ref ty) => ty,
+            },
             handler: &sig.ident,
             handler_fn,
         },
         {
             #[allow(non_camel_case_types)]
             fn handler(
-            ) -> impl rweb::Filter<Extract = impl rweb::reply::Reply, Error = rweb::warp::Rejection>
+            ) -> impl rweb::Filter<Extract = (Ret,), Error = rweb::warp::Rejection>
                    + rweb::rt::Clone {
                 use rweb::Filter;
 

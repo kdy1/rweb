@@ -53,7 +53,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     q!(Vars { expr, router_name }, {
         #[allow(non_snake_case)]
         fn router_name(
-        ) -> impl Clone + rweb::Filter<Extract = impl rweb::Reply, Error = rweb::Rejection>
+        ) -> impl Clone + rweb::Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection>
         {
             use rweb::{rt::StatusCode, Filter};
 
