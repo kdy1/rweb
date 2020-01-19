@@ -29,7 +29,30 @@ fn param_typed(v: u32) -> Result<String, Error> {
     Ok(v.to_string())
 }
 
+#[get("/param/{name}/{value}")]
+fn multiple_param(name: String, value: String) -> Result<String, Error> {
+    Ok(format!("{}={}", name, value))
+}
+
+#[get("/param/{name}/{value}")]
+fn multiple_param_ordered(name: String, value: u8) -> Result<String, Error> {
+    Ok(format!("{}={}", name, value))
+}
+
+#[get("/param/{name}/{value}")]
+fn multiple_param_unordered(value: u8, name: String) -> Result<String, Error> {
+    Ok(format!("{}={}", name, value))
+}
+
 #[test]
 fn app_service() {
-    rweb::serve(index().or(foo()).or(param()).or(param_typed()));
+    rweb::serve(
+        index()
+            .or(foo())
+            .or(param())
+            .or(param_typed())
+            .or(multiple_param())
+            .or(multiple_param_ordered())
+            .or(multiple_param_unordered()),
+    );
 }
