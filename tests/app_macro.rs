@@ -19,7 +19,17 @@ pub fn foo() -> Result<String, Error> {
     Ok(String::new())
 }
 
+#[get("/param/{foo}")]
+pub fn param(foo: String) -> Result<String, Error> {
+    Ok(String::new())
+}
+
+#[get("/param/{v}")]
+pub fn param_typed(v: u32) -> Result<String, Error> {
+    Ok(String::new())
+}
+
 #[test]
 fn app_service() {
-    rweb::serve(index().or(foo()));
+    rweb::serve(foo().or(index()));
 }
