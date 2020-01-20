@@ -78,7 +78,7 @@
 //! ```
 //!
 //! ## `#[header]`
-//! Parses query string.
+//! Value of the header.
 //! ```rust
 //! #[get("/")]
 //! fn ret_accept(#[header = "accept"] accept: String) -> String {
@@ -127,7 +127,7 @@
 //! }
 //! ```
 //!
-//! ## `[data]`
+//! ## `#[data]`
 //! ```rust
 //! use futures::lock::Mutex;
 //! use rweb::*;
