@@ -145,6 +145,30 @@
 //!    Ok(items.len().to_string())
 //! }
 //! ```
+//!
+//! # FromRequest
+//!
+//! ```rust
+//! use http::StatusCode;
+//! use rweb::{filters::BoxedFilter, *};
+//!
+//! impl FromRequest for User {
+//!    type Filter = BoxedFilter<(User,)>;
+//!
+//!    fn new() -> Self::Filter {
+//!        header::<String>("x-user-id").map(|id| User { id }).boxed()
+//!    }
+//! }
+//!
+//! struct User {
+//!    id: String,
+//! }
+//!
+//! #[get("/")]
+//! fn index(user: User) -> String {
+//!    user.id
+//! }
+//! ```
 
 pub use self::factory::{FromRequest, Json};
 pub use rweb_macros::{delete, get, head, options, patch, post, put, router};
