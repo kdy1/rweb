@@ -12,6 +12,7 @@ use syn::{
 };
 
 mod path;
+mod route;
 mod router;
 
 #[proc_macro_attribute]
@@ -236,25 +237,12 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                                     { expr.and(rweb::filters::header::header(header_name)) }
                                 )
                                 .parse();
-                            } else if let Ok(kv) = syn::parse2::<ParenTwoValue>(attr.tokens.clone())
-                            {
-                                let name = kv.key.value();
-                                let header_value = &kv.value;
-
-                                expr = q!(
-                                    Vars {
-                                        expr,
-                                        header_name: &name,
-                                        header_value
-                                    },
-                                    {
-                                        expr.and(rweb::filters::header::exact_ignore_case(
-                                            header_name,
-                                            header_value,
-                                        ))
-                                    }
+                            } else {
+                                panic!(
+                                    "invalid usage of header: {}\nCorrect usage is#[header = \
+                                     \"accpet\"]",
+                                    attr.tokens.dump()
                                 )
-                                .parse();
                             }
                         } else if attr.path.is_ident("filter") {
                             let filter_path: EqStr = parse(attr.tokens.clone());
@@ -296,7 +284,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
         };
 
         ItemFn {
-            attrs: f.attrs,
+            attrs: Default::default(),
             vis: Visibility::Inherited,
 
             sig: Signature {
@@ -318,6 +306,8 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
     //            Pair::new(Ident::new(&format!("arg{}", i), arg.span()),
     // comma.clone())        })
     //        .collect();
+
+    let expr = route::compile_item_attrs(expr, f.attrs.clone());
 
     let expr = if sig.asyncness.is_some() {
         q!(

@@ -18,7 +18,8 @@ async fn ret_accept_test() {
 }
 
 #[get("/")]
-fn guard(#[header("X-AuthUser", "test-uid")] _: ()) -> String {
+#[header("X-AuthUser", "test-uid")]
+fn guard() -> String {
     unreachable!()
 }
 
