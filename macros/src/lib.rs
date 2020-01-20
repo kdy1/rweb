@@ -100,6 +100,7 @@ impl Parse for FilterInput {
 fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro::TokenStream {
     let f: ItemFn = parse(f);
     let sig = &f.sig;
+    let mut data_inputs: Punctuated<_, Token![,]> = Default::default();
 
     // Apply method filter
     let expr: Expr = q!(
@@ -210,6 +211,18 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                                 },
                                 _ => {}
                             }
+                        } else if attr.path.is_ident("data") {
+                            let ident = match &*pat.pat {
+                                Pat::Ident(i) => &i.ident,
+                                _ => unimplemented!("#[data] with complex pattern"),
+                            };
+
+                            expr = q!(Vars { expr, ident }, {
+                                expr.and(rweb::rt::provider(ident))
+                            })
+                            .parse();
+
+                            data_inputs.push(i.value().clone());
                         }
 
                         actual_inputs.push(i);
@@ -272,19 +285,15 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
         }
     };
 
-    let vis = f.vis;
-
-    q!(
+    let mut outer = q!(
         Vars {
-            vis,
             expr,
             handler: &sig.ident,
             Ret: ret,
             handler_fn,
         },
         {
-            #[allow(non_camel_case_types)]
-            vis fn handler(
+            fn handler(
             ) -> impl rweb::Filter<Extract = (Ret,), Error = rweb::warp::Rejection>
                    + rweb::rt::Clone {
                 use rweb::Filter;
@@ -295,7 +304,15 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
             }
         }
     )
-    .into()
+    .parse::<ItemFn>();
+
+    outer.vis = f.vis;
+    outer.sig = Signature {
+        inputs: data_inputs,
+        ..outer.sig
+    };
+
+    outer.dump().into()
 }
 
 fn is_rweb_attr(a: &Attribute) -> bool {
@@ -305,4 +322,5 @@ fn is_rweb_attr(a: &Attribute) -> bool {
         || a.path.is_ident("query")
         || a.path.is_ident("header")
         || a.path.is_ident("filter")
+        || a.path.is_ident("data")
 }
