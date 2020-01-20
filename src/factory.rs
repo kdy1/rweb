@@ -1,7 +1,11 @@
 use serde::{de::DeserializeOwned, Deserialize};
-use warp::{filters::BoxedFilter, Filter, Rejection};
+use warp::{
+    filters::{ws::Ws, BoxedFilter},
+    Filter, Rejection,
+};
 
-pub trait FromRequest {
+pub trait FromRequest: Sized {
+    /// Extract should be `(Self,),`
     type Filter: Filter<Error = Rejection>;
 
     fn new() -> Self::Filter;
@@ -25,5 +29,13 @@ where
 
     fn new() -> Self::Filter {
         warp::body::json().boxed()
+    }
+}
+
+impl FromRequest for Ws {
+    type Filter = BoxedFilter<(Ws,)>;
+
+    fn new() -> Self::Filter {
+        warp::ws().boxed()
     }
 }

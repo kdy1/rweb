@@ -1,5 +1,7 @@
 #![deny(warnings)]
-use warp::{http::StatusCode, Filter};
+
+use http::StatusCode;
+use rweb::*;
 
 #[get("/{word}")]
 async fn dyn_reply(word: String) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
