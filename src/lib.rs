@@ -81,7 +81,7 @@
 //! Parses query string.
 //! ```rust
 //! #[get("/")]
-//! fn ret_accept(#[header="accept"] accept: String) -> String {
+//! fn ret_accept(#[header = "accept"] accept: String) -> String {
 //!     accept
 //! }
 //! ```
