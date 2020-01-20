@@ -136,14 +136,13 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
 
     let handler_fn = {
         let mut inputs: Punctuated<FnArg, _> = f.sig.inputs.clone();
+        let mut path_params = HashSet::new();
 
         {
             // Handle path parameters
 
-            let mut done = HashSet::new();
-
             for (orig_idx, (name, idx)) in vars.into_iter().enumerate() {
-                if orig_idx == idx || done.contains(&orig_idx) {
+                if path_params.contains(&orig_idx) {
                     continue;
                 }
 
@@ -152,7 +151,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                         Pat::Ident(ref i) if i.ident == name => {
                             inputs[orig_idx] = f.sig.inputs[idx].clone();
                             inputs[idx] = f.sig.inputs[orig_idx].clone();
-                            done.insert(idx);
+                            path_params.insert(orig_idx);
                         }
                         _ => {}
                     },
@@ -165,12 +164,25 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
             let mut actual_inputs = vec![];
 
             // Handle annotated parameters.
-            for mut i in inputs.into_pairs() {
+            for (idx, mut i) in inputs.into_pairs().enumerate() {
+                if path_params.contains(&idx) {
+                    actual_inputs.push(i);
+                    continue;
+                }
+
+                let cloned_i = i.clone();
+
                 match i.value_mut() {
                     FnArg::Receiver(_) => continue,
                     FnArg::Typed(ref mut pat) => {
                         if pat.attrs.is_empty() {
-                            actual_inputs.push(i);
+                            // If there's no attribute, it's type should implement FromRequest
+
+                            actual_inputs.push(cloned_i);
+                            expr = q!(Vars { expr, T: &pat.ty }, {
+                                expr.and(<T as rweb::FromRequest>::new())
+                            })
+                            .parse();
                             continue;
                         }
 
