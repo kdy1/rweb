@@ -34,15 +34,9 @@ fn no_arg() -> String {
 #[router("/math/complex", services(sum, mul, no_arg))]
 struct Complex;
 
-fn complex() -> impl Clone + rweb::Filter<Extract = impl rweb::Reply, Error = rweb::Rejection> {
-    rweb::filters::path::path("math")
-        .and(rweb::filters::path::path("complex"))
-        .and(sum().or(mul()).or(no_arg()))
-}
-
 #[tokio::test]
 async fn complex_router() {
-    let filter = complex();
+    let filter = Complex();
 
     let value = warp::test::request()
         .path("/math/complex/sum/1/2")
