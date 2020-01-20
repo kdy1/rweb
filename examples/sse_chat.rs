@@ -1,5 +1,6 @@
+use bytes::Bytes;
 use futures::{Stream, StreamExt};
-use rweb::{sse::ServerSentEvent, Filter};
+use rweb::{get, post, sse::ServerSentEvent, Filter, Reply};
 use std::{
     collections::HashMap,
     sync::{
@@ -8,6 +9,7 @@ use std::{
     },
 };
 use tokio::sync::{mpsc, oneshot};
+use warp::Rejection;
 
 /// Our global unique user id counter.
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
@@ -26,7 +28,37 @@ impl rweb::reject::Reject for NotUtf8 {}
 ///
 /// - Key is their id
 /// - Value is a sender of `Message`
+///
+/// TODO(kdy1): .and(rweb::body::content_length_limit(500))
 type Users = Arc<Mutex<HashMap<usize, mpsc::UnboundedSender<Message>>>>;
+
+#[post("/chat/{my_id}")]
+async fn send_chat(
+    my_id: usize,
+    #[body] msg: Bytes,
+    #[data] users: Users,
+) -> Result<impl Reply, Rejection> {
+    let msg = std::str::from_utf8(&msg)
+        .map(String::from)
+        .map_err(|_e| rweb::reject::custom(NotUtf8))?;
+
+    user_message(my_id, msg, &users);
+    Ok(rweb::reply())
+}
+
+#[get("/chat")]
+fn recv_chat(#[data] users: Users) -> impl Reply {
+    // reply using server-sent events
+    let stream = user_connected(users);
+    rweb::sse::reply(rweb::sse::keep_alive().stream(stream))
+}
+
+#[get("/")]
+fn index() -> impl Reply {
+    rweb::http::Response::builder()
+        .header("content-type", "text/html; charset=utf-8")
+        .body(INDEX_HTML)
+}
 
 #[tokio::main]
 async fn main() {
@@ -35,42 +67,14 @@ async fn main() {
     // Keep track of all connected users, key is usize, value
     // is an event stream sender.
     let users = Arc::new(Mutex::new(HashMap::new()));
-    // Turn our "state" into a new Filter...
-    let users = rweb::any().map(move || users.clone());
 
     // POST /chat -> send message
-    let chat_send = rweb::path("chat")
-        .and(rweb::post())
-        .and(rweb::path::param::<usize>())
-        .and(rweb::body::content_length_limit(500))
-        .and(
-            rweb::body::bytes().and_then(|body: bytes::Bytes| async move {
-                std::str::from_utf8(&body)
-                    .map(String::from)
-                    .map_err(|_e| rweb::reject::custom(NotUtf8))
-            }),
-        )
-        .and(users.clone())
-        .map(|my_id, msg, users| {
-            user_message(my_id, msg, &users);
-            rweb::reply()
-        });
+    let chat_send = send_chat(users.clone());
 
     // GET /chat -> messages stream
-    let chat_recv = rweb::path("chat").and(rweb::get()).and(users).map(|users| {
-        // reply using server-sent events
-        let stream = user_connected(users);
-        rweb::sse::reply(rweb::sse::keep_alive().stream(stream))
-    });
+    let chat_recv = recv_chat(users.clone());
 
-    // GET / -> index html
-    let index = rweb::path::end().map(|| {
-        rweb::http::Response::builder()
-            .header("content-type", "text/html; charset=utf-8")
-            .body(INDEX_HTML)
-    });
-
-    let routes = index.or(chat_recv).or(chat_send);
+    let routes = index().or(chat_recv).or(chat_send);
 
     rweb::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }
