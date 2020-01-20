@@ -222,6 +222,7 @@
 //!    type Filter = BoxedFilter<(User,)>;
 //!
 //!    fn new() -> Self::Filter {
+//!        // In real world, you can use a header like Authorization
 //!        header::<String>("x-user-id").map(|id| User { id }).boxed()
 //!    }
 //! }
