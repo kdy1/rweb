@@ -6,18 +6,27 @@
 //!   - Annotated with the annotations documented below.
 //!   - Has a type which implements [FromRequest].
 //!
+//! # Path parmeters
+//!
+//!
 //! # Attribute on parameters
 //!
 //! ## `#[body]`
 //! Parses request body
+//!
 //! ```rust
 //! use rweb::*;
+//! use http::Error;
 //! use bytes::Bytes;
 //!
 //! #[post("/body")]
 //! fn body(#[body] body: Bytes) -> Result<String, Error> {
 //!    let _ = body;
 //!    Ok(String::new())
+//! }
+//!
+//! fn main() {
+//!     serve(body());
 //! }
 //! ```
 //!
@@ -35,8 +44,12 @@
 //! }
 //!
 //! #[post("/form")]
-//! fn form(#[form] body: LoginForm) -> Result<String, Error> {
-//!    Ok(serde_json::to_string(&body).unwrap())
+//! fn form(#[form] body: LoginForm) -> String {
+//!    String::from("Ok")
+//! }
+//!
+//! fn main() {
+//!     serve(form());
 //! }
 //! ```
 //!
@@ -56,33 +69,61 @@
 //! fn json(#[json] body: LoginForm) -> String {
 //!     String::from("Ok")
 //! }
+//!
+//! fn main() {
+//!     serve(json());
+//! }
 //! ```
 //!
 //! Note that you can mix the order of parameters.
 //! ```rust
+//! use rweb::*;
+//! use serde::Deserialize;
+//!
+//! #[derive(Deserialize)]
+//! struct LoginForm {
+//!     id: String,
+//!     password: String,
+//! }
+//!
 //! #[get("/param/{a}/{b}")]
-//! fn body_between_path_params(a: u32, #[json] body: LoginForm, b: u32) ->
-//! String {     assert_eq!(body.id, "TEST_ID");
+//! fn body_between_path_params(a: u32, #[json] body: LoginForm, b: u32) -> String {
+//!     assert_eq!(body.id, "TEST_ID");
 //!     assert_eq!(body.password, "TEST_PASSWORD");
 //!     (a + b).to_string()
+//! }
+//!
+//! fn main() {
+//!     serve(body_between_path_params());
 //! }
 //! ```
 //!
 //! ## `#[query]`
 //! Parses query string.
 //! ```rust
+//! use rweb::*;
+//!
 //! #[get("/")]
 //! fn use_query(#[query] qs: String) -> String {
 //!     qs
+//! }
+//!
+//! fn main() {
+//!     serve(use_query());
 //! }
 //! ```
 //!
 //! ## `#[header]`
 //! Value of the header.
 //! ```rust
+//! use rweb::*;
+//!
 //! #[get("/")]
 //! fn ret_accept(#[header = "accept"] accept: String) -> String {
 //!     accept
+//! }
+//! fn main() {
+//!     serve(ret_accept());
 //! }
 //! ```
 //!
@@ -96,6 +137,9 @@
 //! fn routes(#[header(accept = "*/*")] _guard: (), #[header = "host"] host: SocketAddr) -> String {
 //!    format!("accepting stars on {}", host)
 //! }
+//! fn main() {
+//!     serve(routes());
+//! }
 //! ```
 //!
 //!
@@ -104,9 +148,17 @@
 //!
 //! **Note**: If the callee returns `()`, you should use `()` as type. (Type
 //! alias is not allowed)
+//!
 //! ```rust
 //! use std::num::NonZeroU16;
 //! use rweb::*;
+//! use serde::Serialize;
+//!
+//! #[derive(Serialize)]
+//! struct Math {
+//!     op: String,
+//!     output: u16,
+//! }
 //!
 //! #[get("/math/{num}")]
 //! fn math(num: u16, #[filter = "div_by"] denom: NonZeroU16) -> impl Reply {
@@ -124,6 +176,15 @@
 //!            Err(reject::custom(DivideByZero))
 //!        }
 //!    })
+//! }
+//!
+//! #[derive(Debug)]
+//! struct DivideByZero;
+//!
+//! impl reject::Reject for DivideByZero {}
+//!
+//! fn main() {
+//!     serve(math());
 //! }
 //! ```
 //!
@@ -172,6 +233,10 @@
 //! #[get("/")]
 //! fn index(user: User) -> String {
 //!    user.id
+//! }
+//!
+//! fn main() {
+//!     serve(index());
 //! }
 //! ```
 

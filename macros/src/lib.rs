@@ -1,6 +1,6 @@
 extern crate proc_macro;
 use pmutil::{q, Quote, ToTokensExt};
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use std::collections::HashSet;
 use syn::{
     parenthesized,
@@ -100,17 +100,17 @@ impl Parse for EqStr {
 }
 
 /// An eq token followed by literal string
-struct ParenKeyValue {
-    key: Ident,
-    _eq: Token![=],
+struct ParenTwoValue {
+    key: LitStr,
+    _eq: Token![,],
     value: LitStr,
 }
 
-impl Parse for ParenKeyValue {
+impl Parse for ParenTwoValue {
     fn parse(input: ParseStream) -> Result<Self, syn::Error> {
         let content;
         parenthesized!(content in input);
-        Ok(ParenKeyValue {
+        Ok(ParenTwoValue {
             key: content.parse()?,
             _eq: content.parse()?,
             value: content.parse()?,
@@ -223,9 +223,9 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                                     { expr.and(rweb::filters::header::header(header_name)) }
                                 )
                                 .parse();
-                            } else if let Ok(kv) = syn::parse2::<ParenKeyValue>(attr.tokens.clone())
+                            } else if let Ok(kv) = syn::parse2::<ParenTwoValue>(attr.tokens.clone())
                             {
-                                let name = kv.key.to_string().replace('_', "-");
+                                let name = kv.key.value();
                                 let header_value = &kv.value;
 
                                 expr = q!(
