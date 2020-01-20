@@ -1,6 +1,6 @@
 use serde::{de::DeserializeOwned, Deserialize};
 use warp::{
-    filters::{ws::Ws, BoxedFilter},
+    filters::{multipart, ws::Ws, BoxedFilter},
     Filter, Rejection,
 };
 
@@ -37,5 +37,13 @@ impl FromRequest for Ws {
 
     fn new() -> Self::Filter {
         warp::ws().boxed()
+    }
+}
+
+impl FromRequest for multipart::FormData {
+    type Filter = BoxedFilter<(Self,)>;
+
+    fn new() -> Self::Filter {
+        warp::multipart::form().boxed()
     }
 }
