@@ -1,3 +1,4 @@
+pub use crate::factory::factory;
 pub use http::StatusCode;
 pub use std::clone::Clone;
 use std::convert::Infallible;

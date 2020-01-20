@@ -140,8 +140,10 @@
 //! }
 //! ```
 
+pub use self::factory::Json;
 pub use rweb_macros::{delete, get, head, options, patch, post, put, router};
 pub use warp::{self, *};
 
+mod factory;
 #[doc(hidden)]
 pub mod rt;
