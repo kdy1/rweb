@@ -83,14 +83,15 @@ pub fn router(
     router::router(attr.into(), item.into()).dump().into()
 }
 
-struct FilterInput {
+/// An eq token followed by literal string
+struct EqStr {
     _eq: Token![=],
     path: LitStr,
 }
 
-impl Parse for FilterInput {
+impl Parse for EqStr {
     fn parse(input: ParseStream) -> Result<Self, syn::Error> {
-        Ok(FilterInput {
+        Ok(EqStr {
             _eq: input.parse()?,
             path: input.parse()?,
         })
@@ -181,8 +182,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                             expr =
                                 q!(Vars { expr }, { expr.and(rweb::filters::query::raw()) }).parse()
                         } else if attr.path.is_ident("header") {
-                            if let Ok(header_name) = syn::parse2::<FilterInput>(attr.tokens.clone())
-                            {
+                            if let Ok(header_name) = syn::parse2::<EqStr>(attr.tokens.clone()) {
                                 expr = q!(
                                     Vars {
                                         expr,
@@ -195,7 +195,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                                 unimplemented!("header {:?}", attr.tokens)
                             }
                         } else if attr.path.is_ident("filter") {
-                            let filter_path: FilterInput = parse(attr.tokens.clone());
+                            let filter_path: EqStr = parse(attr.tokens.clone());
                             let filter_path = filter_path.path.value();
                             let tts: TokenStream = filter_path.parse().expect("failed tokenize");
                             let filter_path: Path = parse(tts);
