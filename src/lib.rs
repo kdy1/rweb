@@ -6,6 +6,7 @@
 //!   - Annotated with the annotations documented below.
 //!   - Has a type which implements [FromRequest].
 //!
+//!
 //! # Path parmeters
 //!
 //!
@@ -238,6 +239,20 @@
 //!
 //! fn main() {
 //!     serve(index());
+//! }
+//! ```
+//!
+//!
+//! # Guards
+//!
+//! ```rust
+//! use rweb::*;
+//!
+//! // This handler is invoked only if x-appengine-cron matches 1 (case insensitive).  
+//! #[get("/")]
+//! #[header("X-AppEngine-Cron", "1")]
+//! fn gae_cron() -> String {
+//!     String::new()
 //! }
 //! ```
 
