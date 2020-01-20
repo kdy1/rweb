@@ -42,16 +42,17 @@ async fn index_test_fail() {
 #[derive(Deserialize)]
 struct LoginForm {
     id: String,
+    #[allow(dead_code)]
     password: String,
 }
 
 #[get("/")]
-fn json(body: Json<LoginForm>) -> String {
+pub fn json(body: Json<LoginForm>) -> String {
     body.into_inner().id
 }
 
 #[get("/")]
-fn form(body: Form<LoginForm>) -> String {
+pub fn form(body: Form<LoginForm>) -> String {
     body.into_inner().id
 }
 
@@ -61,6 +62,6 @@ struct Pagination {
 }
 
 #[get("/")]
-fn query(body: Query<Pagination>) -> String {
+pub fn query(body: Query<Pagination>) -> String {
     body.into_inner().token
 }
