@@ -1,5 +1,11 @@
 //! A macro to convert a function to rweb handler.
 //!
+//! All parameters should satisfy one of the following.
+//!
+//!   - Has a path parameter with same name.
+//!   - Annotated with the annotations documented below.
+//!   - Has a type which implements [FromRequest].
+//!
 //! # Attribute on parameters
 //!
 //! ## `#[body]`
@@ -140,7 +146,7 @@
 //! }
 //! ```
 
-pub use self::factory::Json;
+pub use self::factory::{FromRequest, Json};
 pub use rweb_macros::{delete, get, head, options, patch, post, put, router};
 pub use warp::{self, *};
 

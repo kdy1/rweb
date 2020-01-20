@@ -1,7 +1,7 @@
 use serde::{de::DeserializeOwned, Deserialize};
 use warp::{filters::BoxedFilter, Filter, Rejection};
 
-pub trait Factory {
+pub trait FromRequest {
     type Filter: Filter<Error = Rejection>;
 
     fn new() -> Self::Filter;
@@ -17,7 +17,7 @@ impl<T> Json<T> {
     }
 }
 
-impl<T> Factory for Json<T>
+impl<T> FromRequest for Json<T>
 where
     T: 'static + Send + DeserializeOwned,
 {
@@ -26,11 +26,4 @@ where
     fn new() -> Self::Filter {
         warp::body::json().boxed()
     }
-}
-
-pub fn factory<F>() -> F::Filter
-where
-    F: Factory,
-{
-    F::new()
 }
