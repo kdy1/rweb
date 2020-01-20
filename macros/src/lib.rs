@@ -186,7 +186,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                             continue;
                         }
 
-                        let is_rweb_attr = pat.attrs.iter().any(is_rweb_attr);
+                        let is_rweb_attr = pat.attrs.iter().any(is_rweb_arg_attr);
                         if !is_rweb_attr {
                             // We don't care about this parameter.
                             actual_inputs.push(i);
@@ -377,7 +377,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
     outer.dump().into()
 }
 
-fn is_rweb_attr(a: &Attribute) -> bool {
+fn is_rweb_arg_attr(a: &Attribute) -> bool {
     a.path.is_ident("json")
         || a.path.is_ident("form")
         || a.path.is_ident("body")
