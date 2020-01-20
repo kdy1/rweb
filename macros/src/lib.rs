@@ -1,8 +1,9 @@
 extern crate proc_macro;
 use pmutil::{q, Quote, ToTokensExt};
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use std::collections::HashSet;
 use syn::{
+    parenthesized,
     parse::{Parse, ParseStream},
     parse_quote::parse,
     punctuated::Punctuated,
@@ -83,16 +84,36 @@ pub fn router(
     router::router(attr.into(), item.into()).dump().into()
 }
 
-struct FilterInput {
+/// An eq token followed by literal string
+struct EqStr {
     _eq: Token![=],
     path: LitStr,
 }
 
-impl Parse for FilterInput {
+impl Parse for EqStr {
     fn parse(input: ParseStream) -> Result<Self, syn::Error> {
-        Ok(FilterInput {
+        Ok(EqStr {
             _eq: input.parse()?,
             path: input.parse()?,
+        })
+    }
+}
+
+/// An eq token followed by literal string
+struct ParenKeyValue {
+    key: Ident,
+    _eq: Token![=],
+    value: LitStr,
+}
+
+impl Parse for ParenKeyValue {
+    fn parse(input: ParseStream) -> Result<Self, syn::Error> {
+        let content;
+        parenthesized!(content in input);
+        Ok(ParenKeyValue {
+            key: content.parse()?,
+            _eq: content.parse()?,
+            value: content.parse()?,
         })
     }
 }
@@ -181,8 +202,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                             expr =
                                 q!(Vars { expr }, { expr.and(rweb::filters::query::raw()) }).parse()
                         } else if attr.path.is_ident("header") {
-                            if let Ok(header_name) = syn::parse2::<FilterInput>(attr.tokens.clone())
-                            {
+                            if let Ok(header_name) = syn::parse2::<EqStr>(attr.tokens.clone()) {
                                 expr = q!(
                                     Vars {
                                         expr,
@@ -191,26 +211,34 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                                     { expr.and(rweb::filters::header::header(header_name)) }
                                 )
                                 .parse();
-                            } else {
-                                unimplemented!("header {:?}", attr.tokens)
+                            } else if let Ok(kv) = syn::parse2::<ParenKeyValue>(attr.tokens.clone())
+                            {
+                                let name = kv.key.to_string().replace('_', "-");
+                                let header_value = &kv.value;
+
+                                expr = q!(
+                                    Vars {
+                                        expr,
+                                        header_name: &name,
+                                        header_value
+                                    },
+                                    {
+                                        expr.and(rweb::filters::header::exact_ignore_case(
+                                            header_name,
+                                            header_value,
+                                        ))
+                                    }
+                                )
+                                .parse();
                             }
                         } else if attr.path.is_ident("filter") {
-                            let filter_path: FilterInput = parse(attr.tokens.clone());
+                            let filter_path: EqStr = parse(attr.tokens.clone());
                             let filter_path = filter_path.path.value();
                             let tts: TokenStream = filter_path.parse().expect("failed tokenize");
                             let filter_path: Path = parse(tts);
 
                             expr =
                                 q!(Vars { expr, filter_path }, { expr.and(filter_path()) }).parse();
-
-                            // Don't add unit type to argument list
-                            match i.value() {
-                                FnArg::Typed(pat) => match &*pat.ty {
-                                    Type::Tuple(tuple) if tuple.elems.is_empty() => continue,
-                                    _ => {}
-                                },
-                                _ => {}
-                            }
                         } else if attr.path.is_ident("data") {
                             let ident = match &*pat.pat {
                                 Pat::Ident(i) => &i.ident,
@@ -223,6 +251,15 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                             .parse();
 
                             data_inputs.push(i.value().clone());
+                        }
+
+                        // Don't add unit type to argument list
+                        match i.value() {
+                            FnArg::Typed(pat) => match &*pat.ty {
+                                Type::Tuple(tuple) if tuple.elems.is_empty() => continue,
+                                _ => {}
+                            },
+                            _ => {}
                         }
 
                         actual_inputs.push(i);

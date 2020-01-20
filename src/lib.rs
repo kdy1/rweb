@@ -80,6 +80,19 @@
 //! }
 //! ```
 //!
+//! ### Using header as a guard
+//!
+//! ```rust
+//! use rweb::*;
+//! use std::net::SocketAddr;
+//!
+//! #[get("/")]
+//! fn routes(#[header(accept = "*/*")] _guard: (), #[header = "host"] host: SocketAddr) -> String {
+//!    format!("accepting stars on {}", host)
+//! }
+//! ```
+//!
+//!
 //! ## `#[filter = "path_to_fn"]`
 //! Calls function.
 //!
@@ -105,6 +118,25 @@
 //!            Err(reject::custom(DivideByZero))
 //!        }
 //!    })
+//! }
+//! ```
+//!
+//! ## `[data]`
+//! ```rust
+//! use futures::lock::Mutex;
+//! use rweb::*;
+//! use std::sync::Arc;
+//!
+//! #[derive(Clone)]
+//! struct Db {
+//!    items: Arc<Mutex<Vec<String>>>,
+//! }
+//!
+//! #[get("/")]
+//! async fn index(#[data] db: Db) -> Result<String, Rejection> {
+//!    let items = db.items.lock().await;
+//!
+//!    Ok(items.len().to_string())
 //! }
 //! ```
 
