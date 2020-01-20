@@ -213,6 +213,19 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
                         } else if attr.path.is_ident("query") {
                             expr =
                                 q!(Vars { expr }, { expr.and(rweb::filters::query::raw()) }).parse()
+                        } else if attr.path.is_ident("cookie") {
+                            if let Ok(cookie_name) = syn::parse2::<EqStr>(attr.tokens.clone()) {
+                                expr = q!(
+                                    Vars {
+                                        expr,
+                                        cookie_name: cookie_name.path
+                                    },
+                                    { expr.and(rweb::filters::cookie::cookie(cookie_name)) }
+                                )
+                                .parse();
+                            } else {
+                                panic!("#[cookie = \"foo\"] is used incorrectly")
+                            }
                         } else if attr.path.is_ident("header") {
                             if let Ok(header_name) = syn::parse2::<EqStr>(attr.tokens.clone()) {
                                 expr = q!(
@@ -369,6 +382,7 @@ fn is_rweb_attr(a: &Attribute) -> bool {
         || a.path.is_ident("form")
         || a.path.is_ident("body")
         || a.path.is_ident("query")
+        || a.path.is_ident("cookie")
         || a.path.is_ident("header")
         || a.path.is_ident("filter")
         || a.path.is_ident("data")
