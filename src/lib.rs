@@ -80,6 +80,19 @@
 //! }
 //! ```
 //!
+//! ### Using header as a guard
+//!
+//! ```rust
+//! use rweb::*;
+//! use std::net::SocketAddr;
+//!
+//! #[get("/")]
+//! fn routes(#[header(accept = "*/*")] _guard: (), #[header = "host"] host: SocketAddr) -> String {
+//!    format!("accepting stars on {}", host)
+//! }
+//! ```
+//!
+//!
 //! ## `#[filter = "path_to_fn"]`
 //! Calls function.
 //!
@@ -109,7 +122,6 @@
 //! ```
 //!
 //! ## `[data]`
-//!
 //! ```rust
 //! use futures::lock::Mutex;
 //! use rweb::*;
