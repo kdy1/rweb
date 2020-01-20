@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
-use rweb::{get, post, sse::ServerSentEvent, Filter, Reply};
+use rweb::{get, post, sse::ServerSentEvent, Filter, Rejection, Reply};
 use std::{
     collections::HashMap,
     sync::{
@@ -9,7 +9,6 @@ use std::{
     },
 };
 use tokio::sync::{mpsc, oneshot};
-use warp::Rejection;
 
 /// Our global unique user id counter.
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
