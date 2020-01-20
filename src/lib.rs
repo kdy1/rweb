@@ -133,7 +133,7 @@
 //! use rweb::*;
 //! use std::sync::Arc;
 //!
-//! #[derive(Clone)]
+//! #[derive(Clone, Default)]
 //! struct Db {
 //!    items: Arc<Mutex<Vec<String>>>,
 //! }
@@ -143,6 +143,11 @@
 //!    let items = db.items.lock().await;
 //!
 //!    Ok(items.len().to_string())
+//! }
+//!
+//! fn main() {
+//!     let db = Default::default();
+//!     serve(index(db));
 //! }
 //! ```
 //!
