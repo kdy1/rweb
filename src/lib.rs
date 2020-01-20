@@ -240,7 +240,7 @@
 //! }
 //! ```
 
-pub use self::factory::{FromRequest, Json};
+pub use self::factory::{Form, FromRequest, Json, Query};
 pub use rweb_macros::{delete, get, head, options, patch, post, put, router};
 pub use warp::{self, *};
 

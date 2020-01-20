@@ -32,6 +32,48 @@ where
     }
 }
 
+#[derive(Deserialize)]
+#[serde(transparent)]
+pub struct Form<T>(T);
+
+impl<T> Form<T> {
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
+
+impl<T> FromRequest for Form<T>
+where
+    T: 'static + Send + DeserializeOwned,
+{
+    type Filter = BoxedFilter<(Form<T>,)>;
+
+    fn new() -> Self::Filter {
+        warp::body::form().boxed()
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(transparent)]
+pub struct Query<T>(T);
+
+impl<T> Query<T> {
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
+
+impl<T> FromRequest for Query<T>
+where
+    T: 'static + Send + DeserializeOwned,
+{
+    type Filter = BoxedFilter<(Query<T>,)>;
+
+    fn new() -> Self::Filter {
+        warp::query().boxed()
+    }
+}
+
 impl FromRequest for Ws {
     type Filter = BoxedFilter<(Ws,)>;
 
