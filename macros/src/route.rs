@@ -117,10 +117,23 @@ pub fn compile_item_attrs(mut base: Expr, attrs: &mut Vec<Attribute>, emitted_ma
                     Meta::List(l) => {
                         if l.path.is_ident("origins") {
                             for origin in l.nested {
-                                println!("Origin: {}", origin.dump());
-                                //
+                                // TODO: More verification
+                                let is_wildcard = origin.dump().to_string() == "\"*\"";
+
+                                if is_wildcard {
+                                    cors_expr =
+                                        q!(Vars { cors_expr }, { cors_expr.allow_any_origin() })
+                                            .parse();
+                                } else {
+                                    cors_expr = q!(Vars { cors_expr, origin }, {
+                                        cors_expr.allow_origin(origin)
+                                    })
+                                    .parse();
+                                }
                             }
                         } else if l.path.is_ident("methods") {
+                            // TODO: More verification (namely string literal)
+
                             for method in l.nested {
                                 cors_expr = q!(Vars { cors_expr, method }, {
                                     cors_expr.allow_method(stringify!(method))
