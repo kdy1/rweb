@@ -31,7 +31,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
 
     let attr: Input = parse(attr);
 
-    let (expr, path_vars) = crate::path::compile(None, attr.path.dump(), &f.sig, false);
+    let (expr, path_vars) = crate::path::compile(None, attr.path.dump(), None, false);
     let (mut expr, inputs) =
         crate::route::param::compile(expr, &f.sig, &mut data_inputs, path_vars);
 
