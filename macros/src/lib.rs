@@ -20,7 +20,7 @@ pub fn get(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    compile_route(q!({ get }), path.into(), fn_item.into())
+    compile_route(Some(q!({ get })), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -28,7 +28,7 @@ pub fn post(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    compile_route(q!({ post }), path.into(), fn_item.into())
+    compile_route(Some(q!({ post })), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -36,7 +36,7 @@ pub fn put(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    compile_route(q!({ put }), path.into(), fn_item.into())
+    compile_route(Some(q!({ put })), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -44,7 +44,7 @@ pub fn delete(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    compile_route(q!({ delete }), path.into(), fn_item.into())
+    compile_route(Some(q!({ delete })), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -52,7 +52,7 @@ pub fn head(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    compile_route(q!({ head }), path.into(), fn_item.into())
+    compile_route(Some(q!({ head })), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -60,7 +60,7 @@ pub fn options(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    compile_route(q!({ options }), path.into(), fn_item.into())
+    compile_route(Some(q!({ options })), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -68,7 +68,7 @@ pub fn patch(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    compile_route(q!({ patch }), path.into(), fn_item.into())
+    compile_route(Some(q!({ patch })), path.into(), fn_item.into())
 }
 
 /// Creates a router. Useful for modularizing codes.
@@ -119,19 +119,27 @@ impl Parse for ParenTwoValue {
     }
 }
 
-fn compile_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro::TokenStream {
+fn compile_route(
+    method: Option<Quote>,
+    path: TokenStream,
+    f: TokenStream,
+) -> proc_macro::TokenStream {
     let mut f: ItemFn = parse(f);
     let sig = &f.sig;
     let mut data_inputs: Punctuated<_, Token![,]> = Default::default();
 
     // Apply method filter
-    let expr: Expr = q!(
-        Vars {
-            http_method: method,
-        },
-        { rweb::filters::method::http_method() }
-    )
-    .parse();
+    let expr: Expr = if let Some(method) = method {
+        q!(
+            Vars {
+                http_method: method,
+            },
+            { rweb::filters::method::http_method() }
+        )
+        .parse()
+    } else {
+        q!({ rweb::filters::any() }).parse()
+    };
 
     let (mut expr, vars) = path::compile(Some(expr), path, Some(sig), true);
 
