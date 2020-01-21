@@ -41,3 +41,24 @@ async fn arg_cnt_test() {
     assert_eq!(value.status(), StatusCode::OK);
     assert_eq!(value.into_body(), b"3"[..]);
 }
+
+#[derive(Default, Clone)]
+struct Db {}
+
+#[get("/use")]
+fn use_db(#[data] db: Db) -> String {
+    String::new()
+}
+
+#[router("/data", services(use_db))]
+fn param(#[data] db: Db) {}
+
+#[tokio::test]
+async fn param_test() {
+    let value = warp::test::request()
+        .path("/math/complex/sum/1/2")
+        .reply(&param(Db::default()))
+        .await;
+    assert_eq!(value.status(), StatusCode::OK);
+    assert_eq!(value.into_body(), b"3"[..]);
+}
