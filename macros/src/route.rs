@@ -1,12 +1,11 @@
 use crate::ParenTwoValue;
 use pmutil::{q, ToTokensExt};
-use proc_macro2::Ident;
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
     parse2,
     punctuated::Punctuated,
-    Attribute, Error, Expr, Meta, MetaNameValue, NestedMeta, Token,
+    Attribute, Expr, Meta, MetaNameValue, Token,
 };
 
 /// A node wrapped with paren.
