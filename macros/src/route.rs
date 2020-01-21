@@ -43,7 +43,7 @@ where
 
 /// Handle attributes on fn item like `#[header(ContentType =
 /// "application/json")]`
-pub fn compile_item_attrs(mut base: Expr, attrs: &mut Vec<Attribute>, emitted_map: bool) -> Expr {
+pub fn compile_fn_attrs(mut base: Expr, attrs: &mut Vec<Attribute>, emitted_map: bool) -> Expr {
     attrs.retain(|attr| {
         if attr.path.is_ident("header") {
             let t: ParenTwoValue = parse2(attr.tokens.clone()).expect(
