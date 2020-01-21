@@ -4,3 +4,8 @@
 
 Yet another web server framework for rust.
 
+Installation:
+```toml
+[dependencies]
+rweb = "0.3.0-alpha.0"
+```
