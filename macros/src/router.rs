@@ -1,3 +1,4 @@
+use crate::route::fn_attr::compile_fn_attrs;
 use pmutil::{q, ToTokensExt};
 use proc_macro2::{Ident, TokenStream};
 use syn::{
@@ -24,7 +25,7 @@ impl Parse for Input {
 }
 
 pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
-    let f: ItemFn = parse2(item).expect("failed to parse input as a function item");
+    let mut f: ItemFn = parse2(item).expect("failed to parse input as a function item");
     let router_name = &f.sig.ident;
     let vis = &f.vis;
     let mut data_inputs: Punctuated<_, Token![,]> = Default::default();
@@ -32,7 +33,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let attr: Input = parse2(attr).expect("failed to parse input as Input { path , service }");
 
     let (expr, path_vars) = crate::path::compile(None, attr.path.dump(), None, false);
-    let (mut expr, inputs) =
+    let (expr, inputs) =
         crate::route::param::compile(expr, &f.sig, &mut data_inputs, path_vars, false);
 
     let mut exprs: Punctuated<Expr, Token![.]> = Punctuated::default();
@@ -55,6 +56,8 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
         })
         .collect();
 
+    let mut expr = compile_fn_attrs(expr, &mut f.attrs, false);
+
     match attr.services {
         Meta::List(list) => {
             if list.path.is_ident("services") {
@@ -75,9 +78,10 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
         _ => panic!("#[router(\"/path\", services(a, b, c,))] is correct usage"),
     }
 
+    let expr = compile_fn_attrs(expr, &mut f.attrs, true);
+
     // TODO: Default handler
     let mut ret = q!(Vars { expr, router_name }, {
-        #[allow(non_snake_case)]
         fn router_name(
         ) -> impl Clone + rweb::Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection>
         {
@@ -88,6 +92,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     })
     .parse::<ItemFn>();
 
+    ret.attrs = f.attrs;
     ret.sig.inputs = inputs;
     ret.vis = vis.clone();
 

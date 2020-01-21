@@ -51,14 +51,28 @@ fn use_db(#[data] _db: Db) -> String {
 }
 
 #[router("/data", services(use_db))]
-fn param(#[data] db: Db) {}
+fn data_param(#[data] db: Db) {}
 
 #[tokio::test]
-async fn param_test() {
+async fn data_param_test() {
     let value = warp::test::request()
         .path("/data/use")
-        .reply(&param(Db::default()))
+        .reply(&data_param(Db::default()))
         .await;
     assert_eq!(value.status(), StatusCode::OK);
     assert_eq!(value.into_body(), b""[..]);
 }
+
+#[get("/")]
+fn admin_index() -> String {
+    String::new()
+}
+
+#[get("/users")]
+fn admin_users() -> String {
+    String::new()
+}
+
+#[router("/admin", services(admin_index, admin_users))]
+#[header("X-User-Admin", "1")]
+fn admin() {}
