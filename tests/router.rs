@@ -56,9 +56,9 @@ fn param(#[data] db: Db) {}
 #[tokio::test]
 async fn param_test() {
     let value = warp::test::request()
-        .path("/math/complex/sum/1/2")
+        .path("/data/use")
         .reply(&param(Db::default()))
         .await;
     assert_eq!(value.status(), StatusCode::OK);
-    assert_eq!(value.into_body(), b"3"[..]);
+    assert_eq!(value.into_body(), b""[..]);
 }
