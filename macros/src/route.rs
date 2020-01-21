@@ -117,15 +117,40 @@ pub fn compile_item_attrs(mut base: Expr, attrs: &mut Vec<Attribute>, emitted_ma
                     Meta::List(l) => {
                         if l.path.is_ident("origins") {
                             for origin in l.nested {
+                                println!("Origin: {}", origin.dump());
                                 //
                             }
+                        } else if l.path.is_ident("methods") {
+                            for method in l.nested {
+                                cors_expr = q!(Vars { cors_expr, method }, {
+                                    cors_expr.allow_method(stringify!(method))
+                                })
+                                .parse();
+                            }
+                        } else if l.path.is_ident("headers") {
+                            for header in l.nested {
+                                cors_expr = q!(Vars { cors_expr, header }, {
+                                    cors_expr.allow_header(header)
+                                })
+                                .parse();
+                            }
                         } else {
-                            panic!("Unknown config: {}\n{}", l.dump(), correct_usage)
+                            panic!("Unknown config: `{}`\n{}", l.dump(), correct_usage)
                         }
                     }
                     Meta::NameValue(n) => {
-                        //
-                        println!("NameValue: {}", n.dump())
+                        if n.path.is_ident("max_age") {
+                            cors_expr = q!(
+                                Vars {
+                                    cors_expr,
+                                    v: n.lit
+                                },
+                                { cors_expr.max_age(v) }
+                            )
+                            .parse();
+                        } else {
+                            panic!("Unknown config: `{}`\n{}", n.dump(), correct_usage)
+                        }
                     }
                 }
             }

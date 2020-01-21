@@ -14,6 +14,29 @@ fn body_size() -> String {
 
 #[get("/")]
 #[cors(origins("example.com"), max_age = 600)]
-fn cors_example() -> String {
+fn cors_1() -> String {
+    unreachable!()
+}
+
+#[get("/")]
+#[cors(origins("example.com"), methods(get), max_age = 600)]
+fn cors_2() -> String {
+    unreachable!()
+}
+
+#[get("/")]
+#[cors(origins("*"), methods(get), max_age = 600)]
+fn cors_3() -> String {
+    unreachable!()
+}
+
+#[get("/")]
+#[cors(
+    origins("*"),
+    methods(get, post, patch, delete),
+    headers("accept"),
+    max_age = 600
+)]
+fn cors_4() -> String {
     unreachable!()
 }
