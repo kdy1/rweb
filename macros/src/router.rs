@@ -1,4 +1,3 @@
-use crate::path::compile;
 use pmutil::{q, ToTokensExt};
 use proc_macro2::TokenStream;
 use syn::{
@@ -28,10 +27,14 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let f: ItemFn = parse(item);
     let router_name = &f.sig.ident;
     let vis = &f.vis;
+    let mut data_inputs: Punctuated<_, Token![,]> = Default::default();
 
     let attr: Input = parse(attr);
 
-    let (mut expr, _) = compile(None, attr.path.dump(), None, false);
+    let (expr, path_vars) = crate::path::compile(None, attr.path.dump(), &f.sig, false);
+    let (mut expr, inputs) =
+        crate::route::param::compile(expr, &f.sig, &mut data_inputs, path_vars);
+
     let mut exprs: Punctuated<Expr, Token![.]> = Punctuated::default();
 
     match attr.services {
@@ -55,22 +58,20 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     }
 
     // TODO: Default handler
-    q!(
-        Vars {
-            vis,
-            expr,
-            router_name
-        },
+    let mut ret = q!(Vars { expr, router_name }, {
+        #[allow(non_snake_case)]
+        fn router_name(
+        ) -> impl Clone + rweb::Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection>
         {
-            #[allow(non_snake_case)]
-            vis fn router_name(
-            ) -> impl Clone + rweb::Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection>
-            {
-                use rweb::{rt::StatusCode, Filter};
+            use rweb::{rt::StatusCode, Filter};
 
-                expr
-            }
+            expr
         }
-    )
-    .parse()
+    })
+    .parse::<ItemFn>();
+
+    ret.sig.inputs = inputs;
+    ret.vis = vis.clone();
+
+    ret
 }

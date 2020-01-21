@@ -5,7 +5,7 @@ use syn::{parse_quote::parse, punctuated::Punctuated, Expr, FnArg, LitStr, Pat, 
 pub fn compile(
     base: Option<Expr>,
     path: TokenStream,
-    sig: Option<&Signature>,
+    sig: &Signature,
     end: bool,
 ) -> (Expr, Vec<(String, usize)>) {
     let path: LitStr = parse(path);
@@ -34,29 +34,25 @@ pub fn compile(
         let expr = if segment.starts_with('{') {
             let v = &segment[1..segment.len() - 1];
 
-            if let Some(sig) = sig {
-                let ty = sig
-                    .inputs
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(idx, arg)| match arg {
-                        FnArg::Typed(ty) => match *ty.pat {
-                            Pat::Ident(ref i) if i.ident == v => {
-                                vars.push((v.to_string(), idx));
-                                Some(&ty.ty)
-                            }
-                            _ => None,
-                        },
-
+            let ty = sig
+                .inputs
+                .iter()
+                .enumerate()
+                .filter_map(|(idx, arg)| match arg {
+                    FnArg::Typed(ty) => match *ty.pat {
+                        Pat::Ident(ref i) if i.ident == v => {
+                            vars.push((v.to_string(), idx));
+                            Some(&ty.ty)
+                        }
                         _ => None,
-                    })
-                    .next()
-                    .unwrap_or_else(|| panic!("failed to find parameter named `{}`", v));
+                    },
 
-                q!(Vars { ty }, { rweb::filters::path::param::<ty>() })
-            } else {
-                panic!("path parameters are not allowed here (currently)")
-            }
+                    _ => None,
+                })
+                .next()
+                .unwrap_or_else(|| panic!("failed to find parameter named `{}`", v));
+
+            q!(Vars { ty }, { rweb::filters::path::param::<ty>() })
         } else {
             q!(Vars { segment }, { rweb::filters::path::path(segment) })
         };

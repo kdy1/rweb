@@ -67,7 +67,7 @@ pub fn compile_route(
         q!({ rweb::filters::any() }).parse()
     };
 
-    let (mut expr, vars) = crate::path::compile(Some(expr), path, Some(sig), true);
+    let (mut expr, vars) = crate::path::compile(Some(expr), path, sig, true);
 
     let handler_fn = {
         let (e, inputs) = param::compile(expr, &f.sig, &mut data_inputs, vars);
