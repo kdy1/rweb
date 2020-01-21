@@ -46,7 +46,7 @@ async fn arg_cnt_test() {
 struct Db {}
 
 #[get("/use")]
-fn use_db(#[data] db: Db) -> String {
+fn use_db(#[data] _db: Db) -> String {
     String::new()
 }
 

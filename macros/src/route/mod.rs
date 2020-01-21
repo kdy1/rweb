@@ -70,7 +70,7 @@ pub fn compile_route(
     let (mut expr, vars) = crate::path::compile(Some(expr), path, Some(sig), true);
 
     let handler_fn = {
-        let (e, inputs) = param::compile(expr, &f.sig, &mut data_inputs, vars);
+        let (e, inputs) = param::compile(expr, &f.sig, &mut data_inputs, vars, true);
         expr = e;
         ItemFn {
             attrs: Default::default(),

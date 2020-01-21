@@ -12,6 +12,7 @@ pub fn compile(
     sig: &Signature,
     data_inputs: &mut Punctuated<FnArg, Token![,]>,
     path_vars: Vec<(String, usize)>,
+    insert_data_provider: bool,
 ) -> (Expr, Punctuated<FnArg, Token![,]>) {
     let mut path_params = HashSet::new();
     let mut inputs = sig.inputs.clone();
@@ -130,10 +131,12 @@ pub fn compile(
                             _ => unimplemented!("#[data] with complex pattern"),
                         };
 
-                        expr = q!(Vars { expr, ident }, {
-                            expr.and(rweb::rt::provider(ident))
-                        })
-                        .parse();
+                        if insert_data_provider {
+                            expr = q!(Vars { expr, ident }, {
+                                expr.and(rweb::rt::provider(ident))
+                            })
+                            .parse();
+                        }
 
                         data_inputs.push(i.value().clone());
                     }

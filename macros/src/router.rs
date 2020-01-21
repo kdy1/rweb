@@ -33,7 +33,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
 
     let (expr, path_vars) = crate::path::compile(None, attr.path.dump(), None, false);
     let (mut expr, inputs) =
-        crate::route::param::compile(expr, &f.sig, &mut data_inputs, path_vars);
+        crate::route::param::compile(expr, &f.sig, &mut data_inputs, path_vars, false);
 
     let mut exprs: Punctuated<Expr, Token![.]> = Punctuated::default();
 
@@ -60,9 +60,9 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
             if list.path.is_ident("services") {
                 for name in list.nested.into_iter() {
                     if exprs.is_empty() {
-                        exprs.push(q!(Vars { name }, { name() }).parse());
+                        exprs.push(q!(Vars { name, args: &args }, { name(args) }).parse());
                     } else {
-                        exprs.push(q!(Vars { name }, { or(name()) }).parse());
+                        exprs.push(q!(Vars { name, args: &args }, { or(name(args)) }).parse());
                     }
                 }
 
