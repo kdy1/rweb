@@ -8,8 +8,8 @@ use syn::{
     Expr, ItemFn, LitStr, ReturnType, Signature, Token, Visibility,
 };
 
-mod fn_attr;
-mod param;
+pub mod fn_attr;
+pub mod param;
 
 /// An eq token followed by literal string
 struct EqStr {
