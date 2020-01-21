@@ -321,7 +321,7 @@
 //!
 //! # `#[router]`
 //!
-//! `#[router]` can be used to
+//! `#[router]` can be used to group routes.
 //!
 //! ## `#[data]`
 //!
