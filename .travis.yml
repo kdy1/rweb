@@ -19,11 +19,11 @@ cache:
 before_cache:
   - rm -rf /home/travis/.cargo/registry
 
-git:
-  submodules: false
-before_install:
-  - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
-  - git submodule update --init --recursive
+#git:
+#  submodules: false
+#before_install:
+#  - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
+#  - git submodule update --init --recursive
 
 install:
   - cargo test --no-run --color always --all --all-features
