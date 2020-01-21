@@ -1,4 +1,4 @@
-use crate::ParenTwoValue;
+use super::ParenTwoValue;
 use pmutil::{q, ToTokensExt};
 use syn::{
     parenthesized,
@@ -7,8 +7,6 @@ use syn::{
     punctuated::Punctuated,
     Attribute, Expr, Meta, MetaNameValue, Token,
 };
-
-mod param;
 
 /// A node wrapped with paren.
 struct Paren<T> {
