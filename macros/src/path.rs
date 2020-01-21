@@ -2,6 +2,8 @@ use pmutil::q;
 use proc_macro2::TokenStream;
 use syn::{parse_quote::parse, punctuated::Punctuated, Expr, FnArg, LitStr, Pat, Signature, Token};
 
+///
+/// - `sig`: sohuld be [Some] only if path parameters are allowed
 pub fn compile(
     base: Option<Expr>,
     path: TokenStream,

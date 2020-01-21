@@ -8,7 +8,8 @@ use std::net::SocketAddr;
 ///
 /// Match when we get `accept: */*` exactly.
 #[get("/")]
-fn routes(#[header(accept = "*/*")] _guard: (), #[header = "host"] host: SocketAddr) -> String {
+#[header("accept", "*/*")]
+fn routes(#[header = "host"] host: SocketAddr) -> String {
     format!("accepting stars on {}", host)
 }
 
