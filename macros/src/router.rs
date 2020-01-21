@@ -5,7 +5,7 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_quote::parse,
     punctuated::Punctuated,
-    Error, Expr, ItemFn, ItemStruct, LitStr, Meta, Token,
+    Error, Expr, ItemFn, LitStr, Meta, Token,
 };
 
 struct Input {
@@ -25,12 +25,9 @@ impl Parse for Input {
 }
 
 pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
-    let item: ItemStruct = parse(item);
-    let router_name = &item.ident;
-
-    if !item.fields.is_empty() {
-        panic!("#[router] should be applied to unit struct")
-    }
+    let f: ItemFn = parse(item);
+    let router_name = &f.sig.ident;
+    let vis = &f.vis;
 
     let attr: Input = parse(attr);
 
@@ -58,15 +55,22 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     }
 
     // TODO: Default handler
-    q!(Vars { expr, router_name }, {
-        #[allow(non_snake_case)]
-        fn router_name(
-        ) -> impl Clone + rweb::Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection>
+    q!(
+        Vars {
+            vis,
+            expr,
+            router_name
+        },
         {
-            use rweb::{rt::StatusCode, Filter};
+            #[allow(non_snake_case)]
+            vis fn router_name(
+            ) -> impl Clone + rweb::Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection>
+            {
+                use rweb::{rt::StatusCode, Filter};
 
-            expr
+                expr
+            }
         }
-    })
+    )
     .parse()
 }
