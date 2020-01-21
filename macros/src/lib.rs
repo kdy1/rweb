@@ -296,18 +296,10 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
         }
     };
 
-    //    let args: Punctuated<Ident, Token![,]> = sig
-    //        .inputs
-    //        .pairs()
-    //        .enumerate()
-    //        .map(|(i, pair)| {
-    //            let (arg, comma) = pair.into_tuple();
-    //
-    //            Pair::new(Ident::new(&format!("arg{}", i), arg.span()),
-    // comma.clone())        })
-    //        .collect();
+    let should_use_impl_trait =
+        sig.asyncness.is_some() || f.attrs.iter().any(|attr| attr.path.is_ident("cors"));
 
-    let expr = route::compile_item_attrs(expr, &mut f.attrs);
+    let expr = route::compile_item_attrs(expr, &mut f.attrs, false);
 
     let expr = if sig.asyncness.is_some() {
         q!(
@@ -328,7 +320,9 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
     }
     .parse::<Expr>();
 
-    let ret = if sig.asyncness.is_some() {
+    let expr = route::compile_item_attrs(expr, &mut f.attrs, true);
+
+    let ret = if should_use_impl_trait {
         q!((impl rweb::Reply)).dump()
     } else {
         match sig.output {

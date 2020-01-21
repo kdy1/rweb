@@ -11,3 +11,9 @@ fn header_guard() -> String {
 fn body_size() -> String {
     unreachable!()
 }
+
+#[get("/")]
+#[cors(origins("example.com"), max_age = 600)]
+fn cors_example() -> String {
+    unreachable!()
+}

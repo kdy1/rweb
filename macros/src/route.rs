@@ -4,7 +4,9 @@ use proc_macro2::Ident;
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
-    parse2, Attribute, Error, Expr, Meta, MetaNameValue, NestedMeta, Token,
+    parse2,
+    punctuated::Punctuated,
+    Attribute, Error, Expr, Meta, MetaNameValue, NestedMeta, Token,
 };
 
 /// A node wrapped with paren.
@@ -25,9 +27,24 @@ where
     }
 }
 
+struct Delimited<T> {
+    inner: Punctuated<T, Token![,]>,
+}
+
+impl<T> Parse for Delimited<T>
+where
+    T: Parse,
+{
+    fn parse(input: ParseStream) -> syn::parse::Result<Self> {
+        Ok(Delimited {
+            inner: Punctuated::parse_separated_nonempty(input)?,
+        })
+    }
+}
+
 /// Handle attributes on fn item like `#[header(ContentType =
 /// "application/json")]`
-pub fn compile_item_attrs(mut base: Expr, attrs: &mut Vec<Attribute>) -> Expr {
+pub fn compile_item_attrs(mut base: Expr, attrs: &mut Vec<Attribute>, emitted_map: bool) -> Expr {
     attrs.retain(|attr| {
         if attr.path.is_ident("header") {
             let t: ParenTwoValue = parse2(attr.tokens.clone()).expect(
@@ -74,9 +91,55 @@ pub fn compile_item_attrs(mut base: Expr, attrs: &mut Vec<Attribute>) -> Expr {
                 )
                 .parse();
                 return false;
-            } else {
-                panic!("Unknown configuration {} for #[body_size]", meta.dump())
             }
+
+            panic!("Unknown configuration {} for #[body_size]", meta.dump())
+        }
+
+        if attr.path.is_ident("cors") && emitted_map {
+            let correct_usage =
+                "Correct usage:\n#[cors(origins(\"example.com\", \"your.site.com\"), methods(get, \
+                 post), headers(\"accept\"), max_age = 600)]\nNote: origins(\"*\") can be used to \
+                 indicate cors is allowed for all origin. \nNote: you can omit methods to allow \
+                 all methods.\nNote: you can omit headers to use the default behavior.\nNote: you \
+                 can omit max_age to use the default value";
+
+            let configs = parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
+                .expect(correct_usage)
+                .inner
+                .inner;
+
+            let mut cors_expr: Expr = q!({ rweb::filters::cors::cors() }).parse();
+
+            for config in configs {
+                match config {
+                    Meta::Path(p) => unimplemented!("Path meta: {}\n{}", p.dump(), correct_usage),
+                    Meta::List(l) => {
+                        if l.path.is_ident("origins") {
+                            for origin in l.nested {
+                                //
+                            }
+                        } else {
+                            panic!("Unknown config: {}\n{}", l.dump(), correct_usage)
+                        }
+                    }
+                    Meta::NameValue(n) => {
+                        //
+                        println!("NameValue: {}", n.dump())
+                    }
+                }
+            }
+
+            base = q!(
+                Vars {
+                    base: &base,
+                    cors_expr
+                },
+                { base.with(cors_expr.build()) }
+            )
+            .parse();
+
+            return false;
         }
 
         true
