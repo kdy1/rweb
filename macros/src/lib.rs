@@ -20,7 +20,7 @@ pub fn get(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_http_method(q!({ get }), path.into(), fn_item.into())
+    compile_route(q!({ get }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -28,7 +28,7 @@ pub fn post(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_http_method(q!({ post }), path.into(), fn_item.into())
+    compile_route(q!({ post }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -36,7 +36,7 @@ pub fn put(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_http_method(q!({ put }), path.into(), fn_item.into())
+    compile_route(q!({ put }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -44,7 +44,7 @@ pub fn delete(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_http_method(q!({ delete }), path.into(), fn_item.into())
+    compile_route(q!({ delete }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -52,7 +52,7 @@ pub fn head(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_http_method(q!({ head }), path.into(), fn_item.into())
+    compile_route(q!({ head }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -60,7 +60,7 @@ pub fn options(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_http_method(q!({ options }), path.into(), fn_item.into())
+    compile_route(q!({ options }), path.into(), fn_item.into())
 }
 
 #[proc_macro_attribute]
@@ -68,7 +68,7 @@ pub fn patch(
     path: proc_macro::TokenStream,
     fn_item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    expand_http_method(q!({ patch }), path.into(), fn_item.into())
+    compile_route(q!({ patch }), path.into(), fn_item.into())
 }
 
 /// Creates a router. Useful for modularizing codes.
@@ -119,7 +119,7 @@ impl Parse for ParenTwoValue {
     }
 }
 
-fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro::TokenStream {
+fn compile_route(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro::TokenStream {
     let mut f: ItemFn = parse(f);
     let sig = &f.sig;
     let mut data_inputs: Punctuated<_, Token![,]> = Default::default();
@@ -299,7 +299,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
     let should_use_impl_trait =
         sig.asyncness.is_some() || f.attrs.iter().any(|attr| attr.path.is_ident("cors"));
 
-    let expr = route::compile_item_attrs(expr, &mut f.attrs, false);
+    let expr = route::compile_fn_attrs(expr, &mut f.attrs, false);
 
     let expr = if sig.asyncness.is_some() {
         q!(
@@ -320,7 +320,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
     }
     .parse::<Expr>();
 
-    let expr = route::compile_item_attrs(expr, &mut f.attrs, true);
+    let expr = route::compile_fn_attrs(expr, &mut f.attrs, true);
 
     let ret = if should_use_impl_trait {
         q!((impl rweb::Reply)).dump()
