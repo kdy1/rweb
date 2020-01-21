@@ -182,7 +182,7 @@
 //! }
 //! ```
 //!
-//! ## `#[header]`
+//! ## `#[header = "header-name"]`
 //! Value of the header.
 //! ```rust
 //! use rweb::*;
@@ -193,6 +193,20 @@
 //! }
 //! fn main() {
 //!     serve(ret_accept());
+//! }
+//! ```
+//!
+//! ## `#[cookie = "cookie-name"]`
+//! Value of the header.
+//! ```rust
+//! use rweb::*;
+//!
+//! #[get("/")]
+//! fn cookie(#[header = "sess"] sess_id: String) -> String {
+//!     sess_id
+//! }
+//! fn main() {
+//!     serve(cookie());
 //! }
 //! ```
 //!
@@ -307,7 +321,7 @@
 //!
 //! # `#[router]`
 //!
-//! `#[router]` can be used to
+//! `#[router]` can be used to group routes.
 //!
 //! ## `#[data]`
 //!

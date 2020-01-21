@@ -2,7 +2,7 @@
 
 [package]
 name = "rweb"
-version = "0.3.0"
+version = "0.3.0-alpha.0"
 authors = ["강동윤 <kdy1997.dev@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/kdy1/rweb.git"
@@ -16,7 +16,7 @@ websocket = ["warp/websocket"]
 tls = ["warp/rustls"]
 
 [dependencies]
-rweb-macros = { version = "0.2.1", path = "./macros" }
+rweb-macros = { version = "0.3.0-alpha.0", path = "./macros" }
 tokio = { version = "0.2", features = ["macros"] }
 warp = "0.2"
 http = "0.2"
