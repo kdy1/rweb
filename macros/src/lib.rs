@@ -120,7 +120,7 @@ impl Parse for ParenTwoValue {
 }
 
 fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_macro::TokenStream {
-    let f: ItemFn = parse(f);
+    let mut f: ItemFn = parse(f);
     let sig = &f.sig;
     let mut data_inputs: Punctuated<_, Token![,]> = Default::default();
 
@@ -307,7 +307,7 @@ fn expand_http_method(method: Quote, path: TokenStream, f: TokenStream) -> proc_
     // comma.clone())        })
     //        .collect();
 
-    let expr = route::compile_item_attrs(expr, f.attrs.clone());
+    let expr = route::compile_item_attrs(expr, &mut f.attrs);
 
     let expr = if sig.asyncness.is_some() {
         q!(
