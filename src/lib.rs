@@ -18,13 +18,13 @@
 //!
 //! ```rust
 //! use rweb::*;
-//! use std::net::SocketAddr;
 //!
 //! #[get("/")]
-//! #[header(accept = "*/*")]
+//! #[header("accept", "*/*")]
 //! fn routes() -> &'static str {
 //!    "This route matches only if accept header is '*/*'"
 //! }
+//!
 //! fn main() {
 //!     serve(routes());
 //! }
@@ -34,6 +34,8 @@
 //!
 //!
 //! ```rust
+//! use rweb::*;
+//!
 //! #[get("/")]
 //! #[cors(origins("example.com"), max_age = 600)]
 //! fn cors_1() -> String {
@@ -65,8 +67,9 @@
 //! ```
 //!
 //! ## `#[body_size(max = 8192)]`
-//!
 //! ```rust
+//! use rweb::*;
+//!
 //! #[get("/")]
 //! #[body_size(max = "8192")]
 //! fn body_size() -> String {
@@ -294,8 +297,8 @@
 //! ```rust
 //! use rweb::*;
 //!
-//! // This handler is invoked only if x-appengine-cron matches 1 (case
-//! insensitive). #[get("/")]
+//! // This handler is invoked only if x-appengine-cron matches 1 (case insensitive).
+//! #[get("/")]
 //! #[header("X-AppEngine-Cron", "1")]
 //! fn gae_cron() -> String {
 //!     String::new()
@@ -310,6 +313,8 @@
 //!
 //! You can use `#[data]` with a router.
 //! ```rust
+//! use rweb::*;
+//!
 //! #[derive(Default, Clone)]
 //! struct Db {}
 //!
@@ -325,6 +330,8 @@
 //!
 //! ## Guard
 //! ```rust
+//! use rweb::*;
+//!
 //! #[get("/")]
 //! fn admin_index() -> String {
 //!    String::new()
