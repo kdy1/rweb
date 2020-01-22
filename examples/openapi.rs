@@ -1,4 +1,4 @@
-use rweb::{openapi::spec, *};
+use rweb::*;
 
 #[get("/sum/{a}/{b}")]
 fn sum(a: usize, b: usize) -> String {
@@ -6,7 +6,4 @@ fn sum(a: usize, b: usize) -> String {
 }
 
 #[tokio::main]
-async fn main() {
-    let spec = spec(&sum()).await;
-    panic!("Spec: {:?}", spec);
-}
+async fn main() {}
