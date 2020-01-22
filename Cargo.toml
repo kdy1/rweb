@@ -10,7 +10,7 @@ description = "Yet another web server framework for rust"
 edition = "2018"
 
 [features]
-default = ["multipart", "websocket", "openapi"]
+default = ["multipart", "websocket"]
 multipart = ["warp/multipart"]
 websocket = ["warp/websocket"]
 tls = ["warp/rustls"]
