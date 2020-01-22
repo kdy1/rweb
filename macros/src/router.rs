@@ -78,21 +78,15 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
         _ => panic!("#[router(\"/path\", services(a, b, c,))] is correct usage"),
     }
 
-    let expr = compile_fn_attrs(expr, &mut f.attrs, true);
+    let mut expr = compile_fn_attrs(expr, &mut f.attrs, true);
 
-    // TODO: Default handler
-    let mut ret = q!(
-        Vars {
-            path: &attr.path,
-            expr,
-            router_name
-        },
-        {
-            fn router_name(
-            ) -> impl Clone + rweb::Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection>
+    if cfg!(feature = "openapi") {
+        expr = q!(
+            Vars {
+                path: &attr.path,
+                expr
+            },
             {
-                use rweb::{rt::StatusCode, Filter};
-
                 rweb::openapi::with(|__collector: Option<&mut rweb::openapi::Collector>| {
                     if let Some(__collector) = __collector {
                         __collector.with_appended_prefix(stringify!(path), || expr)
@@ -101,8 +95,20 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
                     }
                 })
             }
+        )
+        .parse();
+    }
+
+    // TODO: Default handler
+    let mut ret = q!(Vars { expr, router_name }, {
+        fn router_name(
+        ) -> impl Clone + rweb::Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection>
+        {
+            use rweb::{rt::StatusCode, Filter};
+
+            expr
         }
-    )
+    })
     .parse::<ItemFn>();
 
     ret.attrs = f.attrs;
