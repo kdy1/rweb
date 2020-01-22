@@ -5,8 +5,8 @@ fn sum(a: usize, b: usize) -> String {
     (a + b).to_string()
 }
 
-#[tokio::test]
-async fn sum_spec() {
-    let spec = spec(sum());
+#[tokio::main]
+async fn main() {
+    let spec = spec(&sum()).await;
     panic!("Spec: {:?}", spec);
 }
