@@ -89,7 +89,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
             {
                 rweb::openapi::with(|__collector: Option<&mut rweb::openapi::Collector>| {
                     if let Some(__collector) = __collector {
-                        __collector.with_appended_prefix(stringify!(path), || expr)
+                        __collector.with_appended_prefix(path, || expr)
                     } else {
                         expr
                     }
