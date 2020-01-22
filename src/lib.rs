@@ -368,3 +368,5 @@ pub use warp::{self, *};
 mod factory;
 #[doc(hidden)]
 pub mod rt;
+#[cfg(feature = "swagger")]
+mod swagger;
