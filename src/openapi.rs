@@ -14,6 +14,7 @@ pub struct Collector {
 }
 
 impl Collector {
+    #[doc(hidden)]
     pub fn with_appended_prefix<F, Ret>(&mut self, prefix: &str, op: F) -> Ret
     where
         F: FnOnce() -> Ret,
@@ -25,7 +26,7 @@ impl Collector {
         ret
     }
 
-    /// Do not call this by hand.
+    #[doc(hidden)]
     #[inline(never)]
     pub fn add(&mut self, path: String, method: Method, operation: Operation) {
         let v = self.spec.paths.entry(path).or_insert_with(Default::default);
@@ -79,6 +80,7 @@ where
     (cell.into_inner().spec, ret)
 }
 
+#[doc(hidden)]
 pub fn with<F, Ret>(op: F) -> Ret
 where
     F: FnOnce(Option<&mut Collector>) -> Ret,
@@ -90,5 +92,46 @@ where
         })
     } else {
         op(None)
+    }
+}
+
+#[doc(hidden)]
+pub mod http_methods {
+    use http::Method;
+
+    pub const fn get() -> Method {
+        Method::GET
+    }
+
+    pub const fn post() -> Method {
+        Method::POST
+    }
+
+    pub const fn put() -> Method {
+        Method::PUT
+    }
+
+    pub const fn delete() -> Method {
+        Method::DELETE
+    }
+
+    pub const fn head() -> Method {
+        Method::HEAD
+    }
+
+    pub const fn options() -> Method {
+        Method::OPTIONS
+    }
+
+    pub const fn connect() -> Method {
+        Method::CONNECT
+    }
+
+    pub const fn patch() -> Method {
+        Method::PATCH
+    }
+
+    pub const fn trace() -> Method {
+        Method::TRACE
     }
 }

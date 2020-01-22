@@ -55,7 +55,7 @@ pub fn compile_route(
     let mut data_inputs: Punctuated<_, Token![,]> = Default::default();
 
     // Apply method filter
-    let expr: Expr = if let Some(method) = method {
+    let expr: Expr = if let Some(ref method) = method {
         q!(
             Vars {
                 http_method: method,
@@ -67,7 +67,7 @@ pub fn compile_route(
         q!({ rweb::filters::any() }).parse()
     };
 
-    let (mut expr, vars) = crate::path::compile(Some(expr), path, Some(sig), true);
+    let (mut expr, vars) = crate::path::compile(Some(expr), path.clone(), Some(sig), true);
 
     let handler_fn = {
         let (e, inputs) = param::compile(expr, &f.sig, &mut data_inputs, vars, true);
@@ -109,7 +109,7 @@ pub fn compile_route(
     }
     .parse::<Expr>();
 
-    let expr = fn_attr::compile_fn_attrs(expr, &mut f.attrs, true);
+    let mut expr = fn_attr::compile_fn_attrs(expr, &mut f.attrs, true);
 
     let ret = if should_use_impl_trait {
         q!((impl rweb::Reply)).dump()
@@ -119,6 +119,30 @@ pub fn compile_route(
             ReturnType::Type(_, ref ty) => ty.dump(),
         }
     };
+
+    if cfg!(feature = "openapi") {
+        expr = q!(
+            Vars {
+                http_method: method,
+                path: &path,
+                expr
+            },
+            {
+                rweb::openapi::with(|__collector: Option<&mut rweb::openapi::Collector>| {
+                    if let Some(__collector) = __collector {
+                        __collector.add(
+                            stringify!(path).to_string(),
+                            rweb::openapi::http_methods::http_method(),
+                            rweb::openapi::Operation {},
+                        );
+                    }
+
+                    expr
+                })
+            }
+        )
+        .parse();
+    }
 
     let mut outer = q!(
         Vars {
