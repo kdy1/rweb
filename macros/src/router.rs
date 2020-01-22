@@ -59,9 +59,9 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let mut expr = compile_fn_attrs(expr, &mut f.attrs, false);
 
     match attr.services {
-        Meta::List(list) => {
+        Meta::List(ref list) => {
             if list.path.is_ident("services") {
-                for name in list.nested.into_iter() {
+                for name in list.nested.iter() {
                     if exprs.is_empty() {
                         exprs.push(q!(Vars { name, args: &args }, { name(args) }).parse());
                     } else {
@@ -81,15 +81,28 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let expr = compile_fn_attrs(expr, &mut f.attrs, true);
 
     // TODO: Default handler
-    let mut ret = q!(Vars { expr, router_name }, {
-        fn router_name(
-        ) -> impl Clone + rweb::Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection>
+    let mut ret = q!(
+        Vars {
+            path: &attr.path,
+            expr,
+            router_name
+        },
         {
-            use rweb::{rt::StatusCode, Filter};
+            fn router_name(
+            ) -> impl Clone + rweb::Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection>
+            {
+                use rweb::{rt::StatusCode, Filter};
 
-            expr
+                rweb::openapi::with(|__collector: Option<&mut rweb::openapi::Collector>| {
+                    if let Some(__collector) = __collector {
+                        __collector.with_appended_prefix(stringify!(path), || expr)
+                    } else {
+                        expr
+                    }
+                })
+            }
         }
-    })
+    )
     .parse::<ItemFn>();
 
     ret.attrs = f.attrs;

@@ -14,14 +14,15 @@ pub struct Collector {
 }
 
 impl Collector {
-    pub fn with_appended_prefix<F>(&mut self, prefix: &str, op: F)
+    pub fn with_appended_prefix<F, Ret>(&mut self, prefix: &str, op: F) -> Ret
     where
-        F: FnOnce(&mut Self),
+        F: FnOnce() -> Ret,
     {
         let orig_len = self.path_prefix.len();
         self.path_prefix.push_str(prefix);
-        op(self);
+        let ret = op();
         self.path_prefix.drain(orig_len..);
+        ret
     }
 
     /// Do not call this by hand.
@@ -78,14 +79,16 @@ where
     (cell.into_inner().spec, ret)
 }
 
-pub fn with<F>(op: F)
+pub fn with<F, Ret>(op: F) -> Ret
 where
-    F: FnOnce(&mut Collector),
+    F: FnOnce(Option<&mut Collector>) -> Ret,
 {
     if COLLECTOR.is_set() {
         COLLECTOR.with(|c| {
             let mut r = c.borrow_mut();
-            op(&mut r);
-        });
+            op(Some(&mut r))
+        })
+    } else {
+        op(None)
     }
 }
