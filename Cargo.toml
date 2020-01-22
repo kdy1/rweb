@@ -10,11 +10,11 @@ description = "Yet another web server framework for rust"
 edition = "2018"
 
 [features]
-default = ["multipart", "websocket"]
+default = ["multipart", "websocket", "openapi"]
 multipart = ["warp/multipart"]
 websocket = ["warp/websocket"]
 tls = ["warp/rustls"]
-swagger = ["rweb-macros/openapi", "rweb-openapi"]
+openapi = ["rweb-macros/openapi", "rweb-openapi"]
 
 [dependencies]
 rweb-macros = { version = "0.3.0-alpha.0", path = "./macros" }
@@ -32,6 +32,10 @@ hyper = "0.13"
 pretty_env_logger = "0.3"
 log = "0.4"
 futures = "0.3"
+
+[[example]]
+name = "openapi"
+required-features = ["openapi"]
 
 [[example]]
 name = "todo_websockets"

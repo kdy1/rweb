@@ -367,6 +367,6 @@ pub use warp::{self, *};
 
 mod factory;
 #[cfg(feature = "openapi")]
-mod openapi;
+pub mod openapi;
 #[doc(hidden)]
 pub mod rt;
