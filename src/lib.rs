@@ -366,7 +366,7 @@ pub use rweb_macros::{delete, get, head, options, patch, post, put, router};
 pub use warp::{self, *};
 
 mod factory;
+#[cfg(feature = "openapi")]
+mod openapi;
 #[doc(hidden)]
 pub mod rt;
-#[cfg(feature = "swagger")]
-mod swagger;

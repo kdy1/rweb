@@ -11,7 +11,7 @@ edition = "2018"
 proc-macro = true
 
 [features]
-swagger = []
+openapi = []
 
 [dependencies]
 pmutil = "0.5.3"
