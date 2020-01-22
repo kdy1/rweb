@@ -30,6 +30,7 @@ install:
 
 script:
   - RUST_BACKTRACE=full cargo test --color always --all --all-features
+  - RUST_BACKTRACE=full cargo test --color always --all
 
 #before_deploy:
 #  - CARGO_TARGET_DIR=$HOME/cargo-target cargo doc --color always
