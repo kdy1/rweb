@@ -3,7 +3,7 @@
 use http::Method;
 pub use rweb_openapi::v3_0::*;
 use scoped_tls::scoped_thread_local;
-use std::cell::RefCell;
+use std::{cell::RefCell, mem::replace};
 
 scoped_thread_local!(static COLLECTOR: RefCell<Collector>);
 
@@ -21,14 +21,27 @@ impl Collector {
     {
         let orig_len = self.path_prefix.len();
         self.path_prefix.push_str(prefix);
-        let ret = op();
+
+        let new = replace(self, new());
+        let cell = RefCell::new(new);
+        let ret = COLLECTOR.set(&cell, || op());
+
+        let new = cell.into_inner();
+        replace(self, new);
+
         self.path_prefix.drain(orig_len..);
         ret
     }
 
     #[doc(hidden)]
     #[inline(never)]
-    pub fn add(&mut self, path: String, method: Method, operation: Operation) {
+    pub fn add(&mut self, path: &str, method: Method, operation: Operation) {
+        let path = {
+            let mut p = self.path_prefix.clone();
+            p.push_str(path);
+            p
+        };
+
         let v = self.spec.paths.entry(path).or_insert_with(Default::default);
 
         let op = if method == Method::GET {
@@ -64,14 +77,18 @@ impl Collector {
     }
 }
 
+fn new() -> Collector {
+    Collector {
+        spec: Default::default(),
+        path_prefix: Default::default(),
+    }
+}
+
 pub fn spec<F, Ret>(op: F) -> (Spec, Ret)
 where
     F: FnOnce() -> Ret,
 {
-    let collector = Collector {
-        spec: Default::default(),
-        path_prefix: Default::default(),
-    };
+    let collector = new();
 
     let cell = RefCell::new(collector);
 
