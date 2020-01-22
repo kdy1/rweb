@@ -10,6 +10,9 @@ edition = "2018"
 [lib]
 proc-macro = true
 
+[features]
+swagger = []
+
 [dependencies]
 pmutil = "0.5.3"
 syn = { version = "1", features = ["full"] }
