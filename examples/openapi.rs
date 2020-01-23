@@ -6,7 +6,10 @@ async fn main() {
     let (spec, filter) = openapi::spec(|| {
         // Build filters
 
-        math::math().or(products::products()).or(generic::body())
+        math::math()
+            .or(products::products())
+            .or(generic::body())
+            .or(generic::option())
     });
 
     println!("{}", to_yaml(&OpenApi::V3_0(spec)).unwrap());
@@ -74,6 +77,11 @@ mod generic {
 
     #[post("/login")]
     pub fn body(_: Json<LoginForm>) -> String {
+        String::new()
+    }
+
+    #[post("/option")]
+    pub fn option(_: Option<Json<LoginForm>>) -> String {
         String::new()
     }
 
