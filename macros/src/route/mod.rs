@@ -128,11 +128,24 @@ pub fn compile_route(
 
     if cfg!(feature = "openapi") {
         let op = crate::openapi::parse(&path, sig, &mut f.attrs);
-        let op = crate::openapi::quote_op(op);
+        let mut op = crate::openapi::quote_op(op);
+
+        for from_req in from_req_types {
+            op = q!(
+                Vars {
+                    Type: &from_req,
+                    op
+                },
+                { rweb::openapi::Collector::add_type_to::<Type>(op) }
+            )
+            .parse();
+        }
+
         expr = q!(
             Vars {
                 op,
                 http_method: method,
+
                 path: &path,
                 expr,
             },

@@ -1,6 +1,6 @@
 //! Automatic openapi spec generator.
 
-use crate::Json;
+use crate::{FromRequest, Json};
 use http::Method;
 pub use rweb_openapi::v3_0::*;
 use scoped_tls::scoped_thread_local;
@@ -103,6 +103,40 @@ impl Collector {
         self.tags.drain(orig_tag_len..);
         self.path_prefix.drain(orig_len..);
         ret
+    }
+
+    pub fn add_type_to<T: FromRequest + Entity>(mut op: Operation) -> Operation {
+        let mut handle = |location: &str| {
+            let s = T::describe();
+
+            match &*s.schema_type {
+                "object" => {
+                    //
+                    for (name, ty) in s.properties {
+                        op.parameters.push(ObjectOrReference::Object(Parameter {
+                            required: Some(s.required.contains(&name)),
+                            name,
+                            location: location.to_string(),
+                            unique_items: None,
+                            description: ty.description.clone(),
+                            schema: Some(ty),
+                            ..Default::default()
+                        }))
+                    }
+                }
+                _ => unimplemented!("other type than object"),
+            }
+        };
+
+        if T::is_body() {
+            handle("body");
+        }
+
+        if T::is_query() {
+            handle("query");
+        }
+
+        op
     }
 
     #[doc(hidden)]

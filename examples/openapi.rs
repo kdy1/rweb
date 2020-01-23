@@ -62,14 +62,32 @@ mod products {
 }
 
 mod generic {
-    use rweb::*;
+    use rweb::{openapi::Entity, *};
+    use rweb_openapi::v3_0::Schema;
     use serde::Deserialize;
+    use std::collections::BTreeMap;
 
     #[derive(Debug, Deserialize)]
-    struct LoginForm {}
+    struct LoginForm {
+        id: String,
+    }
 
     #[post("/login")]
     pub fn body(_: Json<LoginForm>) -> String {
         String::new()
+    }
+
+    impl Entity for LoginForm {
+        fn describe() -> Schema {
+            let mut map = BTreeMap::new();
+
+            map.insert("id".into(), String::describe());
+
+            Schema {
+                schema_type: "object".into(),
+                properties: map,
+                ..Default::default()
+            }
+        }
     }
 }
