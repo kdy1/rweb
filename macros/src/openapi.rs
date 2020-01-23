@@ -8,7 +8,7 @@ use syn::{
 };
 
 pub fn quote_op(op: Operation) -> Expr {
-    let mut tags_v: Punctuated<Quote, Token![,]> = op
+    let tags_v: Punctuated<Quote, Token![,]> = op
         .tags
         .iter()
         .map(|tag| Pair::Punctuated(q!(Vars { tag }, { tag.to_string() }), Default::default()))
