@@ -1,24 +1,28 @@
 use rweb::*;
 
-/// Adds a and b
-#[get("/sum/{a}/{b}")]
-fn sum(a: usize, b: usize) -> String {
-    (a + b).to_string()
-}
-
-#[router("/math", services(sum))]
-#[openapi(tags("math"))]
-fn math() {}
-
 #[tokio::main]
 async fn main() {
     let (spec, filter) = openapi::spec(|| {
         // Build filters
 
-        math().or(products::products())
+        math::math().or(products::products())
     });
 
     panic!("Spec: {:?}", spec);
+}
+
+mod math {
+    use rweb::*;
+
+    #[router("/math", services(sum))]
+    #[openapi(tags("math"))]
+    pub fn math() {}
+
+    /// Adds a and b
+    #[get("/sum/{a}/{b}")]
+    fn sum(a: usize, b: usize) -> String {
+        (a + b).to_string()
+    }
 }
 
 mod products {
