@@ -5,7 +5,7 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_quote::parse,
     punctuated::Punctuated,
-    Expr, ItemFn, LitStr, ReturnType, Signature, Token, Type, Visibility,
+    Block, Expr, ItemFn, LitStr, ReturnType, Signature, Token, Type, Visibility,
 };
 
 pub mod fn_attr;
@@ -128,17 +128,23 @@ pub fn compile_route(
 
     if cfg!(feature = "openapi") {
         let op = crate::openapi::parse(&path, sig, &mut f.attrs);
-        let mut op = crate::openapi::quote_op(op);
+        let op = crate::openapi::quote_op(op);
+
+        let mut op_body: Block = q!(Vars { op }, {
+            {
+                #[allow(unused_mut)]
+                let mut v = op;
+            }
+        })
+        .parse();
 
         for from_req in from_req_types {
-            op = q!(
-                Vars {
-                    Type: &from_req,
-                    op
-                },
-                { rweb::openapi::Collector::add_request_type_to::<Type>(op) }
-            )
-            .parse();
+            op_body.stmts.push(
+                q!(Vars { Type: &from_req }, {
+                    rweb::openapi::Collector::add_request_type_to::<Type>(__collector, &mut v);
+                })
+                .parse(),
+            );
         }
 
         match sig.output {
@@ -148,32 +154,38 @@ pub fn compile_route(
                     Type::Infer(..) | Type::ImplTrait(..) => false,
                     _ => true,
                 } {
-                    op = q!(Vars { op, Type: ty }, {
-                        rweb::openapi::Collector::add_response_to::<Type>(op)
-                    })
-                    .parse();
+                    op_body.stmts.push(
+                        q!(Vars { Type: ty }, {
+                            rweb::openapi::Collector::add_response_to::<Type>(__collector, &mut v);
+                        })
+                        .parse(),
+                    );
                 }
             }
         }
 
-        expr = q!(
-            Vars {
-                op,
-                http_method: method,
+        op_body.stmts.push(
+            q!(
+                Vars {
+                    path: &path,
+                    http_method: method,
+                },
+                {
+                    __collector.add(path, rweb::openapi::http_methods::http_method(), v);
+                }
+            )
+            .parse(),
+        );
 
-                path: &path,
-                expr,
-            },
-            {
-                rweb::openapi::with(|__collector: Option<&mut rweb::openapi::Collector>| {
-                    if let Some(__collector) = __collector {
-                        __collector.add(path, rweb::openapi::http_methods::http_method(), op);
-                    }
+        expr = q!(Vars { expr, op_body }, {
+            rweb::openapi::with(|__collector: Option<&mut rweb::openapi::Collector>| {
+                if let Some(__collector) = __collector {
+                    op_body
+                }
 
-                    expr
-                })
-            }
-        )
+                expr
+            })
+        })
         .parse();
     }
 

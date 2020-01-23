@@ -47,7 +47,9 @@ impl Collector {
         ret
     }
 
-    pub fn add_request_type_to<T: FromRequest + Entity>(mut op: Operation) -> Operation {
+    pub fn add_request_type_to<T: FromRequest + Entity>(&mut self, op: &mut Operation) {
+        if let Some(s) = T::describe_component() {}
+
         if T::is_body() {
             if op.request_body.is_some() {
                 panic!("Multiple body detected");
@@ -94,14 +96,11 @@ impl Collector {
                 _ => unimplemented!("other type than object"),
             }
         }
-
-        op
     }
 
-    pub fn add_response_to<T: Entity>(mut op: Operation) -> Operation {
+    pub fn add_response_to<T: Entity>(&mut self, op: &mut Operation) {
         let resp = T::describe_response();
         op.responses.insert("200".into(), resp);
-        op
     }
 
     #[doc(hidden)]
