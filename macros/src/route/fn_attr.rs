@@ -28,8 +28,7 @@ pub fn compile_fn_attrs(mut base: Expr, attrs: &mut Vec<Attribute>, emitted_map:
         if attr.path.is_ident("body_size") {
             let meta = parse2::<Paren<MetaNameValue>>(attr.tokens.clone())
                 .expect("Correct usage: #[body_size(max = \"8192\")]")
-                .inn
-            er;
+                .inner;
 
             if meta.path.is_ident("max") {
                 let v = meta.lit.dump().to_string();
