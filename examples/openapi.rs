@@ -10,6 +10,7 @@ async fn main() {
             .or(products::products())
             .or(generic::body())
             .or(generic::optional())
+            .or(generic::search())
     });
 
     println!("{}", to_yaml(&OpenApi::V3_0(spec)).unwrap());
@@ -75,16 +76,7 @@ mod generic {
         id: String,
     }
 
-    #[post("/login")]
-    pub fn body(_: Json<LoginForm>) -> String {
-        String::new()
-    }
-
-    #[post("/optional")]
-    pub fn optional(_: Option<Json<LoginForm>>) -> String {
-        String::new()
-    }
-
+    /// TODO: Replace this with derive
     impl Entity for LoginForm {
         fn describe() -> Schema {
             let mut map = BTreeMap::new();
@@ -97,5 +89,40 @@ mod generic {
                 ..Default::default()
             }
         }
+    }
+
+    #[post("/login")]
+    pub fn body(_: Json<LoginForm>) -> String {
+        String::new()
+    }
+
+    #[post("/optional")]
+    pub fn optional(_: Option<Json<LoginForm>>) -> String {
+        String::new()
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct SearchReq {
+        query: String,
+    }
+
+    /// TODO: Replace this with derive
+    impl Entity for SearchReq {
+        fn describe() -> Schema {
+            let mut map = BTreeMap::new();
+
+            map.insert("query".into(), String::describe());
+
+            Schema {
+                schema_type: "object".into(),
+                properties: map,
+                ..Default::default()
+            }
+        }
+    }
+
+    #[post("/search")]
+    pub fn search(_: Option<Query<SearchReq>>) -> String {
+        String::new()
     }
 }
