@@ -5,7 +5,7 @@ use crate::FromRequest;
 use http::Method;
 pub use rweb_openapi::v3_0::*;
 use scoped_tls::scoped_thread_local;
-use std::{cell::RefCell, collections::BTreeMap, mem::replace};
+use std::{borrow::Cow, cell::RefCell, collections::BTreeMap, mem::replace};
 
 mod entity;
 
@@ -15,20 +15,25 @@ scoped_thread_local!(static COLLECTOR: RefCell<Collector>);
 pub struct Collector {
     spec: Spec,
     path_prefix: String,
-    tags: Vec<String>,
+    tags: Vec<Cow<'static, str>>,
 }
 
 impl Collector {
     /// Method used by `#[router]`.
     #[doc(hidden)]
-    pub fn with_appended_prefix<F, Ret>(&mut self, prefix: &str, tags: Vec<&str>, op: F) -> Ret
+    pub fn with_appended_prefix<F, Ret>(
+        &mut self,
+        prefix: &str,
+        tags: Vec<Cow<'static, str>>,
+        op: F,
+    ) -> Ret
     where
         F: FnOnce() -> Ret,
     {
         let orig_len = self.path_prefix.len();
         self.path_prefix.push_str(prefix);
         let orig_tag_len = self.tags.len();
-        self.tags.extend(tags.iter().map(|v| v.to_string()));
+        self.tags.extend(tags);
 
         let new = replace(self, new());
         let cell = RefCell::new(new);
@@ -71,14 +76,14 @@ impl Collector {
         if T::is_query() {
             let s = T::describe();
 
-            match &*s.schema_type {
-                "object" => {
+            match s.schema_type {
+                Type::Object => {
                     //
                     for (name, ty) in s.properties {
                         op.parameters.push(ObjectOrReference::Object(Parameter {
                             required: Some(s.required.contains(&name)),
                             name,
-                            location: "query".to_string(),
+                            location: Location::Query,
                             unique_items: None,
                             description: ty.description.clone(),
                             schema: Some(ty),
@@ -108,7 +113,11 @@ impl Collector {
             p
         };
 
-        let v = self.spec.paths.entry(path).or_insert_with(Default::default);
+        let v = self
+            .spec
+            .paths
+            .entry(Cow::Owned(path))
+            .or_insert_with(Default::default);
 
         let op = if method == Method::GET {
             &mut v.get

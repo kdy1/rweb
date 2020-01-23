@@ -33,7 +33,7 @@ pub trait Entity {
 impl<T: Entity> Entity for Vec<T> {
     fn describe() -> Schema {
         Schema {
-            schema_type: "array".into(),
+            schema_type: Type::Array,
             items: Some(Box::new(T::describe())),
             ..Default::default()
         }
@@ -98,13 +98,13 @@ where
     }
 }
 
-macro_rules! number {
+macro_rules! integer {
     ($T:ty) => {
         impl Entity for $T {
             #[inline]
             fn describe() -> Schema {
                 Schema {
-                    schema_type: "number".to_string(),
+                    schema_type: Type::Integer,
                     ..Default::default()
                 }
             }
@@ -118,19 +118,19 @@ macro_rules! number {
         ),*
     ) => {
         $(
-            number!($T);
+            integer!($T);
         )*
     };
 }
 
-number!(u8, u16, u32, u64, u128, usize);
-number!(i8, i16, i32, i64, i128, isize);
+integer!(u8, u16, u32, u64, u128, usize);
+integer!(i8, i16, i32, i64, i128, isize);
 // TODO: non-zero types
 
 impl Entity for String {
     fn describe() -> Schema {
         Schema {
-            schema_type: "string".to_string(),
+            schema_type: Type::String,
             ..Default::default()
         }
     }
