@@ -121,6 +121,8 @@ pub fn compile_route(
     };
 
     if cfg!(feature = "openapi") {
+        let op = crate::openapi::parse(&mut f.attrs);
+
         expr = q!(
             Vars {
                 http_method: method,

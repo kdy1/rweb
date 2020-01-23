@@ -26,6 +26,11 @@ impl Parse for Input {
 
 pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let mut f: ItemFn = parse2(item).expect("failed to parse input as a function item");
+    assert!(
+        f.block.stmts.is_empty(),
+        "#{router] function cannot have body"
+    );
+
     let router_name = &f.sig.ident;
     let vis = &f.vis;
     let mut data_inputs: Punctuated<_, Token![,]> = Default::default();
@@ -81,6 +86,8 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let mut expr = compile_fn_attrs(expr, &mut f.attrs, true);
 
     if cfg!(feature = "openapi") {
+        let op = crate::openapi::parse(&mut f.attrs);
+
         expr = q!(
             Vars {
                 path: &attr.path,
