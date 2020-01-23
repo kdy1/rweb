@@ -1,3 +1,5 @@
+#![cfg(feature = "openapi")]
+
 use rweb::*;
 use serde::{Deserialize, Serialize};
 use serde_yaml;
