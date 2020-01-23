@@ -6,7 +6,7 @@ async fn main() {
     let (spec, filter) = openapi::spec(|| {
         // Build filters
 
-        math::math().or(products::products())
+        math::math().or(products::products()).or(generic::body())
     });
 
     println!("{}", to_yaml(&OpenApi::V3_0(spec)).unwrap());
@@ -58,5 +58,18 @@ mod products {
             title: Default::default(),
         }
         .into()
+    }
+}
+
+mod generic {
+    use rweb::*;
+    use serde::Deserialize;
+
+    #[derive(Debug, Deserialize)]
+    struct LoginForm {}
+
+    #[post("/login")]
+    pub fn body(_: Json<LoginForm>) -> String {
+        String::new()
     }
 }
