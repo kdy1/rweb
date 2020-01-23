@@ -16,11 +16,32 @@ async fn main() {
             .or(generic::body())
             .or(generic::optional())
             .or(generic::search())
+            .or(response::response())
     });
 
     println!("{}", to_yaml(&OpenApi::V3_0(spec)).unwrap());
 
     panic!();
+}
+
+mod response {
+    use rweb::*;
+    use serde::Serialize;
+
+    #[router("/response", services(json))]
+    pub fn response() {}
+
+    #[derive(Debug, Serialize)]
+    struct Data {
+        msg: String,
+    }
+
+    #[get("/json")]
+    pub fn json() -> Json<Data> {
+        Json::from(Data {
+            msg: "Hello".into(),
+        })
+    }
 }
 
 mod math {
