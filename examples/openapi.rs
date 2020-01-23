@@ -120,6 +120,7 @@ mod generic {
     }
 
     #[post("/login")]
+    #[openapi(tags("auth"))]
     pub fn body(_: Json<LoginForm>) -> String {
         String::new()
     }

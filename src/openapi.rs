@@ -114,6 +114,7 @@ pub struct Collector {
 }
 
 impl Collector {
+    /// Method used by `#[router]`.
     #[doc(hidden)]
     pub fn with_appended_prefix<F, Ret>(&mut self, prefix: &str, tags: Vec<&str>, op: F) -> Ret
     where
