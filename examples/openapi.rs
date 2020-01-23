@@ -2,7 +2,6 @@ use rweb::{
     openapi::{Entity, Schema},
     *,
 };
-use rweb_openapi::{to_yaml, OpenApi};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
@@ -19,7 +18,7 @@ async fn main() {
             .or(response::response())
     });
 
-    println!("{}", to_yaml(&OpenApi::V3_0(spec)).unwrap());
+    println!("{}", serde_yaml::to_string(&spec).unwrap());
 
     panic!();
 }
