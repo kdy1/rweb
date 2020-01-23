@@ -10,14 +10,13 @@ use std::collections::BTreeMap;
 /// `#[schema(example = "path_to_function")]`
 pub trait Entity {
     fn describe() -> Schema;
-}
 
-pub trait ResponseEntity: Entity {
     fn describe_response() -> Response {
         let schema = Self::describe();
         let mut content = BTreeMap::new();
         content.insert(
-            "200".into(),
+            // TODO
+            "*/*".into(),
             MediaType {
                 schema: Some(ObjectOrReference::Object(schema)),
                 examples: None,
@@ -60,6 +59,8 @@ where
     fn describe() -> Schema {
         T::describe()
     }
+
+    // TODD: Json content type
 }
 
 impl<T> Entity for Query<T>
@@ -93,6 +94,7 @@ macro_rules! number {
                 }
             }
         }
+
     };
 
     (

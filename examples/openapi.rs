@@ -25,8 +25,12 @@ async fn main() {
 }
 
 mod response {
-    use rweb::*;
+    use rweb::{
+        openapi::{Entity, Schema},
+        *,
+    };
     use serde::Serialize;
+    use std::collections::BTreeMap;
 
     #[router("/response", services(json))]
     pub fn response() {}
@@ -34,6 +38,21 @@ mod response {
     #[derive(Debug, Serialize)]
     pub struct Data {
         msg: String,
+    }
+
+    /// TODO: Replace this with derive
+    impl Entity for Data {
+        fn describe() -> Schema {
+            let mut map = BTreeMap::new();
+
+            map.insert("msg".into(), String::describe());
+
+            Schema {
+                schema_type: "object".into(),
+                properties: map,
+                ..Default::default()
+            }
+        }
     }
 
     #[get("/json")]
@@ -62,13 +81,33 @@ mod math {
 
 mod products {
     use super::SearchReq;
-    use rweb::*;
+    use rweb::{
+        openapi::{Entity, Schema},
+        *,
+    };
     use serde::{Deserialize, Serialize};
+    use std::collections::BTreeMap;
 
     #[derive(Debug, Default, Serialize, Deserialize)]
     pub struct Product {
         pub id: String,
         pub title: String,
+    }
+
+    /// TODO: Replace this with derive
+    impl Entity for Product {
+        fn describe() -> Schema {
+            let mut map = BTreeMap::new();
+
+            map.insert("id".into(), String::describe());
+            map.insert("title".into(), String::describe());
+
+            Schema {
+                schema_type: "object".into(),
+                properties: map,
+                ..Default::default()
+            }
+        }
     }
 
     #[router("/products", services(list, product))]

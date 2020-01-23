@@ -1,6 +1,6 @@
 //! Automatic openapi spec generator.
 
-pub use self::entity::{Entity, ResponseEntity};
+pub use self::entity::Entity;
 use crate::FromRequest;
 use http::Method;
 pub use rweb_openapi::v3_0::*;
@@ -93,7 +93,9 @@ impl Collector {
         op
     }
 
-    pub fn add_response_to<T: FromRequest + ResponseEntity>(mut op: Operation) -> Operation {
+    pub fn add_response_to<T: Entity>(mut op: Operation) -> Operation {
+        let resp = T::describe_response();
+        op.responses.insert("200".into(), resp);
         op
     }
 
