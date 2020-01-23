@@ -7,6 +7,16 @@ use std::{cell::RefCell, mem::replace};
 
 scoped_thread_local!(static COLLECTOR: RefCell<Collector>);
 
+/// This can be derived by `#[derive(Schema)]`.
+///
+///
+/// You may provide an example value of each field with
+///
+/// `#[schema(example = "path_to_function")]`
+pub trait Schema {
+    fn describe() -> Response;
+}
+
 #[derive(Debug)]
 pub struct Collector {
     spec: Spec,
@@ -112,6 +122,7 @@ where
     }
 }
 
+/// I'm too lazy to use inflector.
 #[doc(hidden)]
 pub mod http_methods {
     use http::Method;

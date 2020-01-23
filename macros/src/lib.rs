@@ -2,6 +2,7 @@ extern crate proc_macro;
 use self::route::compile_route;
 use pmutil::{q, ToTokensExt};
 
+mod openapi;
 mod parse;
 mod path;
 mod route;
