@@ -12,7 +12,8 @@ use crate::{
 };
 use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
-use rweb_openapi::v3_0::{ObjectOrReference, Operation, Parameter, Schema};
+use rweb_openapi::v3_0::{Location, ObjectOrReference, Operation, Parameter, Schema};
+use std::borrow::Cow;
 use syn::{
     export::ToTokens,
     parse2,
@@ -95,7 +96,7 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
         Vars {
             Type: ty,
             name_v: &param.name,
-            location_v: &param.location,
+            location_v: quote_location(param.location),
             required_v,
         },
         {
@@ -111,6 +112,15 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
     .parse()
 }
 
+fn quote_location(l: Location) -> Quote {
+    match l {
+        Location::Query => q!({ rweb::openapi::Location::Query }),
+        Location::Header => q!({ rweb::openapi::Location::Header }),
+        Location::Path => q!({ rweb::openapi::Location::Path }),
+        Location::FormData => q!({ rweb::openapi::Location::FormData }),
+    }
+}
+
 pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operation {
     let mut op = Operation::default();
 
@@ -122,16 +132,16 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
         let var = &segment[1..segment.len() - 1];
         if let Some(ty) = find_ty(sig, var) {
             let mut p = Parameter::default();
-            p.name = var.to_string();
-            p.location = "path".to_string();
+            p.name = Cow::Owned(var.to_string());
+            p.location = Location::Path;
             p.required = Some(true);
 
             op.parameters.push(ObjectOrReference::Object(Parameter {
-                name: var.to_string(),
-                location: "path".to_string(),
+                name: Cow::Owned(var.to_string()),
+                location: Location::Path,
                 required: Some(true),
                 schema: Some(Schema {
-                    ref_path: ty.dump().to_string(),
+                    ref_path: Cow::Owned(ty.dump().to_string()),
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -156,7 +166,7 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                     );
                     match config {
                         Meta::NameValue(v) => match v.lit {
-                            Lit::Str(s) => op.operation_id = s.value(),
+                            Lit::Str(s) => op.operation_id = Cow::Owned(s.value()),
                             _ => panic!("#[openapi]: invalid operation id"),
                         },
                         _ => panic!("Correct usage: #[openapi(id = \"foo\")]"),
@@ -164,7 +174,7 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                 } else if config.path().is_ident("summary") {
                     match config {
                         Meta::NameValue(v) => match v.lit {
-                            Lit::Str(s) => op.summary = s.value(),
+                            Lit::Str(s) => op.summary = Cow::Owned(s.value()),
                             _ => panic!("#[openapi]: invalid operation summary"),
                         },
                         _ => panic!("Correct usage: #[openapi(summary = \"foo\")]"),
@@ -175,7 +185,7 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                             for tag in l.nested {
                                 match tag {
                                     NestedMeta::Lit(v) => match v {
-                                        Lit::Str(s) => op.tags.push(s.value()),
+                                        Lit::Str(s) => op.tags.push(Cow::Owned(s.value())),
                                         _ => panic!("#[openapi]: tag should be a string literal"),
                                     },
                                     _ => panic!("Correct usage: #[openapi(tags(\"foo\" ,\"bar\")]"),
@@ -195,9 +205,11 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
         if attr.path.is_ident("doc") {
             let s: EqStr = parse2(attr.tokens.clone()).expect("failed to parse comments");
             if !op.description.is_empty() {
-                op.description.push(' ');
+                op.description.to_mut().push(' ');
             }
-            op.description.push_str(&s.value.value().trim_start());
+            op.description
+                .to_mut()
+                .push_str(&s.value.value().trim_start());
             // Preserve comments
             return true;
         }
