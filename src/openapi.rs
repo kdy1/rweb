@@ -42,16 +42,19 @@ where
 pub struct Collector {
     spec: Spec,
     path_prefix: String,
+    tags: Vec<String>,
 }
 
 impl Collector {
     #[doc(hidden)]
-    pub fn with_appended_prefix<F, Ret>(&mut self, prefix: &str, op: F) -> Ret
+    pub fn with_appended_prefix<F, Ret>(&mut self, prefix: &str, tags: Vec<&str>, op: F) -> Ret
     where
         F: FnOnce() -> Ret,
     {
         let orig_len = self.path_prefix.len();
         self.path_prefix.push_str(prefix);
+        let orig_tag_len = self.tags.len();
+        self.tags.extend(tags.iter().map(|v| v.to_string()));
 
         let new = replace(self, new());
         let cell = RefCell::new(new);
@@ -60,6 +63,7 @@ impl Collector {
         let new = cell.into_inner();
         replace(self, new);
 
+        self.tags.drain(orig_tag_len..);
         self.path_prefix.drain(orig_len..);
         ret
     }
@@ -105,6 +109,9 @@ impl Collector {
                 *op = Some(operation);
             }
         }
+
+        let op = op.as_mut().unwrap();
+        op.tags.extend(self.tags.clone());
     }
 
     pub fn add_scheme<T>() {}
@@ -114,6 +121,7 @@ fn new() -> Collector {
     Collector {
         spec: Default::default(),
         path_prefix: Default::default(),
+        tags: vec![],
     }
 }
 

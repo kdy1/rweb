@@ -87,16 +87,22 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
 
     if cfg!(feature = "openapi") {
         let op = crate::openapi::parse(&mut f.attrs);
+        let tags: Punctuated<&str, Token![,]> = op
+            .tags
+            .iter()
+            .map(|tag| Pair::Punctuated(&**tag, Default::default()))
+            .collect();
 
         expr = q!(
             Vars {
+                tags,
                 path: &attr.path,
                 expr
             },
             {
                 rweb::openapi::with(|__collector: Option<&mut rweb::openapi::Collector>| {
                     if let Some(__collector) = __collector {
-                        __collector.with_appended_prefix(path, || expr)
+                        __collector.with_appended_prefix(path, vec![tags], || expr)
                     } else {
                         expr
                     }

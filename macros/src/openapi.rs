@@ -1,7 +1,7 @@
 use crate::parse::{Delimited, Paren};
 use pmutil::{q, ToTokensExt};
 use rweb_openapi::v3_0::Operation;
-use syn::{parse2, Attribute, Expr, Lit, Meta};
+use syn::{parse2, Attribute, Expr, Lit, Meta, NestedMeta};
 
 pub fn quote_op(op: Operation) -> Expr {
     q!(
@@ -47,23 +47,35 @@ pub fn parse(attrs: &mut Vec<Attribute>) -> Operation {
                         "#[openapi]: Duplicate operation id detected"
                     );
                     match config {
-                        Meta::Path(_) => unreachable!(),
-                        Meta::List(_) => panic!("Correct usage: #[openapi(id = \"foo\")]"),
                         Meta::NameValue(v) => match v.lit {
                             Lit::Str(s) => op.operation_id = s.value(),
                             _ => panic!("#[openapi]: invalid operation id"),
                         },
+                        _ => panic!("Correct usage: #[openapi(id = \"foo\")]"),
                     }
                 } else if config.path().is_ident("summary") {
                     match config {
-                        Meta::Path(_) => unreachable!(),
-                        Meta::List(_) => panic!("Correct usage: #[openapi(summary = \"foo\")]"),
                         Meta::NameValue(v) => match v.lit {
                             Lit::Str(s) => op.summary = s.value(),
                             _ => panic!("#[openapi]: invalid operation summary"),
                         },
+                        _ => panic!("Correct usage: #[openapi(summary = \"foo\")]"),
                     }
                 } else if config.path().is_ident("tags") {
+                    match config {
+                        Meta::List(l) => {
+                            for tag in l.nested {
+                                match tag {
+                                    NestedMeta::Lit(v) => match v {
+                                        Lit::Str(s) => op.tags.push(s.value()),
+                                        _ => panic!("#[openapi]: tag should be a string literal"),
+                                    },
+                                    _ => panic!("Correct usage: #[openapi(tags(\"foo\" ,\"bar\")]"),
+                                }
+                            }
+                        }
+                        _ => panic!("Correct usage: #[openapi(tags(\"foo\" ,\"bar\")]"),
+                    }
                 } else {
                     panic!("Unknown openapi config `{}`", config.dump())
                 }
