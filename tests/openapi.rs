@@ -45,12 +45,11 @@ fn simple() {
 
     let yaml = serde_yaml::to_string(&spec).unwrap();
     println!("{}", yaml);
-
-    panic!();
 }
 
 #[derive(Debug, Default, Serialize, Schema)]
 struct Resp<T> {
+    status: usize,
     data: T,
 }
 
@@ -60,6 +59,7 @@ struct Data {}
 #[get("/proxy")]
 fn proxy() -> Json<Resp<Data>> {
     Resp {
+        status: 200,
         data: Data::default(),
     }
     .into()

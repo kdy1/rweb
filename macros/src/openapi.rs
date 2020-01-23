@@ -19,8 +19,8 @@ use syn::{
     export::ToTokens,
     parse2,
     punctuated::{Pair, Punctuated},
-    Attribute, Block, Data, DeriveInput, Expr, FieldValue, ItemImpl, Lit, Meta, NestedMeta,
-    Signature, Stmt, Token,
+    Attribute, Block, Data, DeriveInput, Expr, FieldValue, GenericParam, ItemImpl, Lit, Meta,
+    NestedMeta, Signature, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
 };
 
 pub fn derive_schema(input: DeriveInput) -> TokenStream {
@@ -72,7 +72,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }
 
-    let item = q!(
+    let mut item = q!(
         Vars {
             Type: &input.ident,
             fields
@@ -90,6 +90,18 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     )
     .parse::<ItemImpl>()
     .with_generics(input.generics.clone());
+
+    for param in item.generics.params.iter_mut() {
+        match param {
+            GenericParam::Type(ref mut ty) => ty.bounds.push(TypeParamBound::Trait(TraitBound {
+                paren_token: None,
+                modifier: TraitBoundModifier::None,
+                lifetimes: None,
+                path: q!({ rweb::openapi::Entity }).parse(),
+            })),
+            _ => continue,
+        }
+    }
 
     item.dump()
 }
