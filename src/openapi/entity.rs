@@ -60,7 +60,22 @@ where
         T::describe()
     }
 
-    // TODD: Json content type
+    fn describe_response() -> Response {
+        let schema = Self::describe();
+        let mut content = BTreeMap::new();
+        content.insert(
+            "application/json".into(),
+            MediaType {
+                schema: Some(ObjectOrReference::Object(schema)),
+                examples: None,
+                encoding: Default::default(),
+            },
+        );
+        Response {
+            content,
+            ..Default::default()
+        }
+    }
 }
 
 impl<T> Entity for Query<T>
