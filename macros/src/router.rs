@@ -1,5 +1,5 @@
 use crate::route::fn_attr::compile_fn_attrs;
-use pmutil::{q, ToTokensExt};
+use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::{Ident, TokenStream};
 use syn::{
     parse::{Parse, ParseStream},
@@ -87,10 +87,15 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
 
     if cfg!(feature = "openapi") {
         let op = crate::openapi::parse(&attr.path.value(), &f.sig, &mut f.attrs);
-        let tags: Punctuated<&str, Token![,]> = op
+        let tags: Punctuated<Quote, Token![,]> = op
             .tags
             .iter()
-            .map(|tag| Pair::Punctuated(&**tag, Default::default()))
+            .map(|tag| {
+                Pair::Punctuated(
+                    q!(Vars { tag }, { rweb::rt::Cow::Borrowed(tag) }),
+                    Default::default(),
+                )
+            })
             .collect();
 
         expr = q!(

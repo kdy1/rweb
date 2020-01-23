@@ -25,7 +25,12 @@ pub fn quote_op(op: Operation) -> Expr {
     let tags_v: Punctuated<Quote, Token![,]> = op
         .tags
         .iter()
-        .map(|tag| Pair::Punctuated(q!(Vars { tag }, { tag.to_string() }), Default::default()))
+        .map(|tag| {
+            Pair::Punctuated(
+                q!(Vars { tag }, { rweb::rt::Cow::Borrowed(tag) }),
+                Default::default(),
+            )
+        })
         .collect();
 
     let params_v: Punctuated<Expr, Token![,]> = op
@@ -45,16 +50,11 @@ pub fn quote_op(op: Operation) -> Expr {
         {
             rweb::openapi::Operation {
                 tags: vec![tags_v],
-                summary: summary_v.to_string(),
-                description: description_v.to_string(),
-                external_docs: Default::default(),
-                operation_id: id_v.to_string(),
+                summary: rweb::rt::Cow::Borrowed(summary_v),
+                description: rweb::rt::Cow::Borrowed(description_v),
+                operation_id: rweb::rt::Cow::Borrowed(id_v),
                 parameters: vec![params_v],
-                request_body: Default::default(),
-                responses: Default::default(),
-                callbacks: Default::default(),
-                deprecated: Default::default(),
-                servers: Default::default(),
+                ..Default::default()
             }
         }
     )
@@ -101,8 +101,8 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
         },
         {
             rweb::openapi::ObjectOrReference::Object(rweb::openapi::Parameter {
-                name: name_v.to_string(),
-                location: location_v.to_string(),
+                name: rweb::rt::Cow::Borrowed(name_v),
+                location: location_v,
                 required: required_v,
                 schema: Some(<Type as rweb::openapi::Entity>::describe()),
                 ..Default::default()
