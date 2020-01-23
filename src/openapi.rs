@@ -4,7 +4,7 @@ use crate::{FromRequest, Json};
 use http::Method;
 pub use rweb_openapi::v3_0::*;
 use scoped_tls::scoped_thread_local;
-use std::{cell::RefCell, mem::replace};
+use std::{cell::RefCell, collections::BTreeMap, mem::replace};
 
 scoped_thread_local!(static COLLECTOR: RefCell<Collector>);
 
@@ -106,7 +106,32 @@ impl Collector {
     }
 
     pub fn add_type_to<T: FromRequest + Entity>(mut op: Operation) -> Operation {
-        let mut handle = |location: &str| {
+        if T::is_body() {
+            if op.request_body.is_some() {
+                panic!("Multiple body detected");
+            }
+            let s = T::describe();
+
+            let mut content = BTreeMap::new();
+
+            // TODO
+            content.insert(
+                "*/*".into(),
+                MediaType {
+                    schema: Some(ObjectOrReference::Object(s)),
+                    examples: None,
+                    encoding: Default::default(),
+                },
+            );
+
+            op.request_body = Some(ObjectOrReference::Object(RequestBody {
+                content,
+                required: Some(!T::is_optional()),
+                ..Default::default()
+            }));
+        }
+
+        if T::is_query() {
             let s = T::describe();
 
             match &*s.schema_type {
@@ -116,7 +141,7 @@ impl Collector {
                         op.parameters.push(ObjectOrReference::Object(Parameter {
                             required: Some(s.required.contains(&name)),
                             name,
-                            location: location.to_string(),
+                            location: "query".to_string(),
                             unique_items: None,
                             description: ty.description.clone(),
                             schema: Some(ty),
@@ -126,14 +151,6 @@ impl Collector {
                 }
                 _ => unimplemented!("other type than object"),
             }
-        };
-
-        if T::is_body() {
-            handle("body");
-        }
-
-        if T::is_query() {
-            handle("query");
         }
 
         op

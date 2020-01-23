@@ -10,11 +10,22 @@ pub trait FromRequest: Sized {
     type Filter: Filter<Error = Rejection>;
 
     /// It's true iff the type represents whole request body.
+    ///
+    /// It returns true for `Json<T>` and `Form<T>`.
     fn is_body() -> bool {
         false
     }
 
+    /// It's true if the type is optional.
+    ///
+    /// It returns true for `Option<T>`.
+    fn is_optional() -> bool {
+        false
+    }
+
     /// It's true iff the type represents whole request query.
+    ///
+    /// It returns true for `Query<T>`.
     fn is_query() -> bool {
         false
     }
