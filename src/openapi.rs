@@ -1,5 +1,6 @@
 //! Automatic openapi spec generator.
 
+use crate::Json;
 use http::Method;
 pub use rweb_openapi::v3_0::*;
 use scoped_tls::scoped_thread_local;
@@ -15,6 +16,26 @@ scoped_thread_local!(static COLLECTOR: RefCell<Collector>);
 /// `#[schema(example = "path_to_function")]`
 pub trait Entity {
     fn describe() -> Schema;
+}
+
+impl<T: Entity> Entity for Vec<T> {
+    fn describe() -> Schema {
+        Schema {
+            schema_type: "array".into(),
+            items: Some(Box::new(T::describe())),
+            ..Default::default()
+        }
+    }
+}
+
+impl<T> Entity for Json<T>
+where
+    T: Entity,
+{
+    #[inline]
+    fn describe() -> Schema {
+        T::describe()
+    }
 }
 
 #[derive(Debug)]

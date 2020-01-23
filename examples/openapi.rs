@@ -42,5 +42,7 @@ mod products {
     #[get("/")]
     #[openapi(id = "products.list")]
     #[openapi(summary = "List products")]
-    fn list() -> Vec<Product> {}
+    fn list() -> Json<Vec<Product>> {
+        vec![].into()
+    }
 }
