@@ -106,6 +106,8 @@ impl Collector {
             }
         }
     }
+
+    pub fn add_scheme<T>() {}
 }
 
 fn new() -> Collector {
@@ -124,8 +126,9 @@ where
     let cell = RefCell::new(collector);
 
     let ret = COLLECTOR.set(&cell, || op());
-
-    (cell.into_inner().spec, ret)
+    let mut spec = cell.into_inner().spec;
+    spec.openapi = "3.0.1".into();
+    (spec, ret)
 }
 
 #[doc(hidden)]
