@@ -32,13 +32,13 @@ mod products {
     use rweb::*;
     use serde::{Deserialize, Serialize};
 
-    #[derive(Debug, Serialize, Deserialize)]
+    #[derive(Debug, Default, Serialize, Deserialize)]
     pub struct Product {
         pub id: String,
         pub title: String,
     }
 
-    #[router("/products", services(list))]
+    #[router("/products", services(list, product))]
     #[openapi(tags("products"))]
     pub fn products() {}
 
@@ -47,5 +47,16 @@ mod products {
     #[openapi(summary = "List products")]
     fn list() -> Json<Vec<Product>> {
         vec![].into()
+    }
+
+    #[get("/{id}")]
+    #[openapi(id = "products.get")]
+    #[openapi(summary = "Get a product")]
+    fn product(id: String) -> Json<Product> {
+        Product {
+            id,
+            title: Default::default(),
+        }
+        .into()
     }
 }
