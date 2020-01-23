@@ -123,7 +123,7 @@ pub fn compile_route(
     };
 
     if cfg!(feature = "openapi") {
-        let op = crate::openapi::parse(&path, Some(sig), &mut f.attrs);
+        let op = crate::openapi::parse(&path, sig, &mut f.attrs);
         let op = crate::openapi::quote_op(op);
         expr = q!(
             Vars {

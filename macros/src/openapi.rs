@@ -1,4 +1,7 @@
-use crate::parse::{Delimited, Paren};
+use crate::{
+    parse::{Delimited, Paren},
+    path::find_ty,
+};
 use pmutil::{q, Quote, ToTokensExt};
 use rweb_openapi::v3_0::{ObjectOrReference, Operation, Parameter};
 use syn::{
@@ -75,9 +78,19 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
     .parse()
 }
 
-/// `sig` being [None] means that path parameter is not allowed.
-pub fn parse(path: &str, sig: Option<&Signature>, attrs: &mut Vec<Attribute>) -> Operation {
+pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operation {
     let mut op = Operation::default();
+
+    for segment in path.split('/').filter(|&s| s != "") {
+        if !segment.starts_with('{') {
+            continue;
+        }
+
+        let var = &segment[1..segment.len() - 1];
+        if let Some(ty) = find_ty(sig, var) {
+            //
+        }
+    }
 
     attrs.retain(|attr| {
         if attr.path.is_ident("openapi") {

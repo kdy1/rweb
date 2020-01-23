@@ -86,7 +86,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let mut expr = compile_fn_attrs(expr, &mut f.attrs, true);
 
     if cfg!(feature = "openapi") {
-        let op = crate::openapi::parse(&attr.path.value(), None, &mut f.attrs);
+        let op = crate::openapi::parse(&attr.path.value(), &f.sig, &mut f.attrs);
         let tags: Punctuated<&str, Token![,]> = op
             .tags
             .iter()
