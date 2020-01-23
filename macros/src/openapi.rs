@@ -76,13 +76,16 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
             required_v,
         },
         {
-            rweb::openapi::ObjectOrReference::Object({
-                let mut p = rweb::openapi::Parameter::default();
-                p.name = name_v.to_string();
-                p.location = location_v.to_string();
-                p.required = required_v;
-
-                p
+            rweb::openapi::ObjectOrReference::Object(rweb::openapi::Parameter {
+                name: name_v.to_string(),
+                location: location_v.to_string(),
+                required: required_v,
+                schema: None,
+                unique_items: None,
+                param_type: "".to_string(),
+                format: "".to_string(),
+                description: "".to_string(),
+                style: None,
             })
         }
     )
@@ -104,7 +107,17 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
             p.location = "path".to_string();
             p.required = Some(true);
 
-            op.parameters.push(ObjectOrReference::Object(p));
+            op.parameters.push(ObjectOrReference::Object(Parameter {
+                name: var.to_string(),
+                location: "path".to_string(),
+                required: Some(true),
+                schema: None,
+                unique_items: None,
+                param_type: "".to_string(),
+                format: "".to_string(),
+                description: "".to_string(),
+                style: None,
+            }));
         }
     }
 
