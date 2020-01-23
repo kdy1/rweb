@@ -1,5 +1,10 @@
-use rweb::*;
+use rweb::{
+    openapi::{Entity, Schema},
+    *,
+};
 use rweb_openapi::{to_yaml, OpenApi};
+use serde::Deserialize;
+use std::collections::BTreeMap;
 
 #[tokio::main]
 async fn main() {
@@ -33,6 +38,7 @@ mod math {
 }
 
 mod products {
+    use super::SearchReq;
     use rweb::*;
     use serde::{Deserialize, Serialize};
 
@@ -49,7 +55,8 @@ mod products {
     #[get("/")]
     #[openapi(id = "products.list")]
     #[openapi(summary = "List products")]
-    fn list() -> Json<Vec<Product>> {
+    fn list(_query: Query<SearchReq>) -> Json<Vec<Product>> {
+        // Mix
         vec![].into()
     }
 
@@ -65,7 +72,28 @@ mod products {
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct SearchReq {
+    query: String,
+}
+
+/// TODO: Replace this with derive
+impl Entity for SearchReq {
+    fn describe() -> Schema {
+        let mut map = BTreeMap::new();
+
+        map.insert("query".into(), String::describe());
+
+        Schema {
+            schema_type: "object".into(),
+            properties: map,
+            ..Default::default()
+        }
+    }
+}
+
 mod generic {
+    use super::SearchReq;
     use rweb::{openapi::Entity, *};
     use rweb_openapi::v3_0::Schema;
     use serde::Deserialize;
@@ -99,26 +127,6 @@ mod generic {
     #[post("/optional")]
     pub fn optional(_: Option<Json<LoginForm>>) -> String {
         String::new()
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct SearchReq {
-        query: String,
-    }
-
-    /// TODO: Replace this with derive
-    impl Entity for SearchReq {
-        fn describe() -> Schema {
-            let mut map = BTreeMap::new();
-
-            map.insert("query".into(), String::describe());
-
-            Schema {
-                schema_type: "object".into(),
-                properties: map,
-                ..Default::default()
-            }
-        }
     }
 
     #[post("/search")]
