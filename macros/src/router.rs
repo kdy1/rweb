@@ -38,7 +38,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let attr: Input = parse2(attr).expect("failed to parse input as Input { path , service }");
 
     let (expr, path_vars) = crate::path::compile(None, attr.path.dump(), None, false);
-    let (expr, inputs) =
+    let (expr, inputs, _) =
         crate::route::param::compile(expr, &f.sig, &mut data_inputs, path_vars, false);
 
     let mut exprs: Punctuated<Expr, Token![.]> = Punctuated::default();

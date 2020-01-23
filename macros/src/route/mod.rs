@@ -71,20 +71,24 @@ pub fn compile_route(
     let path: LitStr = parse(path);
     let path = path.value();
 
-    let handler_fn = {
-        let (e, inputs) = param::compile(expr, &f.sig, &mut data_inputs, vars, true);
+    let (handler_fn, from_req_types) = {
+        let (e, inputs, from_req_types) =
+            param::compile(expr, &f.sig, &mut data_inputs, vars, true);
         expr = e;
-        ItemFn {
-            attrs: Default::default(),
-            vis: Visibility::Inherited,
+        (
+            ItemFn {
+                attrs: Default::default(),
+                vis: Visibility::Inherited,
 
-            sig: Signature {
-                //                asyncness: None,
-                inputs,
-                ..f.sig.clone()
+                sig: Signature {
+                    //                asyncness: None,
+                    inputs,
+                    ..f.sig.clone()
+                },
+                block: f.block,
             },
-            block: f.block,
-        }
+            from_req_types,
+        )
     };
 
     let should_use_impl_trait =

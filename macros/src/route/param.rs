@@ -7,15 +7,17 @@ use syn::{
     Token, Type,
 };
 
+/// Returns (expr, actual_inputs_of_handler, from_request_types)
 pub fn compile(
     mut expr: Expr,
     sig: &Signature,
     data_inputs: &mut Punctuated<FnArg, Token![,]>,
     path_vars: Vec<(String, usize)>,
     insert_data_provider: bool,
-) -> (Expr, Punctuated<FnArg, Token![,]>) {
+) -> (Expr, Punctuated<FnArg, Token![,]>, Vec<Type>) {
     let mut path_params = HashSet::new();
     let mut inputs = sig.inputs.clone();
+    let mut from_request_types = vec![];
 
     {
         // Handle path parameters
@@ -58,10 +60,12 @@ pub fn compile(
                         // If there's no attribute, it's type should implement FromRequest
 
                         actual_inputs.push(cloned_i);
+                        from_request_types.push(*pat.ty.clone());
                         expr = q!(Vars { expr, T: &pat.ty }, {
                             expr.and(<T as rweb::FromRequest>::new())
                         })
                         .parse();
+
                         continue;
                     }
 
@@ -158,7 +162,7 @@ pub fn compile(
         actual_inputs.into_iter().collect()
     };
 
-    (expr, inputs)
+    (expr, inputs, from_request_types)
 }
 
 fn is_rweb_arg_attr(a: &Attribute) -> bool {
