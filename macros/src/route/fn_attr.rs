@@ -1,7 +1,7 @@
 use super::ParenTwoValue;
 use crate::parse::{Delimited, Paren};
 use pmutil::{q, ToTokensExt};
-use syn::{parse::Parse, parse2, Attribute, Expr, Meta, MetaNameValue};
+use syn::{parse2, Attribute, Expr, Meta, MetaNameValue};
 
 /// Handle attributes on fn item like `#[header(ContentType =
 /// "application/json")]`
