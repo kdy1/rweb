@@ -42,3 +42,6 @@ required-features = ["openapi"]
 [[example]]
 name = "todo_websockets"
 required-features = ["websocket"]
+
+[package.metadata.docs.rs]
+all-features = true
