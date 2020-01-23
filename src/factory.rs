@@ -1,7 +1,8 @@
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use warp::{
     filters::{multipart, ws::Ws, BoxedFilter},
-    Filter, Rejection,
+    reply::{json, Response},
+    Filter, Rejection, Reply,
 };
 
 pub trait FromRequest: Sized {
@@ -36,6 +37,15 @@ where
 
     fn new() -> Self::Filter {
         warp::body::json().boxed()
+    }
+}
+
+impl<T> Reply for Json<T>
+where
+    T: Serialize + Send,
+{
+    fn into_response(self) -> Response {
+        json(&self.0).into_response()
     }
 }
 
