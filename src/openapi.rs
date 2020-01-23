@@ -13,8 +13,8 @@ scoped_thread_local!(static COLLECTOR: RefCell<Collector>);
 /// You may provide an example value of each field with
 ///
 /// `#[schema(example = "path_to_function")]`
-pub trait Schema {
-    fn describe() -> Response;
+pub trait Entity {
+    fn describe() -> Schema;
 }
 
 #[derive(Debug)]
