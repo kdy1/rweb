@@ -1,9 +1,17 @@
+//!
+//!
+//!
+//! # Rules
+//!
+//!  - We abuse `Parameter.ref_path` to store type name.
+
 use crate::{
     parse::{Delimited, Paren},
     path::find_ty,
 };
 use pmutil::{q, Quote, ToTokensExt};
-use rweb_openapi::v3_0::{ObjectOrReference, Operation, Parameter};
+use proc_macro2::TokenStream;
+use rweb_openapi::v3_0::{ObjectOrReference, Operation, Parameter, Schema};
 use syn::{
     export::ToTokens,
     parse2,
@@ -70,13 +78,21 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
 
     let required_v = quote_option(param.required);
 
-    assert_eq!(
-        param.schema, None,
-        "Schema of a parameter should be provided using type system"
+    assert!(
+        param.schema.is_some(),
+        "Schema should contain a (rust) path to the type"
     );
+    let ty = param
+        .schema
+        .as_ref()
+        .unwrap()
+        .ref_path
+        .parse::<TokenStream>()
+        .expect("failed to lex path to the type of parameter?");
 
     q!(
         Vars {
+            Type: ty,
             name_v: &param.name,
             location_v: &param.location,
             required_v,
@@ -86,12 +102,8 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
                 name: name_v.to_string(),
                 location: location_v.to_string(),
                 required: required_v,
-                schema: None,
-                unique_items: None,
-                param_type: "".to_string(),
-                format: "".to_string(),
-                description: "".to_string(),
-                style: None,
+                schema: Some(<Type as rweb::openapi::Entity>::describe()),
+                ..Default::default()
             })
         }
     )
@@ -107,7 +119,7 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
         }
 
         let var = &segment[1..segment.len() - 1];
-        if let Some(_ty) = find_ty(sig, var) {
+        if let Some(ty) = find_ty(sig, var) {
             let mut p = Parameter::default();
             p.name = var.to_string();
             p.location = "path".to_string();
@@ -117,12 +129,11 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                 name: var.to_string(),
                 location: "path".to_string(),
                 required: Some(true),
-                schema: None,
-                unique_items: None,
-                param_type: "".to_string(),
-                format: "".to_string(),
-                description: "".to_string(),
-                style: None,
+                schema: Some(Schema {
+                    ref_path: ty.dump().to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
             }));
         }
     }
