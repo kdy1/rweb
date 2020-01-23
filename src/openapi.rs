@@ -28,6 +28,17 @@ impl<T: Entity> Entity for Vec<T> {
     }
 }
 
+impl<T> Entity for Option<T>
+where
+    T: Entity,
+{
+    fn describe() -> Schema {
+        let mut s = T::describe();
+        s.nullable = Some(true);
+        s
+    }
+}
+
 impl<T> Entity for Json<T>
 where
     T: Entity,
