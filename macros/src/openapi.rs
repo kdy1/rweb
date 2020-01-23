@@ -194,6 +194,9 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
 
         if attr.path.is_ident("doc") {
             let s: EqStr = parse2(attr.tokens.clone()).expect("failed to parse comments");
+            if !op.description.is_empty() {
+                op.description.push(' ');
+            }
             op.description.push_str(&s.value.value().trim_start());
             // Preserve comments
             return true;

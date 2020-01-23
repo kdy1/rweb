@@ -52,6 +52,8 @@ mod math {
     pub fn math() {}
 
     /// Adds a and b
+    /// and
+    /// return it
     #[get("/sum/{a}/{b}")]
     fn sum(a: usize, b: usize) -> String {
         (a + b).to_string()
