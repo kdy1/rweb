@@ -1,6 +1,6 @@
 use crate::parse::{Delimited, Paren};
 use pmutil::{q, Quote, ToTokensExt};
-use rweb_openapi::v3_0::Operation;
+use rweb_openapi::v3_0::{ObjectOrReference, Operation, Parameter};
 use syn::{
     parse2,
     punctuated::{Pair, Punctuated},
@@ -14,26 +14,62 @@ pub fn quote_op(op: Operation) -> Expr {
         .map(|tag| Pair::Punctuated(q!(Vars { tag }, { tag.to_string() }), Default::default()))
         .collect();
 
+    let params_v: Punctuated<Expr, Token![,]> = op
+        .parameters
+        .iter()
+        .map(|v| Pair::Punctuated(quote_parameter(v), Default::default()))
+        .collect();
+
     q!(
         Vars {
             tags_v,
             id_v: op.operation_id,
             summary_v: op.summary,
+            description_v: op.description,
+            params_v,
         },
         {
             rweb::openapi::Operation {
                 tags: vec![tags_v],
                 summary: summary_v.to_string(),
-                description: Default::default(),
+                description: description_v.to_string(),
                 external_docs: Default::default(),
                 operation_id: id_v.to_string(),
-                parameters: Default::default(),
+                parameters: vec![params_v],
                 request_body: Default::default(),
                 responses: Default::default(),
                 callbacks: Default::default(),
                 deprecated: Default::default(),
                 servers: Default::default(),
             }
+        }
+    )
+    .parse()
+}
+
+fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
+    let param = match param {
+        ObjectOrReference::Ref { .. } => unreachable!("ObjectOrReference::Ref"),
+        ObjectOrReference::Object(param) => param,
+    };
+
+    q!(
+        Vars {
+            name_v: &param.name,
+            location_v: &param.location,
+        },
+        {
+            ObjectOrReference::Object(Parameter {
+                name: name_v.to_string(),
+                location: location_v.to_string(),
+                required: None,
+                schema: None,
+                unique_items: None,
+                param_type: "".to_string(),
+                format: "".to_string(),
+                description: Default::default(),
+                style: None,
+            })
         }
     )
     .parse()
