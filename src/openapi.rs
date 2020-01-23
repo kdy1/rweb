@@ -38,6 +38,43 @@ where
     }
 }
 
+macro_rules! number {
+    ($T:ty) => {
+        impl Entity for $T {
+            #[inline]
+            fn describe() -> Schema {
+                Schema {
+                    schema_type: "number".to_string(),
+                    ..Default::default()
+                }
+            }
+        }
+    };
+
+    (
+        $(
+            $T:ty
+        ),*
+    ) => {
+        $(
+            number!($T);
+        )*
+    };
+}
+
+number!(u8, u16, u32, u64, u128, usize);
+number!(i8, i16, i32, i64, i128, isize);
+// TODO: non-zero types
+
+impl Entity for String {
+    fn describe() -> Schema {
+        Schema {
+            schema_type: "string".to_string(),
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Collector {
     spec: Spec,
