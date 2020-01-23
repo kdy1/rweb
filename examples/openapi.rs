@@ -1,4 +1,5 @@
 use rweb::*;
+use rweb_openapi::{to_yaml, OpenApi};
 
 #[tokio::main]
 async fn main() {
@@ -8,7 +9,9 @@ async fn main() {
         math::math().or(products::products())
     });
 
-    panic!("Spec: {:?}", spec);
+    println!("{}", to_yaml(&OpenApi::V3_0(spec)).unwrap());
+
+    panic!();
 }
 
 mod math {
