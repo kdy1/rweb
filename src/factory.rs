@@ -1,4 +1,4 @@
-use futures::{future::ok, FutureExt};
+use futures::future::ok;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use warp::{
     filters::{multipart, ws::Ws, BoxedFilter},
