@@ -7,6 +7,7 @@ mod parse;
 mod path;
 mod route;
 mod router;
+mod util;
 
 #[proc_macro_attribute]
 pub fn get(

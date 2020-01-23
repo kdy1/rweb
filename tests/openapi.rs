@@ -31,7 +31,7 @@ fn product(id: String) -> Product {
 }
 
 #[test]
-fn test1() {
+fn simple() {
     let (spec, _) = openapi::spec(|| {
         //
         product().or(products())
@@ -42,6 +42,38 @@ fn test1() {
 
     assert!(spec.paths.get("/product/{id}").is_some());
     assert!(spec.paths.get("/product/{id}").unwrap().get.is_some());
+
+    let yaml = serde_yaml::to_string(&spec).unwrap();
+    println!("{}", yaml);
+
+    panic!();
+}
+
+#[derive(Debug, Default, Serialize, Schema)]
+struct Resp<T> {
+    data: T,
+}
+
+#[derive(Debug, Default, Serialize, Schema)]
+struct Data {}
+
+#[get("/proxy")]
+fn proxy() -> Json<Resp<Data>> {
+    Resp {
+        data: Data::default(),
+    }
+    .into()
+}
+
+#[test]
+fn generic() {
+    let (spec, _) = openapi::spec(|| {
+        //
+        proxy()
+    });
+
+    assert!(spec.paths.get("/proxy").is_some());
+    assert!(spec.paths.get("/proxy").unwrap().get.is_some());
 
     let yaml = serde_yaml::to_string(&spec).unwrap();
     println!("{}", yaml);

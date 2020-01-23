@@ -18,3 +18,4 @@ rweb-openapi = "0.3.0"
 pmutil = "0.5.3"
 syn = { version = "1", features = ["full"] }
 proc-macro2 = "1"
+quote = "1"

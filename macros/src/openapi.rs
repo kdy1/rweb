@@ -9,6 +9,7 @@ use crate::{
     parse::{Delimited, Paren},
     path::find_ty,
     route::EqStr,
+    util::ItemImplExt,
 };
 use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
@@ -87,7 +88,8 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
             }
         }
     )
-    .parse::<ItemImpl>();
+    .parse::<ItemImpl>()
+    .with_generics(input.generics.clone());
 
     item.dump()
 }
