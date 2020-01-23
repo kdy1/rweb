@@ -208,6 +208,7 @@ fn quote_location(l: Location) -> Quote {
 
 pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operation {
     let mut op = Operation::default();
+    let mut has_description = false;
 
     for segment in path.split('/').filter(|&s| s != "") {
         if !segment.starts_with('{') {
@@ -256,6 +257,17 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                         },
                         _ => panic!("Correct usage: #[openapi(id = \"foo\")]"),
                     }
+                } else if config.path().is_ident("description") {
+                    match config {
+                        Meta::NameValue(v) => match v.lit {
+                            Lit::Str(s) => {
+                                op.description = Cow::Owned(s.value());
+                                has_description = true;
+                            }
+                            _ => panic!("#[openapi]: invalid operation summary"),
+                        },
+                        _ => panic!("Correct usage: #[openapi(summary = \"foo\")]"),
+                    }
                 } else if config.path().is_ident("summary") {
                     match config {
                         Meta::NameValue(v) => match v.lit {
@@ -287,7 +299,7 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
             return false;
         }
 
-        if attr.path.is_ident("doc") {
+        if attr.path.is_ident("doc") && !has_description {
             let s: EqStr = parse2(attr.tokens.clone()).expect("failed to parse comments");
             if !op.description.is_empty() {
                 op.description.to_mut().push(' ');

@@ -65,6 +65,8 @@ fn proxy() -> Json<Resp<Data>> {
     .into()
 }
 
+// TODO: enum
+
 #[test]
 fn generic() {
     let (spec, _) = openapi::spec(|| {
@@ -77,6 +79,36 @@ fn generic() {
 
     let yaml = serde_yaml::to_string(&spec).unwrap();
     println!("{}", yaml);
+}
 
-    panic!();
+/// Doc comment
+#[get("/")]
+#[openapi(description = "foo-bar")]
+/// Doc comment
+fn index() -> String {
+    String::new()
+}
+
+#[test]
+fn description() {
+    let (spec, _) = openapi::spec(|| {
+        //
+        index()
+    });
+
+    assert!(spec.paths.get("/").is_some());
+    assert!(spec.paths.get("/").unwrap().get.is_some());
+    assert_eq!(
+        spec.paths
+            .get("/")
+            .unwrap()
+            .get
+            .as_ref()
+            .unwrap()
+            .description,
+        "foo-bar"
+    );
+
+    let yaml = serde_yaml::to_string(&spec).unwrap();
+    println!("{}", yaml);
 }
