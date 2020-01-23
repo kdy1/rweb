@@ -122,33 +122,18 @@ pub fn compile_route(
 
     if cfg!(feature = "openapi") {
         let op = crate::openapi::parse(&mut f.attrs);
-
+        let op = crate::openapi::quote_op(op);
         expr = q!(
             Vars {
+                op,
                 http_method: method,
                 path: &path,
-                expr
+                expr,
             },
             {
                 rweb::openapi::with(|__collector: Option<&mut rweb::openapi::Collector>| {
                     if let Some(__collector) = __collector {
-                        __collector.add(
-                            path,
-                            rweb::openapi::http_methods::http_method(),
-                            rweb::openapi::Operation {
-                                tags: None,
-                                summary: None,
-                                description: None,
-                                external_docs: None,
-                                operation_id: None,
-                                parameters: None,
-                                request_body: None,
-                                responses: Default::default(),
-                                callbacks: None,
-                                deprecated: None,
-                                servers: None,
-                            },
-                        );
+                        __collector.add(path, rweb::openapi::http_methods::http_method(), op);
                     }
 
                     expr
