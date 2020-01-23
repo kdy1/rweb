@@ -33,6 +33,28 @@ pub trait FromRequest: Sized {
     fn new() -> Self::Filter;
 }
 
+//impl<T> FromRequest for Option<T>
+//where
+//    T: FromRequest + Send + Filter<Extract = (T,)>,
+//{
+//    type Filter = BoxedFilter<(Option<T>,)>;
+//
+//    fn is_optional() -> bool {
+//        true
+//    }
+//
+//    fn new() -> Self::Filter {
+//        T::new().map(|t: T| Some(t)).or_else(|_| None).boxed()
+//    }
+//}
+
+fn opt<T, F>(f: F)
+where
+    F: Filter<Extract = (T,)>,
+{
+    f.map(|_| {});
+}
+
 #[derive(Deserialize)]
 #[serde(transparent)]
 pub struct Json<T>(T);
