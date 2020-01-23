@@ -21,6 +21,13 @@ impl<T> Json<T> {
     }
 }
 
+impl<T> From<T> for Json<T> {
+    #[inline(always)]
+    fn from(v: T) -> Self {
+        Json(v)
+    }
+}
+
 impl<T> FromRequest for Json<T>
 where
     T: 'static + Send + DeserializeOwned,
