@@ -12,22 +12,22 @@ pub mod fn_attr;
 pub mod param;
 
 /// An eq token followed by literal string
-struct EqStr {
+pub(crate) struct EqStr {
     _eq: Token![=],
-    path: LitStr,
+    pub value: LitStr,
 }
 
 impl Parse for EqStr {
     fn parse(input: ParseStream) -> Result<Self, syn::Error> {
         Ok(EqStr {
             _eq: input.parse()?,
-            path: input.parse()?,
+            value: input.parse()?,
         })
     }
 }
 
 /// An eq token followed by literal string
-struct ParenTwoValue {
+pub(crate) struct ParenTwoValue {
     key: LitStr,
     _eq: Token![,],
     value: LitStr,

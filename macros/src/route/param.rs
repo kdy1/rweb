@@ -97,7 +97,7 @@ pub fn compile(
                             expr = q!(
                                 Vars {
                                     expr,
-                                    cookie_name: cookie_name.path
+                                    cookie_name: cookie_name.value
                                 },
                                 { expr.and(rweb::filters::cookie::cookie(cookie_name)) }
                             )
@@ -110,7 +110,7 @@ pub fn compile(
                             expr = q!(
                                 Vars {
                                     expr,
-                                    header_name: header_name.path
+                                    header_name: header_name.value
                                 },
                                 { expr.and(rweb::filters::header::header(header_name)) }
                             )
@@ -124,7 +124,7 @@ pub fn compile(
                         }
                     } else if attr.path.is_ident("filter") {
                         let filter_path: EqStr = parse(attr.tokens.clone());
-                        let filter_path = filter_path.path.value();
+                        let filter_path = filter_path.value.value();
                         let tts: TokenStream = filter_path.parse().expect("failed tokenize");
                         let filter_path: Path = parse(tts);
 

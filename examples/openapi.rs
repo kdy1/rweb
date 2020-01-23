@@ -32,7 +32,7 @@ mod response {
     pub fn response() {}
 
     #[derive(Debug, Serialize)]
-    struct Data {
+    pub struct Data {
         msg: String,
     }
 

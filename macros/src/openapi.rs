@@ -8,6 +8,7 @@
 use crate::{
     parse::{Delimited, Paren},
     path::find_ty,
+    route::EqStr,
 };
 use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
@@ -191,7 +192,12 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
             return false;
         }
 
-        if attr.path.is_ident("doc") {}
+        if attr.path.is_ident("doc") {
+            let s: EqStr = parse2(attr.tokens.clone()).expect("failed to parse comments");
+            op.description.push_str(&s.value.value().trim_start());
+            // Preserve comments
+            return true;
+        }
 
         true
     });
