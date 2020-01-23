@@ -23,8 +23,8 @@ fn products(_: Query<SearchReq>) -> Vec<Product> {
 #[get("/product/{id}")]
 fn product(id: String) -> Product {
     Product {
-        id,
         title: format!("Title of {}", id),
+        id,
     }
 }
 
@@ -32,10 +32,17 @@ fn product(id: String) -> Product {
 fn test1() {
     let (spec, _) = openapi::spec(|| {
         //
-        product().or(product())
+        product().or(products())
     });
 
-    println!("{}", serde_yaml::to_string(&spec).unwrap());
+    assert!(spec.paths.get("/products").is_some());
+    assert!(spec.paths.get("/products").unwrap().get.is_some());
+
+    assert!(spec.paths.get("/product/{id}").is_some());
+    assert!(spec.paths.get("/product/{id}").unwrap().get.is_some());
+
+    let yaml = serde_yaml::to_string(&spec).unwrap();
+    println!("{}", yaml);
 
     panic!();
 }

@@ -18,17 +18,75 @@ use syn::{
     export::ToTokens,
     parse2,
     punctuated::{Pair, Punctuated},
-    Attribute, DeriveInput, Expr, ItemImpl, Lit, Meta, NestedMeta, Signature, Token,
+    Attribute, Block, Data, DeriveInput, Expr, FieldValue, ItemImpl, Lit, Meta, NestedMeta,
+    Signature, Stmt, Token,
 };
 
 pub fn derive_schema(input: DeriveInput) -> TokenStream {
-    let item = q!(Vars { Type: &input.ident }, {
-        impl rweb::openapi::Entity for Type {
-            fn describe() -> rweb::openapi::Schema {
-                body
+    let mut fields: Punctuated<FieldValue, Token![,]> = Default::default();
+
+    match input.data {
+        Data::Struct(ref data) => {
+            {
+                // Properties
+                let mut block: Block = q!({ {} }).parse();
+                block.stmts.push(
+                    q!({
+                        #[allow(unused_mut)]
+                        let mut map: rweb::rt::BTreeMap<
+                            rweb::rt::Cow<'static, str>,
+                            _,
+                        > = rweb::rt::BTreeMap::default();
+                    })
+                    .parse(),
+                );
+
+                for f in &data.fields {
+                    let i = f.ident.as_ref().unwrap();
+
+                    block.stmts.push(
+                        q!(
+                            Vars {
+                                name: i,
+                                Type: &f.ty
+                            },
+                            {
+                                map.insert(
+                                    rweb::rt::Cow::Borrowed(stringify!(name)),
+                                    <Type as rweb::openapi::Entity>::describe(),
+                                );
+                            }
+                        )
+                        .parse(),
+                    );
+                }
+
+                block.stmts.push(Stmt::Expr(q!({ map }).parse()));
+                fields.push(q!(Vars { block }, { properties: block }).parse());
+            }
+
+            fields.push(q!({ schema_type: rweb::openapi::Type::Object }).parse());
+        }
+        Data::Enum(_) => unimplemented!("#[derive(Schema)] for enum"),
+        Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
+    }
+
+    let item = q!(
+        Vars {
+            Type: &input.ident,
+            fields
+        },
+        {
+            impl rweb::openapi::Entity for Type {
+                fn describe() -> rweb::openapi::Schema {
+                    rweb::openapi::Schema {
+                        fields,
+                        ..rweb::rt::Default::default()
+                    }
+                }
             }
         }
-    })
+    )
     .parse::<ItemImpl>();
 
     item.dump()
