@@ -5,6 +5,7 @@ use crate::{
 use pmutil::{q, Quote, ToTokensExt};
 use rweb_openapi::v3_0::{ObjectOrReference, Operation, Parameter};
 use syn::{
+    export::ToTokens,
     parse2,
     punctuated::{Pair, Punctuated},
     Attribute, Expr, Lit, Meta, NestedMeta, Signature, Token,
@@ -50,28 +51,38 @@ pub fn quote_op(op: Operation) -> Expr {
     .parse()
 }
 
+fn quote_option<T>(o: Option<T>) -> Quote
+where
+    T: ToTokens,
+{
+    match o {
+        Some(v) => q!(Vars { v }, { Some(v) }),
+        None => q!({ None }),
+    }
+}
+
 fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
     let param = match param {
-        ObjectOrReference::Ref { .. } => unreachable!("ObjectOrReference::Ref"),
+        ObjectOrReference::Ref { .. } => unreachable!("quote_parameter(ObjectOrReference::Ref)"),
         ObjectOrReference::Object(param) => param,
     };
+
+    let required_v = quote_option(param.required);
 
     q!(
         Vars {
             name_v: &param.name,
             location_v: &param.location,
+            required_v,
         },
         {
-            ObjectOrReference::Object(Parameter {
-                name: name_v.to_string(),
-                location: location_v.to_string(),
-                required: None,
-                schema: None,
-                unique_items: None,
-                param_type: "".to_string(),
-                format: "".to_string(),
-                description: Default::default(),
-                style: None,
+            rweb::openapi::ObjectOrReference::Object({
+                let mut p = rweb::openapi::Parameter::default();
+                p.name = name_v.to_string();
+                p.location = location_v.to_string();
+                p.required = required_v;
+
+                p
             })
         }
     )
@@ -87,8 +98,13 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
         }
 
         let var = &segment[1..segment.len() - 1];
-        if let Some(ty) = find_ty(sig, var) {
-            //
+        if let Some(_ty) = find_ty(sig, var) {
+            let mut p = Parameter::default();
+            p.name = var.to_string();
+            p.location = "path".to_string();
+            p.required = Some(true);
+
+            op.parameters.push(ObjectOrReference::Object(p));
         }
     }
 
