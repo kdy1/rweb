@@ -136,7 +136,7 @@ pub fn compile_route(
                     Type: &from_req,
                     op
                 },
-                { rweb::openapi::Collector::add_type_to::<Type>(op) }
+                { rweb::openapi::Collector::add_request_type_to::<Type>(op) }
             )
             .parse();
         }

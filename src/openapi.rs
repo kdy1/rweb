@@ -136,7 +136,7 @@ impl Collector {
         ret
     }
 
-    pub fn add_type_to<T: FromRequest + Entity>(mut op: Operation) -> Operation {
+    pub fn add_request_type_to<T: FromRequest + Entity>(mut op: Operation) -> Operation {
         if T::is_body() {
             if op.request_body.is_some() {
                 panic!("Multiple body detected");
