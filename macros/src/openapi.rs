@@ -51,6 +51,7 @@ pub fn quote_op(op: Operation) -> Expr {
     .parse()
 }
 
+/// TODO: Move this to pmutil
 fn quote_option<T>(o: Option<T>) -> Quote
 where
     T: ToTokens,
@@ -68,6 +69,11 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
     };
 
     let required_v = quote_option(param.required);
+
+    assert_eq!(
+        param.schema, None,
+        "Schema of a parameter should be provided using type system"
+    );
 
     q!(
         Vars {
