@@ -41,8 +41,16 @@ where
 {
     type Filter = BoxedFilter<(Option<T>,)>;
 
+    fn is_body() -> bool {
+        T::is_body()
+    }
+
     fn is_optional() -> bool {
         true
+    }
+
+    fn is_query() -> bool {
+        T::is_query()
     }
 
     fn new() -> Self::Filter {

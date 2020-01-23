@@ -9,7 +9,7 @@ async fn main() {
         math::math()
             .or(products::products())
             .or(generic::body())
-            .or(generic::option())
+            .or(generic::optional())
     });
 
     println!("{}", to_yaml(&OpenApi::V3_0(spec)).unwrap());
@@ -80,8 +80,8 @@ mod generic {
         String::new()
     }
 
-    #[post("/option")]
-    pub fn option(_: Option<Json<LoginForm>>) -> String {
+    #[post("/optional")]
+    pub fn optional(_: Option<Json<LoginForm>>) -> String {
         String::new()
     }
 
