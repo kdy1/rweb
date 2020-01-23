@@ -1,9 +1,5 @@
-use rweb::{
-    openapi::{Entity, Schema},
-    *,
-};
+use rweb::*;
 use serde::Deserialize;
-use std::collections::BTreeMap;
 
 #[tokio::main]
 async fn main() {
@@ -24,34 +20,15 @@ async fn main() {
 }
 
 mod response {
-    use rweb::{
-        openapi::{Entity, Schema},
-        *,
-    };
+    use rweb::*;
     use serde::Serialize;
-    use std::collections::BTreeMap;
 
     #[router("/response", services(json))]
     pub fn response() {}
 
-    #[derive(Debug, Serialize)]
+    #[derive(Debug, Serialize, Schema)]
     pub struct Data {
         msg: String,
-    }
-
-    /// TODO: Replace this with derive
-    impl Entity for Data {
-        fn describe() -> Schema {
-            let mut map = BTreeMap::new();
-
-            map.insert("msg".into(), String::describe());
-
-            Schema {
-                schema_type: "object".into(),
-                properties: map,
-                ..Default::default()
-            }
-        }
     }
 
     #[get("/json")]
@@ -80,33 +57,13 @@ mod math {
 
 mod products {
     use super::SearchReq;
-    use rweb::{
-        openapi::{Entity, Schema},
-        *,
-    };
+    use rweb::*;
     use serde::{Deserialize, Serialize};
-    use std::collections::BTreeMap;
 
-    #[derive(Debug, Default, Serialize, Deserialize)]
+    #[derive(Debug, Default, Serialize, Deserialize, Schema)]
     pub struct Product {
         pub id: String,
         pub title: String,
-    }
-
-    /// TODO: Replace this with derive
-    impl Entity for Product {
-        fn describe() -> Schema {
-            let mut map = BTreeMap::new();
-
-            map.insert("id".into(), String::describe());
-            map.insert("title".into(), String::describe());
-
-            Schema {
-                schema_type: "object".into(),
-                properties: map,
-                ..Default::default()
-            }
-        }
     }
 
     #[router("/products", services(list, product))]
@@ -133,51 +90,19 @@ mod products {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Schema)]
 struct SearchReq {
     query: String,
 }
 
-/// TODO: Replace this with derive
-impl Entity for SearchReq {
-    fn describe() -> Schema {
-        let mut map = BTreeMap::new();
-
-        map.insert("query".into(), String::describe());
-
-        Schema {
-            schema_type: "object".into(),
-            properties: map,
-            ..Default::default()
-        }
-    }
-}
-
 mod generic {
     use super::SearchReq;
-    use rweb::{openapi::Entity, *};
-    use rweb_openapi::v3_0::Schema;
+    use rweb::*;
     use serde::Deserialize;
-    use std::collections::BTreeMap;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, Schema)]
     struct LoginForm {
         id: String,
-    }
-
-    /// TODO: Replace this with derive
-    impl Entity for LoginForm {
-        fn describe() -> Schema {
-            let mut map = BTreeMap::new();
-
-            map.insert("id".into(), String::describe());
-
-            Schema {
-                schema_type: "object".into(),
-                properties: map,
-                ..Default::default()
-            }
-        }
     }
 
     #[post("/login")]

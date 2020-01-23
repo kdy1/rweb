@@ -362,7 +362,7 @@
 //! ```
 
 pub use self::factory::{Form, FromRequest, Json, Query};
-pub use rweb_macros::{delete, get, head, options, patch, post, put, router};
+pub use rweb_macros::{delete, get, head, options, patch, post, put, router, Schema};
 pub use warp::{self, *};
 
 mod factory;

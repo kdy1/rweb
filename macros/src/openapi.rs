@@ -18,8 +18,21 @@ use syn::{
     export::ToTokens,
     parse2,
     punctuated::{Pair, Punctuated},
-    Attribute, Expr, Lit, Meta, NestedMeta, Signature, Token,
+    Attribute, DeriveInput, Expr, ItemImpl, Lit, Meta, NestedMeta, Signature, Token,
 };
+
+pub fn derive_schema(input: DeriveInput) -> TokenStream {
+    let item = q!(Vars { Type: &input.ident }, {
+        impl rweb::openapi::Entity for Type {
+            fn describe() -> rweb::openapi::Schema {
+                body
+            }
+        }
+    })
+    .parse::<ItemImpl>();
+
+    item.dump()
+}
 
 pub fn quote_op(op: Operation) -> Expr {
     let tags_v: Punctuated<Quote, Token![,]> = op
