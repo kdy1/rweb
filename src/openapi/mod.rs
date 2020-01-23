@@ -1,110 +1,15 @@
 //! Automatic openapi spec generator.
 
-use crate::{Form, FromRequest, Json, Query};
+pub use self::entity::{Entity, ResponseEntity};
+use crate::FromRequest;
 use http::Method;
 pub use rweb_openapi::v3_0::*;
 use scoped_tls::scoped_thread_local;
 use std::{cell::RefCell, collections::BTreeMap, mem::replace};
 
+mod entity;
+
 scoped_thread_local!(static COLLECTOR: RefCell<Collector>);
-
-/// This can be derived by `#[derive(Schema)]`.
-///
-///
-/// You may provide an example value of each field with
-///
-/// `#[schema(example = "path_to_function")]`
-pub trait Entity {
-    fn describe() -> Schema;
-}
-
-impl<T: Entity> Entity for Vec<T> {
-    fn describe() -> Schema {
-        Schema {
-            schema_type: "array".into(),
-            items: Some(Box::new(T::describe())),
-            ..Default::default()
-        }
-    }
-}
-
-impl<T> Entity for Option<T>
-where
-    T: Entity,
-{
-    fn describe() -> Schema {
-        let mut s = T::describe();
-        s.nullable = Some(true);
-        s
-    }
-}
-
-impl<T> Entity for Json<T>
-where
-    T: Entity,
-{
-    #[inline]
-    fn describe() -> Schema {
-        T::describe()
-    }
-}
-
-impl<T> Entity for Query<T>
-where
-    T: Entity,
-{
-    #[inline]
-    fn describe() -> Schema {
-        T::describe()
-    }
-}
-
-impl<T> Entity for Form<T>
-where
-    T: Entity,
-{
-    #[inline]
-    fn describe() -> Schema {
-        T::describe()
-    }
-}
-
-macro_rules! number {
-    ($T:ty) => {
-        impl Entity for $T {
-            #[inline]
-            fn describe() -> Schema {
-                Schema {
-                    schema_type: "number".to_string(),
-                    ..Default::default()
-                }
-            }
-        }
-    };
-
-    (
-        $(
-            $T:ty
-        ),*
-    ) => {
-        $(
-            number!($T);
-        )*
-    };
-}
-
-number!(u8, u16, u32, u64, u128, usize);
-number!(i8, i16, i32, i64, i128, isize);
-// TODO: non-zero types
-
-impl Entity for String {
-    fn describe() -> Schema {
-        Schema {
-            schema_type: "string".to_string(),
-            ..Default::default()
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct Collector {
@@ -185,6 +90,10 @@ impl Collector {
             }
         }
 
+        op
+    }
+
+    pub fn add_response_to<T: FromRequest + ResponseEntity>(mut op: Operation) -> Operation {
         op
     }
 

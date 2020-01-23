@@ -5,7 +5,7 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_quote::parse,
     punctuated::Punctuated,
-    Expr, ItemFn, LitStr, ReturnType, Signature, Token, Visibility,
+    Expr, ItemFn, LitStr, ReturnType, Signature, Token, Type, Visibility,
 };
 
 pub mod fn_attr;
@@ -139,6 +139,21 @@ pub fn compile_route(
                 { rweb::openapi::Collector::add_request_type_to::<Type>(op) }
             )
             .parse();
+        }
+
+        match sig.output {
+            ReturnType::Default => panic!("http handlers should have return type"),
+            ReturnType::Type(_, ref ty) => {
+                if match &**ty {
+                    Type::Infer(..) | Type::ImplTrait(..) => false,
+                    _ => true,
+                } {
+                    op = q!(Vars { op, Type: ty }, {
+                        rweb::openapi::Collector::add_response_to::<Type>(op)
+                    })
+                    .parse();
+                }
+            }
         }
 
         expr = q!(
