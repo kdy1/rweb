@@ -10,6 +10,9 @@ use std::collections::BTreeMap;
 /// `#[schema(example = "path_to_function")]`
 pub trait Entity {
     fn describe() -> Schema;
+    fn describe_component() -> Option<Schema> {
+        None
+    }
 
     fn describe_response() -> Response {
         let schema = Self::describe();
@@ -38,6 +41,15 @@ impl<T: Entity> Entity for Vec<T> {
             ..Default::default()
         }
     }
+
+    fn describe_component() -> Option<Schema> {
+        let s = T::describe_component()?;
+        Some(Schema {
+            schema_type: Type::Array,
+            items: Some(Box::new(s)),
+            ..Default::default()
+        })
+    }
 }
 
 impl<T> Entity for Option<T>
@@ -49,6 +61,12 @@ where
         s.nullable = Some(true);
         s
     }
+
+    fn describe_component() -> Option<Schema> {
+        let mut s = T::describe_component()?;
+        s.nullable = Some(true);
+        Some(s)
+    }
 }
 
 impl<T> Entity for Json<T>
@@ -58,6 +76,10 @@ where
     #[inline]
     fn describe() -> Schema {
         T::describe()
+    }
+
+    fn describe_component() -> Option<Schema> {
+        T::describe_component()
     }
 
     fn describe_response() -> Response {
@@ -86,6 +108,10 @@ where
     fn describe() -> Schema {
         T::describe()
     }
+
+    fn describe_component() -> Option<Schema> {
+        T::describe_component()
+    }
 }
 
 impl<T> Entity for Form<T>
@@ -95,6 +121,10 @@ where
     #[inline]
     fn describe() -> Schema {
         T::describe()
+    }
+
+    fn describe_component() -> Option<Schema> {
+        T::describe_component()
     }
 }
 
