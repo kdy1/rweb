@@ -1,4 +1,4 @@
-use futures::future::ok;
+use futures::{future::ok, FutureExt};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use warp::{
     filters::{multipart, ws::Ws, BoxedFilter},
@@ -36,8 +36,8 @@ pub trait FromRequest: Sized {
 
 impl<T> FromRequest for Option<T>
 where
-    T: Send,
-    T: FromRequest + Send + Filter<Extract = (T,), Error = Rejection>,
+    T: 'static + FromRequest + Send + Send,
+    T::Filter: Send + Sync + Filter<Extract = (T,), Error = Rejection>,
 {
     type Filter = BoxedFilter<(Option<T>,)>;
 
@@ -46,16 +46,11 @@ where
     }
 
     fn new() -> Self::Filter {
-        unimplemented!()
+        T::new()
+            .map(Some)
+            .or_else(|_| ok::<_, Rejection>((None,)))
+            .boxed()
     }
-}
-
-fn opt<T, F>(f: F) -> impl Filter<Extract = (Option<T>,), Error = Rejection> + Send
-where
-    T: Send,
-    F: Send + Filter<Extract = (T,), Error = Rejection>,
-{
-    f.map(Some).or_else(|_| ok::<_, Rejection>((None,)))
 }
 
 #[derive(Deserialize)]
