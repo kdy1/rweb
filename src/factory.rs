@@ -9,6 +9,16 @@ pub trait FromRequest: Sized {
     /// Extract should be `(Self,),`
     type Filter: Filter<Error = Rejection>;
 
+    /// It's true iff the type represents whole request body.
+    fn is_body() -> bool {
+        false
+    }
+
+    /// It's true iff the type represents whole request query.
+    fn is_query() -> bool {
+        false
+    }
+
     fn new() -> Self::Filter;
 }
 
@@ -34,6 +44,10 @@ where
     T: 'static + Send + DeserializeOwned,
 {
     type Filter = BoxedFilter<(Json<T>,)>;
+
+    fn is_body() -> bool {
+        true
+    }
 
     fn new() -> Self::Filter {
         warp::body::json().boxed()
@@ -65,6 +79,10 @@ where
 {
     type Filter = BoxedFilter<(Form<T>,)>;
 
+    fn is_body() -> bool {
+        true
+    }
+
     fn new() -> Self::Filter {
         warp::body::form().boxed()
     }
@@ -85,6 +103,10 @@ where
     T: 'static + Send + DeserializeOwned,
 {
     type Filter = BoxedFilter<(Query<T>,)>;
+
+    fn is_query() -> bool {
+        true
+    }
 
     fn new() -> Self::Filter {
         warp::query().boxed()
