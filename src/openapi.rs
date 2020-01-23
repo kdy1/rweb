@@ -1,6 +1,6 @@
 //! Automatic openapi spec generator.
 
-use crate::{FromRequest, Json};
+use crate::{Form, FromRequest, Json, Query};
 use http::Method;
 pub use rweb_openapi::v3_0::*;
 use scoped_tls::scoped_thread_local;
@@ -40,6 +40,26 @@ where
 }
 
 impl<T> Entity for Json<T>
+where
+    T: Entity,
+{
+    #[inline]
+    fn describe() -> Schema {
+        T::describe()
+    }
+}
+
+impl<T> Entity for Query<T>
+where
+    T: Entity,
+{
+    #[inline]
+    fn describe() -> Schema {
+        T::describe()
+    }
+}
+
+impl<T> Entity for Form<T>
 where
     T: Entity,
 {
