@@ -1,17 +1,28 @@
 use crate::parse::{Delimited, Paren};
-use pmutil::{q, ToTokensExt};
+use pmutil::{q, Quote, ToTokensExt};
 use rweb_openapi::v3_0::Operation;
-use syn::{parse2, Attribute, Expr, Lit, Meta, NestedMeta};
+use syn::{
+    parse2,
+    punctuated::{Pair, Punctuated},
+    Attribute, Expr, Lit, Meta, NestedMeta, Token,
+};
 
 pub fn quote_op(op: Operation) -> Expr {
+    let mut tags_v: Punctuated<Quote, Token![,]> = op
+        .tags
+        .iter()
+        .map(|tag| Pair::Punctuated(q!(Vars { tag }, { tag.to_string() }), Default::default()))
+        .collect();
+
     q!(
         Vars {
+            tags_v,
             id_v: op.operation_id,
             summary_v: op.summary,
         },
         {
             rweb::openapi::Operation {
-                tags: Default::default(),
+                tags: vec![tags_v],
                 summary: summary_v.to_string(),
                 description: Default::default(),
                 external_docs: Default::default(),
