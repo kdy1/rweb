@@ -68,6 +68,8 @@ pub fn compile_route(
     };
 
     let (mut expr, vars) = crate::path::compile(Some(expr), path.clone(), Some(sig), true);
+    let path: LitStr = parse(path);
+    let path = path.value();
 
     let handler_fn = {
         let (e, inputs) = param::compile(expr, &f.sig, &mut data_inputs, vars, true);
@@ -121,7 +123,7 @@ pub fn compile_route(
     };
 
     if cfg!(feature = "openapi") {
-        let op = crate::openapi::parse(&mut f.attrs);
+        let op = crate::openapi::parse(&path, Some(sig), &mut f.attrs);
         let op = crate::openapi::quote_op(op);
         expr = q!(
             Vars {

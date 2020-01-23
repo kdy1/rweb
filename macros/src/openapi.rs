@@ -4,7 +4,7 @@ use rweb_openapi::v3_0::{ObjectOrReference, Operation, Parameter};
 use syn::{
     parse2,
     punctuated::{Pair, Punctuated},
-    Attribute, Expr, Lit, Meta, NestedMeta, Token,
+    Attribute, Expr, Lit, Meta, NestedMeta, Signature, Token,
 };
 
 pub fn quote_op(op: Operation) -> Expr {
@@ -75,7 +75,8 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
     .parse()
 }
 
-pub fn parse(attrs: &mut Vec<Attribute>) -> Operation {
+/// `sig` being [None] means that path parameter is not allowed.
+pub fn parse(path: &str, sig: Option<&Signature>, attrs: &mut Vec<Attribute>) -> Operation {
     let mut op = Operation::default();
 
     attrs.retain(|attr| {
