@@ -1,12 +1,16 @@
 //! Automatic openapi spec generator.
 
-pub use self::entity::Entity;
+pub use self::{
+    builder::{spec, Builder},
+    entity::Entity,
+};
 use crate::FromRequest;
 use http::Method;
 pub use rweb_openapi::v3_0::*;
 use scoped_tls::scoped_thread_local;
 use std::{borrow::Cow, cell::RefCell, collections::BTreeMap, mem::replace};
 
+mod builder;
 mod entity;
 
 scoped_thread_local!(static COLLECTOR: RefCell<Collector>);
@@ -177,20 +181,6 @@ fn new() -> Collector {
         path_prefix: Default::default(),
         tags: vec![],
     }
-}
-
-pub fn spec<F, Ret>(op: F) -> (Spec, Ret)
-where
-    F: FnOnce() -> Ret,
-{
-    let collector = new();
-
-    let cell = RefCell::new(collector);
-
-    let ret = COLLECTOR.set(&cell, || op());
-    let mut spec = cell.into_inner().spec;
-    spec.openapi = "3.0.1".into();
-    (spec, ret)
 }
 
 #[doc(hidden)]

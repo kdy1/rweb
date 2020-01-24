@@ -21,7 +21,7 @@ enum Enum {
 
 #[test]
 fn description() {
-    let (spec, _) = openapi::spec(|| {
+    let (spec, _) = openapi::spec().build(|| {
         //
         index()
     });

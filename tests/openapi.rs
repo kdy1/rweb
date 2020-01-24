@@ -33,7 +33,7 @@ fn product(id: String) -> Product {
 
 #[test]
 fn simple() {
-    let (spec, _) = openapi::spec(|| {
+    let (spec, _) = openapi::spec().build(|| {
         //
         product().or(products())
     });
@@ -73,7 +73,7 @@ fn proxy() -> Json<Resp<Data>> {
 
 #[test]
 fn generic() {
-    let (spec, _) = openapi::spec(|| {
+    let (spec, _) = openapi::spec().build(|| {
         //
         proxy()
     });
@@ -97,7 +97,7 @@ fn index() -> String {
 
 #[test]
 fn description() {
-    let (spec, _) = openapi::spec(|| {
+    let (spec, _) = openapi::spec().build(|| {
         //
         index()
     });

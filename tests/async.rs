@@ -1,3 +1,5 @@
+#![cfg(not(feature = "openapi"))]
+
 use rweb::{get, Filter, Rejection};
 
 async fn task() -> Result<String, Rejection> {

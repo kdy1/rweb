@@ -1,3 +1,5 @@
+#![cfg(not(feature = "openapi"))]
+
 use futures::lock::Mutex;
 use rweb::*;
 use std::sync::Arc;

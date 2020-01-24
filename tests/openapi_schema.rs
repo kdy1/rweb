@@ -16,7 +16,7 @@ fn component(_: Query<ComponentTestReq>) -> String {
 
 #[test]
 fn component_test() {
-    let (spec, _) = openapi::spec(|| {
+    let (spec, _) = openapi::spec().build(|| {
         //
         component()
     });
