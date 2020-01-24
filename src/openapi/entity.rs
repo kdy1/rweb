@@ -1,7 +1,7 @@
 use crate::{Form, Json, Query};
 pub use rweb_openapi::v3_0::*;
 use std::{borrow::Cow, collections::BTreeMap, convert::Infallible};
-use warp::Rejection;
+use warp::{Rejection, Reply};
 
 pub type Components = Vec<(Cow<'static, str>, Schema)>;
 
@@ -50,6 +50,28 @@ impl<T: Entity> Entity for Vec<T> {
                 )
             })
             .collect()
+    }
+}
+
+impl<T> Entity for Box<T>
+where
+    T: Entity,
+{
+    fn describe() -> Schema {
+        T::describe()
+    }
+
+    fn describe_components() -> Components {
+        T::describe_components()
+    }
+}
+
+impl<T> ResponseEntity for Box<T>
+where
+    T: ResponseEntity,
+{
+    fn describe_responses() -> Responses {
+        T::describe_responses()
     }
 }
 
@@ -364,6 +386,22 @@ impl Entity for http::Error {
 }
 
 impl ResponseEntity for http::Error {
+    fn describe_responses() -> Responses {
+        Default::default()
+    }
+}
+
+impl Entity for dyn Reply {
+    fn describe() -> Schema {
+        <() as Entity>::describe()
+    }
+
+    fn describe_components() -> Vec<(Cow<'static, str>, Schema)> {
+        Default::default()
+    }
+}
+
+impl ResponseEntity for dyn Reply {
     fn describe_responses() -> Responses {
         Default::default()
     }
