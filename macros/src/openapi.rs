@@ -68,7 +68,9 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
 
             fields.push(q!({ schema_type: rweb::openapi::Type::Object }).parse());
         }
-        Data::Enum(_) => unimplemented!("#[derive(Schema)] for enum"),
+        Data::Enum(ref data) => {
+            fields.push(q!(Vars {}, { one_of: vec![] }).parse());
+        }
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }
 
