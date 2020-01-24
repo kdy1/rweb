@@ -229,10 +229,13 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
     }
 
     let mut item = if let Some(comp) = component {
+        let path_to_schema = format!("#/components/schemas/{}", comp);
+
         q!(
             Vars {
                 Type: &input.ident,
                 desc,
+                path_to_schema,
                 fields,
                 comp,
             },
@@ -240,6 +243,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                 impl rweb::openapi::Entity for Type {
                     fn describe() -> rweb::openapi::Schema {
                         rweb::openapi::Schema {
+                            ref_path: rweb::rt::Cow::Borrowed(path_to_schema),
                             ..rweb::rt::Default::default()
                         }
                     }
