@@ -41,16 +41,11 @@ fn index() -> Result<Json<Resp<()>>, Error> {
 struct Product {}
 
 #[get("/product")]
-#[response(400)]
-#[response(404)]
 fn product() -> Result<Json<Product>, Error> {
     unimplemented!()
 }
 
 #[get("/product")]
-#[response(400, description = "Invalid query")]
-#[response(400, description = "Invalid header")]
-#[response(404, description = "No product matches the query")]
 fn products() -> Result<Json<Vec<Product>>, Error> {
     unimplemented!()
 }
