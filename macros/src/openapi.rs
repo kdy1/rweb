@@ -150,9 +150,13 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
 
     match input.data {
         Data::Struct(ref mut data) => {
-            {
-                let block = handle_fields(&mut data.fields);
-                fields.push(q!(Vars { block }, { properties: block }).parse());
+            match data.fields {
+                Fields::Named(_) => {
+                    let block = handle_fields(&mut data.fields);
+                    fields.push(q!(Vars { block }, { properties: block }).parse());
+                }
+                Fields::Unnamed(ref n) if n.unnamed.len() == 1 => {}
+                _ => {}
             }
 
             fields.push(q!({ schema_type: rweb::openapi::Type::Object }).parse());

@@ -55,7 +55,7 @@ impl<T: Entity> Entity for Vec<T> {
 
 impl<T> Entity for Box<T>
 where
-    T: Entity,
+    T: ?Sized + Entity,
 {
     fn describe() -> Schema {
         T::describe()
@@ -68,7 +68,7 @@ where
 
 impl<T> ResponseEntity for Box<T>
 where
-    T: ResponseEntity,
+    T: ?Sized + ResponseEntity,
 {
     fn describe_responses() -> Responses {
         T::describe_responses()
