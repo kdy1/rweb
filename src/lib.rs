@@ -292,6 +292,8 @@
 //!    }
 //! }
 //!
+//!
+//! #[cfg_attr(feature = "openapi", derive(Schema))]
 //! struct User {
 //!    id: String,
 //! }

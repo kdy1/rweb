@@ -352,3 +352,19 @@ impl ResponseEntity for Rejection {
         Default::default()
     }
 }
+
+impl Entity for http::Error {
+    fn describe() -> Schema {
+        <() as Entity>::describe()
+    }
+
+    fn describe_components() -> Vec<(Cow<'static, str>, Schema)> {
+        Default::default()
+    }
+}
+
+impl ResponseEntity for http::Error {
+    fn describe_responses() -> Responses {
+        Default::default()
+    }
+}
