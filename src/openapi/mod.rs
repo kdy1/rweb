@@ -51,6 +51,8 @@ impl Collector {
         if let Some((k, s)) = T::describe_component() {
             if self.spec.components.is_none() {
                 self.spec.components = Some(Default::default());
+                // TODO: Error reporting
+                // TODO: Remove duplicate work
                 self.spec
                     .components
                     .as_mut()
