@@ -5,7 +5,8 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_quote::parse,
     punctuated::Punctuated,
-    Block, Expr, ItemFn, LitStr, ReturnType, Signature, Token, Type, Visibility,
+    visit::Visit,
+    Block, Expr, ItemFn, LitStr, ReturnType, Signature, Token, Type, TypeImplTrait, Visibility,
 };
 
 pub mod fn_attr;
@@ -150,10 +151,7 @@ pub fn compile_route(
         match sig.output {
             ReturnType::Default => panic!("http handlers should have return type"),
             ReturnType::Type(_, ref ty) => {
-                if match &**ty {
-                    Type::Infer(..) | Type::ImplTrait(..) => false,
-                    _ => true,
-                } {
+                if !contains_impl_trait(&**ty) {
                     op_body.stmts.push(
                         q!(Vars { Type: ty }, {
                             rweb::openapi::Collector::add_response_to::<Type>(__collector, &mut v);
@@ -217,4 +215,19 @@ pub fn compile_route(
     };
 
     outer.dump().into()
+}
+
+fn contains_impl_trait(ty: &Type) -> bool {
+    struct Visitor(bool);
+    impl<'a> syn::visit::Visit<'a> for Visitor {
+        fn visit_type_impl_trait(&mut self, _: &TypeImplTrait) {
+            self.0 = true;
+        }
+    }
+
+    let mut v = Visitor(false);
+
+    v.visit_type(ty);
+
+    v.0
 }

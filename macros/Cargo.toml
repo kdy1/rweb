@@ -16,6 +16,6 @@ openapi = []
 [dependencies]
 rweb-openapi = "0.3.1"
 pmutil = "0.5.3"
-syn = { version = "1", features = ["full"] }
+syn = { version = "1", features = ["full", "visit"] }
 proc-macro2 = "1"
 quote = "1"
