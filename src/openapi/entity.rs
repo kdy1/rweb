@@ -233,6 +233,22 @@ impl Entity for bool {
     }
 }
 
+impl<'a> Entity for &'a str {
+    #[inline]
+    fn describe() -> Schema {
+        Schema {
+            schema_type: Type::String,
+            ..Default::default()
+        }
+    }
+}
+
+impl<'a> ResponseEntity for &'a str {
+    fn describe_responses() -> Responses {
+        String::describe_responses()
+    }
+}
+
 impl Entity for String {
     #[inline]
     fn describe() -> Schema {
