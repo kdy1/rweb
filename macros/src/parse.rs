@@ -5,13 +5,17 @@ use syn::{
     LitStr, Token,
 };
 
-pub(crate) struct KeyValue {
-    pub key: LitStr,
+pub(crate) struct KeyValue<K = LitStr, V = LitStr> {
+    pub key: K,
     _eq: Token![=],
-    pub value: LitStr,
+    pub value: V,
 }
 
-impl Parse for KeyValue {
+impl<K, V> Parse for KeyValue<K, V>
+where
+    K: Parse,
+    V: Parse,
+{
     fn parse(input: ParseStream) -> syn::parse::Result<Self> {
         Ok(KeyValue {
             key: input.parse()?,
