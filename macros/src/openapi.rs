@@ -107,6 +107,45 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
         block
     }
 
+    let desc = extract_doc(&mut input.attrs);
+
+    let mut component = None;
+    input.attrs.retain(|attr| {
+        if attr.path.is_ident("schema") {
+            for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
+                .expect("schema config is invalid")
+                .inner
+                .inner
+            {
+                match config {
+                    Meta::Path(..) => unimplemented!("Meta::Path in #[schema]"),
+                    Meta::NameValue(n) => {
+                        //
+                        if n.path.is_ident("component") {
+                            assert!(
+                                component.is_none(),
+                                "duplicate #[schema(component = \"foo\")] detected"
+                            );
+                            component = Some(match n.lit {
+                                Lit::Str(s) => s.value(),
+                                l => panic!(
+                                    "#[schema]: value of component should be a string literal, \
+                                     but got {}",
+                                    l.dump()
+                                ),
+                            })
+                        } else {
+                            panic!("#[schema]: Unknown option {}", n.path.dump())
+                        }
+                    }
+                    Meta::List(l) => unimplemented!("Meta::List in #[schema]: {}", l.dump()),
+                }
+            }
+        }
+
+        true
+    });
+
     let mut fields: Punctuated<FieldValue, Token![,]> = Default::default();
 
     match input.data {
@@ -189,26 +228,57 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }
 
-    let desc = extract_doc(&mut input.attrs);
+    let mut item = if let Some(comp) = component {
+        q!(
+            Vars {
+                Type: &input.ident,
+                desc,
+                fields,
+                comp,
+            },
+            {
+                impl rweb::openapi::Entity for Type {
+                    fn describe() -> rweb::openapi::Schema {
+                        rweb::openapi::Schema {
+                            ..rweb::rt::Default::default()
+                        }
+                    }
 
-    let mut item = q!(
-        Vars {
-            Type: &input.ident,
-            desc,
-            fields
-        },
-        {
-            impl rweb::openapi::Entity for Type {
-                fn describe() -> rweb::openapi::Schema {
-                    rweb::openapi::Schema {
-                        fields,
-                        description: rweb::rt::Cow::Borrowed(desc),
-                        ..rweb::rt::Default::default()
+                    fn describe_component(
+                    ) -> Option<(rweb::rt::Cow<'static, str>, rweb::openapi::Schema)>
+                    {
+                        Some((
+                            rweb::rt::Cow::Borrowed(comp),
+                            rweb::openapi::Schema {
+                                fields,
+                                description: rweb::rt::Cow::Borrowed(desc),
+                                ..rweb::rt::Default::default()
+                            },
+                        ))
                     }
                 }
             }
-        }
-    )
+        )
+    } else {
+        q!(
+            Vars {
+                Type: &input.ident,
+                desc,
+                fields
+            },
+            {
+                impl rweb::openapi::Entity for Type {
+                    fn describe() -> rweb::openapi::Schema {
+                        rweb::openapi::Schema {
+                            fields,
+                            description: rweb::rt::Cow::Borrowed(desc),
+                            ..rweb::rt::Default::default()
+                        }
+                    }
+                }
+            }
+        )
+    }
     .parse::<ItemImpl>()
     .with_generics(input.generics.clone());
 
