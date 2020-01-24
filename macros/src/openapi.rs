@@ -248,17 +248,15 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                         }
                     }
 
-                    fn describe_component(
-                    ) -> Option<(rweb::rt::Cow<'static, str>, rweb::openapi::Schema)>
-                    {
-                        Some((
+                    fn describe_components() -> rweb::openapi::Components {
+                        vec![(
                             rweb::rt::Cow::Borrowed(comp),
                             rweb::openapi::Schema {
                                 fields,
                                 description: rweb::rt::Cow::Borrowed(desc),
                                 ..rweb::rt::Default::default()
                             },
-                        ))
+                        )]
                     }
                 }
             }

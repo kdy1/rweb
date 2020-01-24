@@ -1,7 +1,7 @@
 //! Automatic openapi spec generator.
 //!
 //!
-//! # Basical usage
+//! # Usage
 //!
 //! Enable cargo feature by
 //!
@@ -10,20 +10,38 @@
 //! rweb = { version = "0.3.0-alpha.1", features = ["openapi"] }
 //! ```
 //!
-//!and wrap your handlers like
+//! and wrap your handlers like
 //!
 //! ```rust
 //! use rweb::*;
+//! use serde::Serialize;
 //!
 //! #[get("/")]
-//! fn index() {
+//! fn index() -> String {
+//!     String::from("content type will be 'text/plain' as you return String")
+//! }
 //!
+//! #[derive(Debug, Serialize, Schema)]
+//! struct Product {
+//!     id: String,
+//!     price: usize,
+//! }
+//!
+//! #[get("/products")]
+//! fn products() -> Json<Vec<Product>> {
+//!     unimplemented!("content type will be 'application/json', and type of openapi schema will be array")
+//! }
+//!
+//! #[get("/product/{id}")]
+//! fn product(id: String) -> Json<Product> {
+//!     // See Component section below if you want to give a name to type.
+//!     unimplemented!("content type will be 'application/json', and type of openapi schema will be object")
 //! }
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!     let (spec, filter) = openapi::spec().build(||{
-//!            index()
+//!     let (_spec, filter) = openapi::spec().build(||{
+//!            index().or(products()).or(product())
 //!     });
 //!
 //!     serve(filter);
@@ -33,13 +51,124 @@
 //! }
 //! ```
 //!
-//!**Note**: Currently using path filter from warp is **not** supported by
+//! **Note**: Currently using path filter from warp is **not** supported by
 //! rweb. If you use path filter from warp, generated document will point to
 //! different path.
 //!
+//! # Parameters
+//!
+//! ```rust
+//! use rweb::*;
+//! use serde::Deserialize;
+//!
+//! #[derive(Debug, Deserialize, Schema)]
+//! struct Opt {
+//!     query: String,
+//!     limit: usize,
+//!     page_token: String,
+//! }
+//!
+//! /// Look at the generated api document, and surprise :)
+//! ///
+//! /// Fields of [Opt] are documented as query parameters.
+//! #[get("/")]
+//! pub fn search(_q: Query<Opt>) -> String {
+//!     String::new()
+//! }
+//!
+//! /// Path parameter is documented. (as there's enough information to document it)
+//! #[get("/{id}")]
+//! pub fn get(id: String) -> String {
+//!     String::new()
+//! }
+//!
+//! /// Fields of [Opt] are documented as request body parameters.
+//! pub fn store(_: Json<Opt>) -> String{
+//!     String::new()
+//! }
+//! ```
+//!
+//! # Response body
+//!
+//! ```rust
+//! use rweb::*;
+//! use serde::Serialize;
+//!
+//! #[derive(Debug, Default, Serialize, Schema)]
+//! struct Output {
+//!     data: String,
+//! }
+//!
+//! /// Json<T> implements rweb::openapi::ResponseEntity if T implements Entity.
+//! #[get("/")]
+//! pub fn get() -> Json<Output> {
+//!     Output::default().into()
+//! }
+//! ```
+//!
 //! # `#[derive(Schema)]`
 //!
+//! It implements [Entity] for the struct or enum.
+//!
+//! ## Overriding description
+//!
+//! ```rust
+//! use rweb::*;
+//!
+//! /// private documentation, for example
+//! #[derive(Debug, Default, Schema)]
+//! #[schema(description = "This is output!!")]
+//! pub struct Output {
+//!     /// By default, doc comments become description
+//!     data: String,
+//!     /// Another private info like implementation detail.
+//!     #[schema(description = "field")]
+//!     field_example: String,
+//! }
+//! ```
+//!
+//! ## Component
+//!
+//! ```rust
+//! use rweb::*;
+//! use serde::{Serialize, Deserialize};
+//!
+//! // This item is stored at #/components/schema/Item
+//! #[derive(Debug, Serialize, Deserialize, Schema)]
+//! #[schema(component = "Item")]
+//! struct ComponentTestReq {
+//!     data: String,
+//! }
+//! ```
+//!
 //! # Custom error
+//!
+//! ```rust
+//! use rweb::*;
+//! use std::collections::BTreeMap;
+//! use std::borrow::Cow;
+//!
+//! #[derive(Debug, Schema)]
+//! enum Error {
+//!     NotFound,
+//! }
+//!
+//! impl openapi::ResponseEntity for Error {
+//!     fn describe_responses() -> openapi::Responses {
+//!         let mut map = BTreeMap::new();
+//!
+//!         map.insert(
+//!             Cow::Borrowed("404"),
+//!             openapi::Response {
+//!                 description: Cow::Borrowed("Item not found"),
+//!                 ..Default::default()
+//!             },
+//!         );
+//!
+//!         map
+//!     }
+//! }
+//! ```
 
 pub use self::{
     builder::{spec, Builder},
