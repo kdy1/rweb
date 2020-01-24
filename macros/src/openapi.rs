@@ -6,7 +6,7 @@
 //!  - We abuse `Parameter.ref_path` to store type name.
 
 use crate::{
-    parse::{Delimited, Paren},
+    parse::{Delimited, KeyValue, Paren},
     path::find_ty,
     route::EqStr,
     util::ItemImplExt,
@@ -23,26 +23,68 @@ use syn::{
     Lit, Meta, NestedMeta, Signature, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
 };
 
-pub fn derive_schema(input: DeriveInput) -> TokenStream {
-    fn handle_field(f: &Field) -> Stmt {
+pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
+    fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
+        let mut doc = None;
+        let mut comments = String::new();
+
+        attrs.retain(|attr| {
+            if attr.path.is_ident("schema") {
+                let v = match parse2::<Paren<KeyValue>>(attr.tokens.clone()) {
+                    Ok(v) if v.inner.key.value() == "description" => v.inner.value.value(),
+                    _ => return true,
+                };
+
+                doc = Some(v);
+            }
+
+            if attr.path.is_ident("doc") {
+                let v = match parse2::<EqStr>(attr.tokens.clone()) {
+                    Ok(v) => v.value,
+                    _ => return true,
+                };
+
+                if !comments.is_empty() {
+                    comments.push(' ');
+                    comments.push_str(&v.value())
+                }
+            }
+
+            true
+        });
+
+        match doc {
+            Some(v) => v,
+            None => comments,
+        }
+    }
+
+    fn handle_field(f: &mut Field) -> Stmt {
         let i = f.ident.as_ref().unwrap();
+
+        let desc = extract_doc(&mut f.attrs);
 
         q!(
             Vars {
                 name: i,
+                desc,
                 Type: &f.ty
             },
             {
-                map.insert(
-                    rweb::rt::Cow::Borrowed(stringify!(name)),
-                    <Type as rweb::openapi::Entity>::describe(),
-                );
+                map.insert(rweb::rt::Cow::Borrowed(stringify!(name)), {
+                    {
+                        #[allow(unused_mut)]
+                        let mut s = <Type as rweb::openapi::Entity>::describe();
+                        s.description = rweb::rt::Cow::Borrowed(desc);
+                        s
+                    }
+                });
             }
         )
         .parse()
     }
 
-    fn handle_fields(fields: &Fields) -> Block {
+    fn handle_fields(fields: &mut Fields) -> Block {
         // Properties
         let mut block: Block = q!({ {} }).parse();
         block.stmts.push(
@@ -66,18 +108,18 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     let mut fields: Punctuated<FieldValue, Token![,]> = Default::default();
 
     match input.data {
-        Data::Struct(ref data) => {
+        Data::Struct(ref mut data) => {
             {
-                let block = handle_fields(&data.fields);
+                let block = handle_fields(&mut data.fields);
                 fields.push(q!(Vars { block }, { properties: block }).parse());
             }
 
             fields.push(q!({ schema_type: rweb::openapi::Type::Object }).parse());
         }
-        Data::Enum(ref data) => {
+        Data::Enum(ref mut data) => {
             let exprs: Punctuated<Expr, Token![,]> = data
                 .variants
-                .iter()
+                .iter_mut()
                 .filter_map(|v| {
                     //
 
@@ -86,7 +128,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
 
                         Fields::Named(..) => Some(Pair::Punctuated(
                             {
-                                let fields = handle_fields(&v.fields);
+                                let fields = handle_fields(&mut v.fields);
                                 q!(Vars { fields }, {
                                     rweb::openapi::ObjectOrReference::Object(
                                         rweb::openapi::Schema {

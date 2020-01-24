@@ -2,8 +2,24 @@ use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Token,
+    LitStr, Token,
 };
+
+pub(crate) struct KeyValue {
+    pub key: LitStr,
+    _eq: Token![=],
+    pub value: LitStr,
+}
+
+impl Parse for KeyValue {
+    fn parse(input: ParseStream) -> syn::parse::Result<Self> {
+        Ok(KeyValue {
+            key: input.parse()?,
+            _eq: input.parse()?,
+            value: input.parse()?,
+        })
+    }
+}
 
 /// A node wrapped with paren.
 pub(crate) struct Paren<T> {
