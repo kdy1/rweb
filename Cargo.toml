@@ -8,6 +8,9 @@ license = "Apache-2.0"
 repository = "https://github.com/kdy1/rweb.git"
 description = "Yet another web server framework for rust"
 edition = "2018"
+keywords = ["rweb", "server", "http", "hyper"]
+autotests = true
+autoexamples = true
 
 [features]
 default = ["multipart", "websocket"]
