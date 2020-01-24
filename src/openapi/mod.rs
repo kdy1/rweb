@@ -48,7 +48,9 @@ impl Collector {
     }
 
     pub fn add_request_type_to<T: FromRequest + Entity>(&mut self, op: &mut Operation) {
-        if let Some((k, s)) = T::describe_component() {
+        let comp = T::describe_component();
+
+        if let Some((k, s)) = comp.clone() {
             if self.spec.components.is_none() {
                 self.spec.components = Some(Default::default());
                 // TODO: Error reporting
@@ -66,6 +68,7 @@ impl Collector {
             if op.request_body.is_some() {
                 panic!("Multiple body detected");
             }
+
             let s = T::describe();
 
             let mut content = BTreeMap::new();
@@ -88,7 +91,7 @@ impl Collector {
         }
 
         if T::is_query() {
-            let s = T::describe();
+            let s = comp.map(|v| v.1).unwrap_or_else(T::describe);
 
             match s.schema_type {
                 Type::Object => {
@@ -105,7 +108,7 @@ impl Collector {
                         }))
                     }
                 }
-                _ => unimplemented!("other type than object"),
+                _ => {}
             }
         }
     }
