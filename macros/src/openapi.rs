@@ -123,7 +123,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                 .variants
                 .iter_mut()
                 .filter_map(|v| {
-                    //
+                    let desc = extract_doc(&mut v.attrs);
 
                     match v.fields {
                         Fields::Named(ref f) if f.named.len() == 1 => None,
@@ -131,14 +131,22 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                         Fields::Named(..) => Some(Pair::Punctuated(
                             {
                                 let fields = handle_fields(&mut v.fields);
-                                q!(Vars { fields }, {
-                                    rweb::openapi::ObjectOrReference::Object(
-                                        rweb::openapi::Schema {
+                                q!(
+                                    Vars { fields, desc },
+                                    ({
+                                        #[allow(unused_mut)]
+                                        let mut s = rweb::openapi::Schema {
                                             fields,
                                             ..rweb::rt::Default::default()
-                                        },
-                                    )
-                                })
+                                        };
+                                        let description = desc;
+                                        if !description.is_empty() {
+                                            s.description = rweb::rt::Cow::Borrowed(description);
+                                        }
+
+                                        rweb::openapi::ObjectOrReference::Object(s)
+                                    })
+                                )
                                 .parse()
                             },
                             Default::default(),
@@ -154,12 +162,18 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                                 q!(
                                     Vars {
                                         Type: &f.unnamed.first().unwrap().ty,
+                                        desc
                                     },
-                                    {
-                                        rweb::openapi::ObjectOrReference::Object(
-                                            <Type as rweb::openapi::Entity>::describe(),
-                                        )
-                                    }
+                                    ({
+                                        #[allow(unused_mut)]
+                                        let mut s = <Type as rweb::openapi::Entity>::describe();
+                                        let description = desc;
+                                        if !description.is_empty() {
+                                            s.description = rweb::rt::Cow::Borrowed(description);
+                                        }
+
+                                        rweb::openapi::ObjectOrReference::Object(s)
+                                    })
                                 )
                                 .parse(),
                                 Default::default(),
