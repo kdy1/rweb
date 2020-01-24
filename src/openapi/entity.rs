@@ -1,6 +1,7 @@
 use crate::{Form, Json, Query};
 pub use rweb_openapi::v3_0::*;
 use std::{borrow::Cow, collections::BTreeMap, convert::Infallible};
+use warp::Rejection;
 
 pub type Components = Vec<(Cow<'static, str>, Schema)>;
 
@@ -315,6 +316,22 @@ impl Entity for Infallible {
 
 impl ResponseEntity for Infallible {
     #[inline]
+    fn describe_responses() -> Responses {
+        Default::default()
+    }
+}
+
+impl Entity for Rejection {
+    fn describe() -> Schema {
+        <() as Entity>::describe()
+    }
+
+    fn describe_components() -> Vec<(Cow<'static, str>, Schema)> {
+        Default::default()
+    }
+}
+
+impl ResponseEntity for Rejection {
     fn describe_responses() -> Responses {
         Default::default()
     }
