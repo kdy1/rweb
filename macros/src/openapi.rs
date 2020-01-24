@@ -486,6 +486,7 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                         }
                         _ => panic!("Correct usage: #[openapi(tags(\"foo\" ,\"bar\")]"),
                     }
+                } else if config.path().is_ident("response") {
                 } else {
                     panic!("Unknown openapi config `{}`", config.dump())
                 }
