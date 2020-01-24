@@ -22,7 +22,7 @@ tokio = { version = "0.2", features = ["macros"] }
 warp = "0.2"
 http = "0.2"
 serde = { version = "1", features = ["derive"] }
-rweb-openapi = { version = "0.3.0", optional = true }
+rweb-openapi = { version = "0.3.1", optional = true }
 scoped-tls = "1"
 futures = "0.3"
 

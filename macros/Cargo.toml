@@ -14,7 +14,7 @@ proc-macro = true
 openapi = []
 
 [dependencies]
-rweb-openapi = "0.3.0"
+rweb-openapi = "0.3.1"
 pmutil = "0.5.3"
 syn = { version = "1", features = ["full"] }
 proc-macro2 = "1"
