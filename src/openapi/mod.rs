@@ -48,7 +48,17 @@ impl Collector {
     }
 
     pub fn add_request_type_to<T: FromRequest + Entity>(&mut self, op: &mut Operation) {
-        if let Some(s) = T::describe_component() {}
+        if let Some((k, s)) = T::describe_component() {
+            if self.spec.components.is_none() {
+                self.spec.components = Some(Default::default());
+                self.spec
+                    .components
+                    .as_mut()
+                    .unwrap()
+                    .schemas
+                    .insert(k, ObjectOrReference::Object(s));
+            }
+        }
 
         if T::is_body() {
             if op.request_body.is_some() {

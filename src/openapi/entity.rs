@@ -1,6 +1,6 @@
 use crate::{Form, Json, Query};
 pub use rweb_openapi::v3_0::*;
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 /// This can be derived by `#[derive(Schema)]`.
 ///
@@ -10,7 +10,8 @@ use std::collections::BTreeMap;
 /// `#[schema(example = "path_to_function")]`
 pub trait Entity {
     fn describe() -> Schema;
-    fn describe_component() -> Option<Schema> {
+
+    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
         None
     }
 
@@ -42,13 +43,16 @@ impl<T: Entity> Entity for Vec<T> {
         }
     }
 
-    fn describe_component() -> Option<Schema> {
-        let s = T::describe_component()?;
-        Some(Schema {
-            schema_type: Type::Array,
-            items: Some(Box::new(s)),
-            ..Default::default()
-        })
+    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
+        let (name, s) = T::describe_component()?;
+        Some((
+            Cow::Owned(format!("{}List", name)),
+            Schema {
+                schema_type: Type::Array,
+                items: Some(Box::new(s)),
+                ..Default::default()
+            },
+        ))
     }
 }
 
@@ -62,10 +66,10 @@ where
         s
     }
 
-    fn describe_component() -> Option<Schema> {
-        let mut s = T::describe_component()?;
+    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
+        let (k, mut s) = T::describe_component()?;
         s.nullable = Some(true);
-        Some(s)
+        Some((k, s))
     }
 }
 
@@ -78,7 +82,7 @@ where
         T::describe()
     }
 
-    fn describe_component() -> Option<Schema> {
+    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
         T::describe_component()
     }
 
@@ -109,7 +113,7 @@ where
         T::describe()
     }
 
-    fn describe_component() -> Option<Schema> {
+    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
         T::describe_component()
     }
 }
@@ -123,7 +127,7 @@ where
         T::describe()
     }
 
-    fn describe_component() -> Option<Schema> {
+    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
         T::describe_component()
     }
 }
