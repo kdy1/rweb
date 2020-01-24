@@ -19,57 +19,114 @@ use syn::{
     export::ToTokens,
     parse2,
     punctuated::{Pair, Punctuated},
-    Attribute, Block, Data, DeriveInput, Expr, FieldValue, GenericParam, ItemImpl, Lit, Meta,
-    NestedMeta, Signature, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
+    Attribute, Block, Data, DeriveInput, Expr, Field, FieldValue, Fields, GenericParam, ItemImpl,
+    Lit, Meta, NestedMeta, Signature, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
 };
 
 pub fn derive_schema(input: DeriveInput) -> TokenStream {
+    fn handle_field(f: &Field) -> Stmt {
+        let i = f.ident.as_ref().unwrap();
+
+        q!(
+            Vars {
+                name: i,
+                Type: &f.ty
+            },
+            {
+                map.insert(
+                    rweb::rt::Cow::Borrowed(stringify!(name)),
+                    <Type as rweb::openapi::Entity>::describe(),
+                );
+            }
+        )
+        .parse()
+    }
+
+    fn handle_fields(fields: &Fields) -> Block {
+        // Properties
+        let mut block: Block = q!({ {} }).parse();
+        block.stmts.push(
+            q!({
+                #[allow(unused_mut)]
+                let mut map: rweb::rt::BTreeMap<rweb::rt::Cow<'static, str>, _> =
+                    rweb::rt::BTreeMap::default();
+            })
+            .parse(),
+        );
+
+        for f in fields {
+            block.stmts.push(handle_field(f));
+        }
+
+        block.stmts.push(Stmt::Expr(q!({ map }).parse()));
+
+        block
+    }
+
     let mut fields: Punctuated<FieldValue, Token![,]> = Default::default();
 
     match input.data {
         Data::Struct(ref data) => {
             {
-                // Properties
-                let mut block: Block = q!({ {} }).parse();
-                block.stmts.push(
-                    q!({
-                        #[allow(unused_mut)]
-                        let mut map: rweb::rt::BTreeMap<
-                            rweb::rt::Cow<'static, str>,
-                            _,
-                        > = rweb::rt::BTreeMap::default();
-                    })
-                    .parse(),
-                );
-
-                for f in &data.fields {
-                    let i = f.ident.as_ref().unwrap();
-
-                    block.stmts.push(
-                        q!(
-                            Vars {
-                                name: i,
-                                Type: &f.ty
-                            },
-                            {
-                                map.insert(
-                                    rweb::rt::Cow::Borrowed(stringify!(name)),
-                                    <Type as rweb::openapi::Entity>::describe(),
-                                );
-                            }
-                        )
-                        .parse(),
-                    );
-                }
-
-                block.stmts.push(Stmt::Expr(q!({ map }).parse()));
+                let block = handle_fields(&data.fields);
                 fields.push(q!(Vars { block }, { properties: block }).parse());
             }
 
             fields.push(q!({ schema_type: rweb::openapi::Type::Object }).parse());
         }
         Data::Enum(ref data) => {
-            fields.push(q!(Vars {}, { one_of: vec![] }).parse());
+            let exprs: Punctuated<Expr, Token![,]> = data
+                .variants
+                .iter()
+                .filter_map(|v| {
+                    //
+
+                    match v.fields {
+                        Fields::Named(ref f) if f.named.len() == 1 => None,
+
+                        Fields::Named(..) => Some(Pair::Punctuated(
+                            {
+                                let fields = handle_fields(&v.fields);
+                                q!(Vars { fields }, {
+                                    rweb::openapi::ObjectOrReference::Object(
+                                        rweb::openapi::Schema {
+                                            fields,
+                                            ..rweb::rt::Default::default()
+                                        },
+                                    )
+                                })
+                                .parse()
+                            },
+                            Default::default(),
+                        )),
+                        Fields::Unnamed(ref f) => {
+                            //
+                            assert!(f.unnamed.len() <= 1);
+                            if f.unnamed.len() == 0 {
+                                return None;
+                            }
+
+                            Some(Pair::Punctuated(
+                                q!(
+                                    Vars {
+                                        Type: &f.unnamed.first().unwrap().ty,
+                                    },
+                                    {
+                                        rweb::openapi::ObjectOrReference::Object(
+                                            <Type as rweb::openapi::Entity>::describe(),
+                                        )
+                                    }
+                                )
+                                .parse(),
+                                Default::default(),
+                            ))
+                        }
+                        Fields::Unit => None,
+                    }
+                })
+                .collect();
+
+            fields.push(q!(Vars { exprs }, { one_of: vec![exprs] }).parse());
         }
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }

@@ -13,6 +13,7 @@ fn index(_: Json<Enum>) -> String {
 enum Enum {
     A(String),
     B(usize),
+    Ref { ref_path: String },
 }
 
 #[test]
