@@ -62,6 +62,4 @@ fn component_test() {
 
     let yaml = serde_yaml::to_string(&spec).unwrap();
     println!("{}", yaml);
-
-    panic!()
 }
