@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 #[tokio::main]
 async fn main() {
-    let (spec, filter) = openapi::spec().build(|| {
+    let (spec, _filter) = openapi::spec().build(|| {
         // Build filters
 
         math::math()
@@ -15,8 +15,6 @@ async fn main() {
     });
 
     println!("{}", serde_yaml::to_string(&spec).unwrap());
-
-    panic!();
 }
 
 mod response {
