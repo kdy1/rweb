@@ -72,7 +72,7 @@ impl<T> Json<T> {
 }
 
 impl<T> From<T> for Json<T> {
-    #[inline(always)]
+    #[inline]
     fn from(v: T) -> Self {
         Json(v)
     }

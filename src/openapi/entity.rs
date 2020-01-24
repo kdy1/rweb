@@ -1,6 +1,6 @@
 use crate::{Form, Json, Query};
 pub use rweb_openapi::v3_0::*;
-use std::{borrow::Cow, collections::BTreeMap};
+use std::{borrow::Cow, collections::BTreeMap, convert::Infallible};
 
 pub type Components = Vec<(Cow<'static, str>, Schema)>;
 
@@ -96,7 +96,7 @@ where
 
 impl Entity for () {
     /// Returns empty schema
-    #[inline(always)]
+    #[inline]
     fn describe() -> Schema {
         Schema {
             schema_type: Type::Object,
@@ -233,6 +233,7 @@ impl Entity for bool {
 }
 
 impl Entity for String {
+    #[inline]
     fn describe() -> Schema {
         Schema {
             schema_type: Type::String,
@@ -297,5 +298,24 @@ where
         let mut map = T::describe_responses();
         map.extend(E::describe_responses());
         map
+    }
+}
+
+impl Entity for Infallible {
+    #[inline]
+    fn describe() -> Schema {
+        <() as Entity>::describe()
+    }
+
+    #[inline]
+    fn describe_components() -> Components {
+        vec![]
+    }
+}
+
+impl ResponseEntity for Infallible {
+    #[inline]
+    fn describe_responses() -> Responses {
+        Default::default()
     }
 }

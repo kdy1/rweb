@@ -7,13 +7,13 @@ pub struct Builder {
 }
 
 /// Crates a new specification builder
-#[inline(always)]
+#[inline]
 pub fn spec() -> Builder {
     Builder::default()
 }
 
 impl Builder {
-    #[inline(always)]
+    #[inline]
     pub fn info(mut self, info: Info) -> Self {
         self.spec.info = info;
         self

@@ -1,5 +1,6 @@
 #![cfg(feature = "openapi")]
 
+use http::Error;
 use rweb::*;
 use serde::Serialize;
 
@@ -20,7 +21,7 @@ struct Product {}
 #[get("/product")]
 #[response(400)]
 #[response(404)]
-fn product() -> Json<Product> {
+fn product() -> Result<Json<Product>, Error> {
     unimplemented!()
 }
 
