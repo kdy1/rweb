@@ -55,6 +55,74 @@
 //! rweb. If you use path filter from warp, generated document will point to
 //! different path.
 //!
+//! # Annotations
+//!
+//! This is applicable to `#[get]`, `#[post]`, ..etc
+//!
+//!
+//! ## `#[openapi(id = "foo")]`
+//!
+//! ```rust
+//! use rweb::*;
+//!
+//! #[get("/sum/{a}/{b}")]
+//! #[openapi(id = "math.sum")]
+//! fn sum(a: usize, b: usize) -> String {
+//!     (a + b).to_string()
+//! }
+//! ```
+//!
+//!
+//! ## `#[openapi(description = "foo")]`
+//!
+//! ```rust
+//! use rweb::*;
+//!
+//! /// By default, doc comments on the function will become description of the operation.
+//! #[get("/sum/{a}/{b}")]
+//! #[openapi(description = "But what if implementation details is written on it?")]
+//! fn sum(a: usize, b: usize) -> String {
+//!     (a + b).to_string()
+//! }
+//! ```
+//!
+//!
+//! ## `#[openapi(summary = "foo")]`
+//!
+//! ```rust
+//! use rweb::*;
+//!
+//! #[get("/sum/{a}/{b}")]
+//! #[openapi(summary = "summary of operation")]
+//! fn sum(a: usize, b: usize) -> String {
+//!     (a + b).to_string()
+//! }
+//! ```
+//!
+//! ## `#[openapi(tags("foo", "bar"))]`
+//!
+//! ```rust
+//! use rweb::*;
+//!
+//! #[get("/sum/{a}/{b}")]
+//! #[openapi(tags("sum"))]
+//! fn sum(a: usize, b: usize) -> String {
+//!     (a + b).to_string()
+//! }
+//!
+//! #[get("/mul/{a}/{b}")]
+//! #[openapi(tags("mul"))]
+//! fn mul(a: usize, b: usize) -> String {
+//!     (a * b).to_string()
+//! }
+//!
+//! // This is also applicable to #[router]
+//! #[router("/math", services(sum, mul))]
+//! #[openapi(tags("math"))]
+//! fn math() {}
+//! ```
+//!
+//!
 //! # Parameters
 //!
 //! ```rust
