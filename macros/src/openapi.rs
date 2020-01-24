@@ -12,7 +12,7 @@ use crate::{
     util::ItemImplExt,
 };
 use pmutil::{q, Quote, ToTokensExt};
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use rweb_openapi::v3_0::{Location, ObjectOrReference, Operation, Parameter, Schema};
 use std::borrow::Cow;
 use syn::{
@@ -30,8 +30,8 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
 
         attrs.retain(|attr| {
             if attr.path.is_ident("schema") {
-                let v = match parse2::<Paren<KeyValue>>(attr.tokens.clone()) {
-                    Ok(v) if v.inner.key.value() == "description" => v.inner.value.value(),
+                let v = match parse2::<Paren<KeyValue<Ident>>>(attr.tokens.clone()) {
+                    Ok(v) if v.inner.key == "description" => v.inner.value.value(),
                     _ => return true,
                 };
                 doc = Some(v);

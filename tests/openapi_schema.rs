@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Schema)]
 #[schema(component = "Item")]
+#[schema(description = "foo")]
 struct ComponentTestReq {
     data: String,
 }
