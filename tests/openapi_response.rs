@@ -1,8 +1,30 @@
 #![cfg(feature = "openapi")]
 
-use http::Error;
-use rweb::*;
+use rweb::{
+    rt::{BTreeMap, Cow},
+    *,
+};
+use rweb_openapi::v3_0::Response;
 use serde::Serialize;
+
+#[derive(Debug, Schema)]
+enum Error {}
+
+impl openapi::ResponseEntity for Error {
+    fn describe_responses() -> openapi::Responses {
+        let mut map = BTreeMap::new();
+
+        map.insert(
+            Cow::Borrowed("404"),
+            Response {
+                description: Cow::Borrowed("Product not found"),
+                ..Default::default()
+            },
+        );
+
+        map
+    }
+}
 
 #[derive(Debug, Serialize, Schema)]
 struct Resp<T> {
@@ -11,7 +33,7 @@ struct Resp<T> {
 }
 
 #[get("/")]
-fn index() -> Json<Resp<()>> {
+fn index() -> Result<Json<Resp<()>>, Error> {
     unimplemented!()
 }
 
@@ -29,7 +51,7 @@ fn product() -> Result<Json<Product>, Error> {
 #[response(400, description = "Invalid query")]
 #[response(400, description = "Invalid header")]
 #[response(404, description = "No product matches the query")]
-fn products() -> Json<Vec<Product>> {
+fn products() -> Result<Json<Vec<Product>>, Error> {
     unimplemented!()
 }
 
