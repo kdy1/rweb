@@ -19,16 +19,17 @@ pub struct SearchReq {
 }
 
 #[get("/products")]
-fn products(_: Query<SearchReq>) -> Vec<Product> {
-    vec![]
+fn products(_: Query<SearchReq>) -> Json<Vec<Product>> {
+    vec![].into()
 }
 
 #[get("/product/{id}")]
-fn product(id: String) -> Product {
+fn product(id: String) -> Json<Product> {
     Product {
         title: format!("Title of {}", id),
         id,
     }
+    .into()
 }
 
 #[test]

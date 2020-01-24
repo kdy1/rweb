@@ -169,8 +169,6 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                     let desc = extract_doc(&mut v.attrs);
 
                     match v.fields {
-                        Fields::Named(ref f) if f.named.len() == 1 => None,
-
                         Fields::Named(..) => Some(Pair::Punctuated(
                             {
                                 let fields = handle_fields(&mut v.fields);
@@ -179,7 +177,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                                     ({
                                         #[allow(unused_mut)]
                                         let mut s = rweb::openapi::Schema {
-                                            fields,
+                                            properties: fields,
                                             ..rweb::rt::Default::default()
                                         };
                                         let description = desc;
