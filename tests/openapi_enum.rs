@@ -13,7 +13,10 @@ fn index(_: Json<Enum>) -> String {
 enum Enum {
     A(String),
     B(usize),
-    Ref { ref_path: String },
+    Ref {
+        /// Reference-foo-bar-baz
+        ref_path: String,
+    },
 }
 
 #[test]
@@ -28,4 +31,6 @@ fn description() {
 
     let yaml = serde_yaml::to_string(&spec).unwrap();
     println!("{}", yaml);
+
+    assert!(yaml.contains("Reference-foo-bar-baz"));
 }

@@ -34,8 +34,8 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                     Ok(v) if v.inner.key.value() == "description" => v.inner.value.value(),
                     _ => return true,
                 };
-
                 doc = Some(v);
+                return false;
             }
 
             if attr.path.is_ident("doc") {
@@ -46,8 +46,8 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
 
                 if !comments.is_empty() {
                     comments.push(' ');
-                    comments.push_str(&v.value())
                 }
+                comments.push_str(&v.value());
             }
 
             true
@@ -63,7 +63,6 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
         let i = f.ident.as_ref().unwrap();
 
         let desc = extract_doc(&mut f.attrs);
-
         q!(
             Vars {
                 name: i,
@@ -75,7 +74,10 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                     {
                         #[allow(unused_mut)]
                         let mut s = <Type as rweb::openapi::Entity>::describe();
-                        s.description = rweb::rt::Cow::Borrowed(desc);
+                        let description = desc;
+                        if !description.is_empty() {
+                            s.description = rweb::rt::Cow::Borrowed(description);
+                        }
                         s
                     }
                 });

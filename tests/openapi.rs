@@ -14,6 +14,7 @@ pub struct Product {
 pub struct SearchReq {
     pub query: String,
     pub limit: usize,
+    /// Token.
     pub paging_token: String,
 }
 
@@ -49,6 +50,7 @@ fn simple() {
 
 #[derive(Debug, Default, Serialize, Schema)]
 struct Resp<T> {
+    /// http-status-code
     status: usize,
     data: T,
 }
@@ -79,6 +81,8 @@ fn generic() {
 
     let yaml = serde_yaml::to_string(&spec).unwrap();
     println!("{}", yaml);
+
+    assert!(yaml.contains("http-status-code"));
 }
 
 /// Doc comment
