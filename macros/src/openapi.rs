@@ -175,9 +175,12 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }
 
+    let desc = extract_doc(&mut input.attrs);
+
     let mut item = q!(
         Vars {
             Type: &input.ident,
+            desc,
             fields
         },
         {
@@ -185,6 +188,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                 fn describe() -> rweb::openapi::Schema {
                     rweb::openapi::Schema {
                         fields,
+                        description: rweb::rt::Cow::Borrowed(desc),
                         ..rweb::rt::Default::default()
                     }
                 }

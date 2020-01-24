@@ -10,6 +10,7 @@ pub struct Product {
     pub title: String,
 }
 
+/// search-req=search-parameter
 #[derive(Debug, Default, Serialize, Deserialize, Schema)]
 pub struct SearchReq {
     pub query: String,
@@ -46,6 +47,8 @@ fn simple() {
 
     let yaml = serde_yaml::to_string(&spec).unwrap();
     println!("{}", yaml);
+
+    assert!(yaml.contains("search-req=search-parameter"));
 }
 
 #[derive(Debug, Default, Serialize, Schema)]
