@@ -1,4 +1,45 @@
 //! Automatic openapi spec generator.
+//!
+//!
+//! # Basical usage
+//!
+//! Enable cargo feature by
+//!
+//!```toml
+//! [dependencies]
+//! rweb = { version = "0.3.0-alpha.1", features = ["openapi"] }
+//! ```
+//!
+//!and wrap your handlers like
+//!
+//! ```rust
+//! use rweb::*;
+//!
+//! #[get("/")]
+//! fn index() {
+//!
+//! }
+//!
+//! #[tokio::main]
+//! async fn main() {
+//!     let (spec, filter) = openapi::spec().build(||{
+//!            index()
+//!     });
+//!
+//!     serve(filter);
+//!     // Use the code below to run server.
+//!     //
+//!     // serve(filter).run(([127, 0, 0, 1], 3030)).await;
+//! }
+//! ```
+//!
+//!**Note**: Currently using path filter from warp is **not** supported by
+//! rweb. If you use path filter from warp, generated document will point to
+//! different path.
+//!
+//! # `#[derive(Schema)]`
+//!
+//! # Custom error
 
 pub use self::{
     builder::{spec, Builder},
