@@ -73,6 +73,17 @@ where
     }
 }
 
+impl Entity for () {
+    /// Returns empty schema
+    #[inline(always)]
+    fn describe() -> Schema {
+        Schema {
+            schema_type: Type::Object,
+            ..Default::default()
+        }
+    }
+}
+
 impl<T> Entity for Json<T>
 where
     T: Entity,
