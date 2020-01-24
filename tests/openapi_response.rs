@@ -4,6 +4,7 @@ use rweb::*;
 use serde::Serialize;
 
 #[derive(Debug, Serialize, Schema)]
+//#[schema(response)]
 struct Resp<T> {
     status: usize,
     data: T,

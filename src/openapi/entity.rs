@@ -14,24 +14,12 @@ pub trait Entity {
     fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
         None
     }
+}
 
-    fn describe_response() -> Response {
-        let schema = Self::describe();
-        let mut content = BTreeMap::new();
-        content.insert(
-            // TODO
-            "*/*".into(),
-            MediaType {
-                schema: Some(ObjectOrReference::Object(schema)),
-                examples: None,
-                encoding: Default::default(),
-            },
-        );
-        Response {
-            content,
-            ..Default::default()
-        }
-    }
+/// THis should be implemented only for types that know how it should be
+/// encoded.
+pub trait ResponseEntity: Entity {
+    fn describe_response() -> Response;
 }
 
 impl<T: Entity> Entity for Vec<T> {
@@ -73,6 +61,27 @@ where
     }
 }
 
+impl<T> ResponseEntity for Option<T>
+where
+    T: ResponseEntity,
+{
+    fn describe_response() -> Response {
+        let mut resp = T::describe_response();
+        for (_, v) in resp.content.iter_mut() {
+            if v.schema.is_some() {
+                match v.schema.as_mut().unwrap() {
+                    ObjectOrReference::Object(ref mut o) => {
+                        o.nullable = Some(true);
+                    }
+                    ObjectOrReference::Ref { .. } => {}
+                }
+            }
+        }
+
+        resp
+    }
+}
+
 impl Entity for () {
     /// Returns empty schema
     #[inline(always)]
@@ -96,7 +105,12 @@ where
     fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
         T::describe_component()
     }
+}
 
+impl<T> ResponseEntity for Json<T>
+where
+    T: Entity,
+{
     fn describe_response() -> Response {
         let schema = Self::describe();
         let mut content = BTreeMap::new();
@@ -176,6 +190,25 @@ impl Entity for String {
     fn describe() -> Schema {
         Schema {
             schema_type: Type::String,
+            ..Default::default()
+        }
+    }
+}
+
+impl ResponseEntity for String {
+    fn describe_response() -> Response {
+        let mut content = BTreeMap::new();
+        content.insert(
+            Cow::Borrowed("text/plain"),
+            MediaType {
+                schema: Some(ObjectOrReference::Object(Self::describe())),
+                examples: None,
+                encoding: Default::default(),
+            },
+        );
+
+        Response {
+            content,
             ..Default::default()
         }
     }

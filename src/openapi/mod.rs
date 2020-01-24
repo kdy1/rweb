@@ -4,7 +4,7 @@ pub use self::{
     builder::{spec, Builder},
     entity::Entity,
 };
-use crate::FromRequest;
+use crate::{openapi::entity::ResponseEntity, FromRequest};
 use http::Method;
 pub use rweb_openapi::v3_0::*;
 use scoped_tls::scoped_thread_local;
@@ -117,7 +117,7 @@ impl Collector {
         }
     }
 
-    pub fn add_response_to<T: Entity>(&mut self, op: &mut Operation) {
+    pub fn add_response_to<T: ResponseEntity>(&mut self, op: &mut Operation) {
         let resp = T::describe_response();
         op.responses.insert("200".into(), resp);
     }
