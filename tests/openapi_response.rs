@@ -4,20 +4,31 @@ use rweb::*;
 use serde::Serialize;
 
 #[derive(Debug, Serialize, Schema)]
-//#[schema(response)]
 struct Resp<T> {
     status: usize,
     data: T,
 }
 
 #[get("/")]
-fn index() -> Resp<()> {
+fn index() -> Json<Resp<()>> {
     unimplemented!()
 }
 
-#[get("/example")]
-#[response()]
-fn example() -> Resp<()> {
+#[derive(Debug, Serialize, Schema)]
+struct Product {}
+
+#[get("/product")]
+#[response(400)]
+#[response(404)]
+fn product() -> Json<Product> {
+    unimplemented!()
+}
+
+#[get("/product")]
+#[response(400, description = "Invalid query")]
+#[response(400, description = "Invalid header")]
+#[response(404, description = "No product matches the query")]
+fn products() -> Json<Vec<Product>> {
     unimplemented!()
 }
 

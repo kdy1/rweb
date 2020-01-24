@@ -2,6 +2,10 @@ use crate::{Form, Json, Query};
 pub use rweb_openapi::v3_0::*;
 use std::{borrow::Cow, collections::BTreeMap};
 
+pub type Components = Vec<(Cow<'static, str>, Schema)>;
+
+pub type Responses = BTreeMap<Cow<'static, str>, Response>;
+
 /// This can be derived by `#[derive(Schema)]`.
 ///
 ///
@@ -11,15 +15,15 @@ use std::{borrow::Cow, collections::BTreeMap};
 pub trait Entity {
     fn describe() -> Schema;
 
-    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
-        None
+    fn describe_components() -> Components {
+        Default::default()
     }
 }
 
 /// THis should be implemented only for types that know how it should be
 /// encoded.
 pub trait ResponseEntity: Entity {
-    fn describe_response() -> Response;
+    fn describe_responses() -> Responses;
 }
 
 impl<T: Entity> Entity for Vec<T> {
@@ -31,16 +35,20 @@ impl<T: Entity> Entity for Vec<T> {
         }
     }
 
-    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
-        let (name, s) = T::describe_component()?;
-        Some((
-            Cow::Owned(format!("{}List", name)),
-            Schema {
-                schema_type: Type::Array,
-                items: Some(Box::new(s)),
-                ..Default::default()
-            },
-        ))
+    fn describe_components() -> Components {
+        T::describe_components()
+            .into_iter()
+            .map(|(name, s)| {
+                (
+                    Cow::Owned(format!("{}List", name)),
+                    Schema {
+                        schema_type: Type::Array,
+                        items: Some(Box::new(s)),
+                        ..Default::default()
+                    },
+                )
+            })
+            .collect()
     }
 }
 
@@ -54,10 +62,12 @@ where
         s
     }
 
-    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
-        let (k, mut s) = T::describe_component()?;
-        s.nullable = Some(true);
-        Some((k, s))
+    fn describe_components() -> Components {
+        let mut v = T::describe_components();
+        for (_, s) in v.iter_mut() {
+            s.nullable = Some(true);
+        }
+        v
     }
 }
 
@@ -65,20 +75,22 @@ impl<T> ResponseEntity for Option<T>
 where
     T: ResponseEntity,
 {
-    fn describe_response() -> Response {
-        let mut resp = T::describe_response();
-        for (_, v) in resp.content.iter_mut() {
-            if v.schema.is_some() {
-                match v.schema.as_mut().unwrap() {
-                    ObjectOrReference::Object(ref mut o) => {
-                        o.nullable = Some(true);
+    fn describe_responses() -> Responses {
+        let mut responses = T::describe_responses();
+        for (_, r) in responses.iter_mut() {
+            for (_, v) in r.content.iter_mut() {
+                if v.schema.is_some() {
+                    match v.schema.as_mut().unwrap() {
+                        ObjectOrReference::Object(ref mut o) => {
+                            o.nullable = Some(true);
+                        }
+                        ObjectOrReference::Ref { .. } => {}
                     }
-                    ObjectOrReference::Ref { .. } => {}
                 }
             }
         }
 
-        resp
+        responses
     }
 }
 
@@ -102,8 +114,8 @@ where
         T::describe()
     }
 
-    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
-        T::describe_component()
+    fn describe_components() -> Components {
+        T::describe_components()
     }
 }
 
@@ -111,7 +123,7 @@ impl<T> ResponseEntity for Json<T>
 where
     T: Entity,
 {
-    fn describe_response() -> Response {
+    fn describe_responses() -> Responses {
         let schema = Self::describe();
         let mut content = BTreeMap::new();
         content.insert(
@@ -122,10 +134,17 @@ where
                 encoding: Default::default(),
             },
         );
-        Response {
-            content,
-            ..Default::default()
-        }
+        let mut map = Responses::new();
+
+        map.insert(
+            Cow::Borrowed("200"),
+            Response {
+                content,
+                ..Default::default()
+            },
+        );
+
+        map
     }
 }
 
@@ -138,8 +157,8 @@ where
         T::describe()
     }
 
-    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
-        T::describe_component()
+    fn describe_components() -> Components {
+        T::describe_components()
     }
 }
 
@@ -152,8 +171,8 @@ where
         T::describe()
     }
 
-    fn describe_component() -> Option<(Cow<'static, str>, Schema)> {
-        T::describe_component()
+    fn describe_components() -> Components {
+        T::describe_components()
     }
 }
 
@@ -223,7 +242,7 @@ impl Entity for String {
 }
 
 impl ResponseEntity for String {
-    fn describe_response() -> Response {
+    fn describe_responses() -> Responses {
         let mut content = BTreeMap::new();
         content.insert(
             Cow::Borrowed("text/plain"),
@@ -234,9 +253,49 @@ impl ResponseEntity for String {
             },
         );
 
-        Response {
-            content,
+        let mut map = BTreeMap::new();
+        map.insert(
+            Cow::Borrowed("200"),
+            Response {
+                content,
+                ..Default::default()
+            },
+        );
+        map
+    }
+}
+
+impl<T, E> Entity for Result<T, E>
+where
+    T: Entity,
+    E: Entity,
+{
+    fn describe() -> Schema {
+        Schema {
+            one_of: vec![
+                ObjectOrReference::Object(T::describe()),
+                ObjectOrReference::Object(E::describe()),
+            ],
             ..Default::default()
         }
+    }
+
+    fn describe_components() -> Components {
+        let mut buf = vec![];
+        buf.extend(T::describe_components());
+        buf.extend(E::describe_components());
+        buf
+    }
+}
+
+impl<T, E> ResponseEntity for Result<T, E>
+where
+    T: ResponseEntity,
+    E: ResponseEntity,
+{
+    fn describe_responses() -> BTreeMap<Cow<'static, str>, Response> {
+        let mut map = T::describe_responses();
+        map.extend(E::describe_responses());
+        map
     }
 }
