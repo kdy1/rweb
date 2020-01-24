@@ -29,6 +29,7 @@ install:
   - cargo test --no-run --color always --all --all-features
 
 script:
+  - RUST_BACKTRACE=full cargo test --color always --all
   - RUST_BACKTRACE=full cargo test --color always --all --all-features
 
 #before_deploy:

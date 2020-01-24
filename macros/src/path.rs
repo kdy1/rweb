@@ -1,6 +1,22 @@
 use pmutil::q;
 use proc_macro2::TokenStream;
-use syn::{parse_quote::parse, punctuated::Punctuated, Expr, FnArg, LitStr, Pat, Signature, Token};
+use syn::{
+    parse_quote::parse, punctuated::Punctuated, Expr, FnArg, LitStr, Pat, Signature, Token, Type,
+};
+
+pub fn find_ty<'a>(sig: &'a Signature, name: &str) -> Option<&'a Type> {
+    sig.inputs
+        .iter()
+        .filter_map(|arg| match arg {
+            FnArg::Typed(ty) => match *ty.pat {
+                Pat::Ident(ref i) if i.ident == name => Some(&*ty.ty),
+                _ => None,
+            },
+
+            _ => None,
+        })
+        .next()
+}
 
 ///
 /// - `sig`: sohuld be [Some] only if path parameters are allowed
@@ -34,7 +50,7 @@ pub fn compile(
         }
 
         let expr = if segment.starts_with('{') {
-            let v = &segment[1..segment.len() - 1];
+            let name = &segment[1..segment.len() - 1];
 
             if let Some(sig) = sig {
                 let ty = sig
@@ -43,8 +59,8 @@ pub fn compile(
                     .enumerate()
                     .filter_map(|(idx, arg)| match arg {
                         FnArg::Typed(ty) => match *ty.pat {
-                            Pat::Ident(ref i) if i.ident == v => {
-                                vars.push((v.to_string(), idx));
+                            Pat::Ident(ref i) if i.ident == name => {
+                                vars.push((name.to_string(), idx));
                                 Some(&ty.ty)
                             }
                             _ => None,
@@ -53,7 +69,7 @@ pub fn compile(
                         _ => None,
                     })
                     .next()
-                    .unwrap_or_else(|| panic!("failed to find parameter named `{}`", v));
+                    .unwrap_or_else(|| panic!("failed to find parameter named `{}`", name));
 
                 q!(Vars { ty }, { rweb::filters::path::param::<ty>() })
             } else {

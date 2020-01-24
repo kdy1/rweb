@@ -1,3 +1,5 @@
+#![cfg(not(feature = "openapi"))]
+
 use http::StatusCode;
 use rweb::{filters::BoxedFilter, *};
 use serde::Deserialize;

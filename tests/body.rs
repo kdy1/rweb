@@ -1,3 +1,5 @@
+#![cfg(not(feature = "openapi"))]
+
 use bytes::Bytes;
 use http::Error;
 use rweb::{post, Filter};

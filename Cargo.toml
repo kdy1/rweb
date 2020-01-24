@@ -2,25 +2,33 @@
 
 [package]
 name = "rweb"
-version = "0.3.0-alpha.0"
+version = "0.3.0-alpha.1"
 authors = ["강동윤 <kdy1997.dev@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/kdy1/rweb.git"
 description = "Yet another web server framework for rust"
 edition = "2018"
+keywords = ["rweb", "server", "http", "hyper"]
+autotests = true
+autoexamples = true
 
 [features]
 default = ["multipart", "websocket"]
 multipart = ["warp/multipart"]
 websocket = ["warp/websocket"]
 tls = ["warp/rustls"]
+openapi = ["rweb-macros/openapi", "rweb-openapi"]
 
 [dependencies]
-rweb-macros = { version = "0.3.0-alpha.0", path = "./macros" }
+rweb-macros = { version = "0.3.0-alpha.1", path = "./macros" }
 tokio = { version = "0.2", features = ["macros"] }
-warp = "0.2"
+warp = "0.2.1"
 http = "0.2"
 serde = { version = "1", features = ["derive"] }
+rweb-openapi = { version = "0.3.1", optional = true }
+scoped-tls = "1"
+futures = "0.3"
+
 
 [dev-dependencies]
 bytes = "0.5"
@@ -29,8 +37,15 @@ http = "0.2"
 hyper = "0.13"
 pretty_env_logger = "0.3"
 log = "0.4"
-futures = "0.3"
+serde_yaml = "0.8"
+
+[[example]]
+name = "openapi"
+required-features = ["openapi"]
 
 [[example]]
 name = "todo_websockets"
 required-features = ["websocket"]
+
+[package.metadata.docs.rs]
+all-features = true

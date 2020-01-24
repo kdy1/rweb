@@ -2,9 +2,12 @@ extern crate proc_macro;
 use self::route::compile_route;
 use pmutil::{q, ToTokensExt};
 
+mod openapi;
+mod parse;
 mod path;
 mod route;
 mod router;
+mod util;
 
 #[proc_macro_attribute]
 pub fn get(
@@ -74,4 +77,10 @@ pub fn router(
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     router::router(attr.into(), item.into()).dump().into()
+}
+
+#[proc_macro_derive(Schema, attributes(schema))]
+pub fn derive_schema(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = syn::parse::<syn::DeriveInput>(input).expect("failed to parse derive input");
+    openapi::derive_schema(input).into()
 }

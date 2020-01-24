@@ -1,6 +1,6 @@
 [package]
 name = "rweb-macros"
-version = "0.3.0-alpha.0"
+version = "0.3.0-alpha.1"
 authors = ["강동윤 <kdy1997.dev@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/kdy1/rweb.git"
@@ -10,7 +10,12 @@ edition = "2018"
 [lib]
 proc-macro = true
 
+[features]
+openapi = []
+
 [dependencies]
+rweb-openapi = "0.3.1"
 pmutil = "0.5.3"
-syn = { version = "1", features = ["full"] }
+syn = { version = "1", features = ["full", "visit"] }
 proc-macro2 = "1"
+quote = "1"

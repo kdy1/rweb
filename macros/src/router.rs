@@ -1,5 +1,5 @@
 use crate::route::fn_attr::compile_fn_attrs;
-use pmutil::{q, ToTokensExt};
+use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::{Ident, TokenStream};
 use syn::{
     parse::{Parse, ParseStream},
@@ -26,6 +26,11 @@ impl Parse for Input {
 
 pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let mut f: ItemFn = parse2(item).expect("failed to parse input as a function item");
+    assert!(
+        f.block.stmts.is_empty(),
+        "#{router] function cannot have body"
+    );
+
     let router_name = &f.sig.ident;
     let vis = &f.vis;
     let mut data_inputs: Punctuated<_, Token![,]> = Default::default();
@@ -33,7 +38,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let attr: Input = parse2(attr).expect("failed to parse input as Input { path , service }");
 
     let (expr, path_vars) = crate::path::compile(None, attr.path.dump(), None, false);
-    let (expr, inputs) =
+    let (expr, inputs, _) =
         crate::route::param::compile(expr, &f.sig, &mut data_inputs, path_vars, false);
 
     let mut exprs: Punctuated<Expr, Token![.]> = Punctuated::default();
@@ -59,9 +64,9 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let mut expr = compile_fn_attrs(expr, &mut f.attrs, false);
 
     match attr.services {
-        Meta::List(list) => {
+        Meta::List(ref list) => {
             if list.path.is_ident("services") {
-                for name in list.nested.into_iter() {
+                for name in list.nested.iter() {
                     if exprs.is_empty() {
                         exprs.push(q!(Vars { name, args: &args }, { name(args) }).parse());
                     } else {
@@ -78,7 +83,39 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
         _ => panic!("#[router(\"/path\", services(a, b, c,))] is correct usage"),
     }
 
-    let expr = compile_fn_attrs(expr, &mut f.attrs, true);
+    let mut expr = compile_fn_attrs(expr, &mut f.attrs, true);
+
+    if cfg!(feature = "openapi") {
+        let op = crate::openapi::parse(&attr.path.value(), &f.sig, &mut f.attrs);
+        let tags: Punctuated<Quote, Token![,]> = op
+            .tags
+            .iter()
+            .map(|tag| {
+                Pair::Punctuated(
+                    q!(Vars { tag }, { rweb::rt::Cow::Borrowed(tag) }),
+                    Default::default(),
+                )
+            })
+            .collect();
+
+        expr = q!(
+            Vars {
+                tags,
+                path: &attr.path,
+                expr
+            },
+            {
+                rweb::openapi::with(|__collector: Option<&mut rweb::openapi::Collector>| {
+                    if let Some(__collector) = __collector {
+                        __collector.with_appended_prefix(path, vec![tags], || expr)
+                    } else {
+                        expr
+                    }
+                })
+            }
+        )
+        .parse();
+    }
 
     // TODO: Default handler
     let mut ret = q!(Vars { expr, router_name }, {

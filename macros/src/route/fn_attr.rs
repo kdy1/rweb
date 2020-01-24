@@ -1,45 +1,7 @@
 use super::ParenTwoValue;
+use crate::parse::{Delimited, Paren};
 use pmutil::{q, ToTokensExt};
-use syn::{
-    parenthesized,
-    parse::{Parse, ParseStream},
-    parse2,
-    punctuated::Punctuated,
-    Attribute, Expr, Meta, MetaNameValue, Token,
-};
-
-/// A node wrapped with paren.
-struct Paren<T> {
-    inner: T,
-}
-
-impl<T> Parse for Paren<T>
-where
-    T: Parse,
-{
-    fn parse(input: ParseStream) -> syn::parse::Result<Self> {
-        let content;
-        parenthesized!(content in input);
-        Ok(Paren {
-            inner: content.parse()?,
-        })
-    }
-}
-
-struct Delimited<T> {
-    inner: Punctuated<T, Token![,]>,
-}
-
-impl<T> Parse for Delimited<T>
-where
-    T: Parse,
-{
-    fn parse(input: ParseStream) -> syn::parse::Result<Self> {
-        Ok(Delimited {
-            inner: Punctuated::parse_separated_nonempty(input)?,
-        })
-    }
-}
+use syn::{parse2, Attribute, Expr, Meta, MetaNameValue};
 
 /// Handle attributes on fn item like `#[header(ContentType =
 /// "application/json")]`

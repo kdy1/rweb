@@ -1,14 +1,64 @@
-use serde::{de::DeserializeOwned, Deserialize};
+use futures::future::ok;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use warp::{
     filters::{multipart, ws::Ws, BoxedFilter},
-    Filter, Rejection,
+    reply::{json, Response},
+    Filter, Rejection, Reply,
 };
 
 pub trait FromRequest: Sized {
     /// Extract should be `(Self,),`
     type Filter: Filter<Error = Rejection>;
 
+    /// It's true iff the type represents whole request body.
+    ///
+    /// It returns true for `Json<T>` and `Form<T>`.
+    fn is_body() -> bool {
+        false
+    }
+
+    /// It's true if the type is optional.
+    ///
+    /// It returns true for `Option<T>`.
+    fn is_optional() -> bool {
+        false
+    }
+
+    /// It's true iff the type represents whole request query.
+    ///
+    /// It returns true for `Query<T>`.
+    fn is_query() -> bool {
+        false
+    }
+
     fn new() -> Self::Filter;
+}
+
+impl<T> FromRequest for Option<T>
+where
+    T: 'static + FromRequest + Send + Send,
+    T::Filter: Send + Sync + Filter<Extract = (T,), Error = Rejection>,
+{
+    type Filter = BoxedFilter<(Option<T>,)>;
+
+    fn is_body() -> bool {
+        T::is_body()
+    }
+
+    fn is_optional() -> bool {
+        true
+    }
+
+    fn is_query() -> bool {
+        T::is_query()
+    }
+
+    fn new() -> Self::Filter {
+        T::new()
+            .map(Some)
+            .or_else(|_| ok::<_, Rejection>((None,)))
+            .boxed()
+    }
 }
 
 #[derive(Deserialize)]
@@ -21,14 +71,34 @@ impl<T> Json<T> {
     }
 }
 
+impl<T> From<T> for Json<T> {
+    #[inline]
+    fn from(v: T) -> Self {
+        Json(v)
+    }
+}
+
 impl<T> FromRequest for Json<T>
 where
     T: 'static + Send + DeserializeOwned,
 {
     type Filter = BoxedFilter<(Json<T>,)>;
 
+    fn is_body() -> bool {
+        true
+    }
+
     fn new() -> Self::Filter {
         warp::body::json().boxed()
+    }
+}
+
+impl<T> Reply for Json<T>
+where
+    T: Serialize + Send,
+{
+    fn into_response(self) -> Response {
+        json(&self.0).into_response()
     }
 }
 
@@ -47,6 +117,10 @@ where
     T: 'static + Send + DeserializeOwned,
 {
     type Filter = BoxedFilter<(Form<T>,)>;
+
+    fn is_body() -> bool {
+        true
+    }
 
     fn new() -> Self::Filter {
         warp::body::form().boxed()
@@ -68,6 +142,10 @@ where
     T: 'static + Send + DeserializeOwned,
 {
     type Filter = BoxedFilter<(Query<T>,)>;
+
+    fn is_query() -> bool {
+        true
+    }
 
     fn new() -> Self::Filter {
         warp::query().boxed()

@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use rweb::get;
+use rweb::*;
 use std::{convert::Infallible, str::FromStr, time::Duration};
 
 #[tokio::main]
@@ -18,6 +18,7 @@ async fn sleepy(seconds: Seconds) -> Result<impl rweb::Reply, Infallible> {
 }
 
 /// A newtype to enforce our maximum allowed seconds.
+#[cfg_attr(feature = "openapi", derive(Schema))]
 struct Seconds(u64);
 
 impl FromStr for Seconds {

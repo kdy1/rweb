@@ -1,3 +1,5 @@
+#![cfg(not(feature = "openapi"))]
+
 use http::Error;
 use rweb::*;
 use serde::{Deserialize, Serialize};

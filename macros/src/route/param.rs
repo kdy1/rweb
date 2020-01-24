@@ -7,15 +7,17 @@ use syn::{
     Token, Type,
 };
 
+/// Returns (expr, actual_inputs_of_handler, from_request_types)
 pub fn compile(
     mut expr: Expr,
     sig: &Signature,
     data_inputs: &mut Punctuated<FnArg, Token![,]>,
     path_vars: Vec<(String, usize)>,
     insert_data_provider: bool,
-) -> (Expr, Punctuated<FnArg, Token![,]>) {
+) -> (Expr, Punctuated<FnArg, Token![,]>, Vec<Type>) {
     let mut path_params = HashSet::new();
     let mut inputs = sig.inputs.clone();
+    let mut from_request_types = vec![];
 
     {
         // Handle path parameters
@@ -58,10 +60,12 @@ pub fn compile(
                         // If there's no attribute, it's type should implement FromRequest
 
                         actual_inputs.push(cloned_i);
+                        from_request_types.push(*pat.ty.clone());
                         expr = q!(Vars { expr, T: &pat.ty }, {
                             expr.and(<T as rweb::FromRequest>::new())
                         })
                         .parse();
+
                         continue;
                     }
 
@@ -93,7 +97,7 @@ pub fn compile(
                             expr = q!(
                                 Vars {
                                     expr,
-                                    cookie_name: cookie_name.path
+                                    cookie_name: cookie_name.value
                                 },
                                 { expr.and(rweb::filters::cookie::cookie(cookie_name)) }
                             )
@@ -106,7 +110,7 @@ pub fn compile(
                             expr = q!(
                                 Vars {
                                     expr,
-                                    header_name: header_name.path
+                                    header_name: header_name.value
                                 },
                                 { expr.and(rweb::filters::header::header(header_name)) }
                             )
@@ -120,7 +124,7 @@ pub fn compile(
                         }
                     } else if attr.path.is_ident("filter") {
                         let filter_path: EqStr = parse(attr.tokens.clone());
-                        let filter_path = filter_path.path.value();
+                        let filter_path = filter_path.value.value();
                         let tts: TokenStream = filter_path.parse().expect("failed tokenize");
                         let filter_path: Path = parse(tts);
 
@@ -158,7 +162,7 @@ pub fn compile(
         actual_inputs.into_iter().collect()
     };
 
-    (expr, inputs)
+    (expr, inputs, from_request_types)
 }
 
 fn is_rweb_arg_attr(a: &Attribute) -> bool {
