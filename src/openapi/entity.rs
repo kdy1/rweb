@@ -186,6 +186,33 @@ integer!(u8, u16, u32, u64, u128, usize);
 integer!(i8, i16, i32, i64, i128, isize);
 // TODO: non-zero types
 
+macro_rules! number {
+    ($T:ty) => {
+        impl Entity for $T {
+            #[inline]
+            fn describe() -> Schema {
+                Schema {
+                    schema_type: Type::Number,
+                    ..Default::default()
+                }
+            }
+        }
+    };
+}
+
+number!(f32);
+number!(f64);
+
+impl Entity for bool {
+    #[inline]
+    fn describe() -> Schema {
+        Schema {
+            schema_type: Type::Boolean,
+            ..Default::default()
+        }
+    }
+}
+
 impl Entity for String {
     fn describe() -> Schema {
         Schema {
