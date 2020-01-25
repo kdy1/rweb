@@ -306,16 +306,27 @@ impl Collector {
             match s.schema_type {
                 Type::Object => {
                     //
+
                     for (name, ty) in s.properties {
-                        op.parameters.push(ObjectOrReference::Object(Parameter {
-                            required: Some(s.required.contains(&name)),
-                            name,
-                            location: Location::Query,
-                            unique_items: None,
-                            description: ty.description.clone(),
-                            schema: Some(ty),
-                            ..Default::default()
-                        }))
+                        if ty.properties.is_empty() {
+                            op.parameters.push(ObjectOrReference::Object(Parameter {
+                                name,
+                                param_type: ty.schema_type,
+                                location: Location::Query,
+                                description: ty.description,
+                                ..Default::default()
+                            }));
+                        } else {
+                            op.parameters.push(ObjectOrReference::Object(Parameter {
+                                required: Some(s.required.contains(&name)),
+                                name,
+                                location: Location::Query,
+                                unique_items: None,
+                                description: ty.description.clone(),
+                                schema: Some(ty),
+                                ..Default::default()
+                            }));
+                        }
                     }
                 }
                 _ => {}
