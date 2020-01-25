@@ -8,6 +8,7 @@
 //!```toml
 //! [dependencies]
 //! rweb = { version = "0.3.0-alpha.1", features = ["openapi"] }
+//! tokio = "0.2"
 //! ```
 //!
 //! and wrap your handlers like
