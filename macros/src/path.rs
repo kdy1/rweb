@@ -29,21 +29,19 @@ pub fn compile(
     let path: LitStr = parse(path);
     let path = path.value();
     assert!(path.starts_with('/'), "Path should start with /");
-
-    // It doesn't make any sense to have a route containing //
-    if path.find("//").is_some() {
-        return (
-            q!({ rweb::filters::path::end() }).parse(),
-            Default::default(),
-        );
-    }
+    assert!(
+        path.find("//").is_none(),
+        "A route containing `//` doesn't make sense"
+    );
 
     let mut exprs: Punctuated<Expr, Token![.]> = Default::default();
     // Set base values
     exprs.extend(base);
     let mut vars = vec![];
 
-    // Filter empty segments before iterating over them
+    // Filter empty segments before iterating over them.
+    // Mainly it will come from the required path in the beginning / but could also come from the end /
+    // Example: #[get("/{word}")] or #[get("/{word}/")] with the `/` before and after `{word}`
     let segments: Vec<&str> = path.split('/').into_iter().filter(|&x| x != "").collect();
     for segment in segments {
         let expr = if segment.starts_with('{') {
