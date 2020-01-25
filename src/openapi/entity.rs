@@ -47,6 +47,33 @@ pub type Responses = BTreeMap<Cow<'static, str>, Response>;
 ///     data: String,
 /// }
 /// ```
+///
+/// ## Example value
+///
+/// `#[schema(example = $path)]` is supported. If `$path` is a literal, it's
+/// automatically converted into json value. Otherwise, you should provide an
+/// expression to get example value.
+///
+///
+/// ```rust
+/// use rweb::*;
+/// use serde::{Serialize, Deserialize};
+///
+/// // This item is stored at #/components/schema/Item
+/// #[derive(Debug, Serialize, Deserialize, Schema)]
+/// struct ExampleTest {
+///     #[schema(example = "10")]
+///     data: usize,
+///     #[schema(example = "\"Example for string values must be escaped like this\"")]
+///     s: String,
+///     #[schema(example = "complex_example()")]
+///     complex: String,
+/// }
+///
+/// fn complex_example() -> serde_json::Value {
+///     serde_json::Value::String(String::from("this is example!"))
+/// }
+/// ```
 pub trait Entity {
     fn describe() -> Schema;
 
