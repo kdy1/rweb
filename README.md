@@ -64,7 +64,7 @@ fn search(_product: Query<SearchOption>) -> Json<Vec<Product>> {
 
 #[tokio::main]
 async fn main() {
-    warp::serve(output().or(product()).or(products())).run(([127, 0, 0, 1], 3030)).await;
+    serve(output().or(product()).or(products()).or(search())).run(([127, 0, 0, 1], 3030)).await;
 }
 
 ```
