@@ -175,40 +175,9 @@
 //! }
 //! ```
 //!
-//! # `#[derive(Schema)]`
+//! # Entity
 //!
-//! It implements [Entity] for the struct or enum.
-//!
-//! ## Overriding description
-//!
-//! ```rust
-//! use rweb::*;
-//!
-//! /// private documentation, for example
-//! #[derive(Debug, Default, Schema)]
-//! #[schema(description = "This is output!!")]
-//! pub struct Output {
-//!     /// By default, doc comments become description
-//!     data: String,
-//!     /// Another private info like implementation detail.
-//!     #[schema(description = "field")]
-//!     field_example: String,
-//! }
-//! ```
-//!
-//! ## Component
-//!
-//! ```rust
-//! use rweb::*;
-//! use serde::{Serialize, Deserialize};
-//!
-//! // This item is stored at #/components/schema/Item
-//! #[derive(Debug, Serialize, Deserialize, Schema)]
-//! #[schema(component = "Item")]
-//! struct ComponentTestReq {
-//!     data: String,
-//! }
-//! ```
+//! See [Entity] for details and examples.
 //!
 //! # Custom error
 //!

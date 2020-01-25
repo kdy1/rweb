@@ -13,10 +13,40 @@ pub type Responses = BTreeMap<Cow<'static, str>, Response>;
 
 /// This can be derived by `#[derive(Schema)]`.
 ///
+/// # `#[derive(Schema)]`
 ///
-/// You may provide an example value of each field with
+/// It implements [Entity] for the struct or enum.
 ///
-/// `#[schema(example = "path_to_function")]`
+/// ## Overriding description
+///
+/// ```rust
+/// use rweb::*;
+///
+/// /// private documentation, for example
+/// #[derive(Debug, Default, Schema)]
+/// #[schema(description = "This is output!!")]
+/// pub struct Output {
+///     /// By default, doc comments become description
+///     data: String,
+///     /// Another private info like implementation detail.
+///     #[schema(description = "field")]
+///     field_example: String,
+/// }
+/// ```
+///
+/// ## Component
+///
+/// ```rust
+/// use rweb::*;
+/// use serde::{Serialize, Deserialize};
+///
+/// // This item is stored at #/components/schema/Item
+/// #[derive(Debug, Serialize, Deserialize, Schema)]
+/// #[schema(component = "Item")]
+/// struct ComponentTestReq {
+///     data: String,
+/// }
+/// ```
 pub trait Entity {
     fn describe() -> Schema;
 
