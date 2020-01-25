@@ -2,7 +2,7 @@ use crate::{Form, Json, Query};
 pub use rweb_openapi::v3_0::*;
 use std::{
     borrow::Cow,
-    collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque},
+    collections::{BTreeMap, BTreeSet, HashSet, LinkedList, VecDeque},
     convert::Infallible,
 };
 use warp::{Rejection, Reply};
