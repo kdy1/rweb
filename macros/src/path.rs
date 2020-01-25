@@ -19,7 +19,7 @@ pub fn find_ty<'a>(sig: &'a Signature, name: &str) -> Option<&'a Type> {
 }
 
 ///
-/// - `sig`: sohuld be [Some] only if path parameters are allowed
+/// - `sig`: Should be [Some] only if path parameters are allowed
 pub fn compile(
     base: Option<Expr>,
     path: TokenStream,
@@ -30,10 +30,8 @@ pub fn compile(
     let path = path.value();
     assert!(path.starts_with('/'), "Path should start with /");
 
-    let segments = path.split('/');
-    let len = segments.clone().filter(|&s| s != "").count();
-
-    if len == 0 {
+    // It doesn't make any sense to have a route containing //
+    if path.find("//").is_some() {
         return (
             q!({ rweb::filters::path::end() }).parse(),
             Default::default(),
@@ -41,17 +39,16 @@ pub fn compile(
     }
 
     let mut exprs: Punctuated<Expr, Token![.]> = Default::default();
+    // Set base values
     exprs.extend(base);
     let mut vars = vec![];
 
+    // Filter empty segments before iterating over them
+    let segments: Vec<&str> = path.split('/').into_iter().filter(|&x| x != "").collect();
     for segment in segments {
-        if segment == "" {
-            continue;
-        }
-
         let expr = if segment.starts_with('{') {
+            // Example if {word} we only want to extract `word` here
             let name = &segment[1..segment.len() - 1];
-
             if let Some(sig) = sig {
                 let ty = sig
                     .inputs
@@ -59,6 +56,12 @@ pub fn compile(
                     .enumerate()
                     .filter_map(|(idx, arg)| match arg {
                         FnArg::Typed(ty) => match *ty.pat {
+                            // Here if we find a Pat::Ident we get i: &PatIdent and i.ident is the parameter in the route fn.
+                            // I.e dyn_reply(word: String), this would be named: `word` and we compare it to the segment name mentioned above.
+                            // If they match:
+                            //      We uses it and adds to our variables.
+                            // else
+                            //      We will panic later.
                             Pat::Ident(ref i) if i.ident == name => {
                                 vars.push((name.to_string(), idx));
                                 Some(&ty.ty)
