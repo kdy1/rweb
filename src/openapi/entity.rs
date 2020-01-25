@@ -15,7 +15,9 @@ pub type Responses = BTreeMap<Cow<'static, str>, Response>;
 ///
 /// # `#[derive(Schema)]`
 ///
-/// It implements [Entity] for the struct or enum.
+/// It implements [Entity] for the struct or enum. Note that it's recommended to
+/// use `derive(Schema)` even when you are not using openapi, as it is noop when
+/// cargo feature openapi is disabled.
 ///
 /// ## Overriding description
 ///
