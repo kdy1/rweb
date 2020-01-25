@@ -430,7 +430,7 @@ where
         let schema = Self::describe();
         let mut content = BTreeMap::new();
         content.insert(
-            "application/json".into(),
+            Cow::Borrowed("application/json"),
             MediaType {
                 schema: Some(ObjectOrReference::Object(schema)),
                 examples: None,
