@@ -24,6 +24,66 @@ use syn::{
 };
 
 pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
+    fn extract_example(attrs: &mut Vec<Attribute>) -> Option<TokenStream> {
+        let mut v = None;
+
+        attrs.iter().find(|attr| {
+            if attr.path.is_ident("example") {
+                for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
+                    .expect("invalid schema config found while extracting example")
+                    .inner
+                    .inner
+                {
+                    match config {
+                        Meta::Path(v) => unimplemented!("#[schema]: Meta::Path({})", v.dump()),
+                        Meta::List(v) => unimplemented!("#[schema]: Meta::List({})", v.dump()),
+                        Meta::NameValue(n) => {
+                            if n.path.is_ident("example") {
+                                assert!(
+                                    v.is_none(),
+                                    "duplicate #[schema(example = \"foo\")] detected"
+                                );
+
+                                v = Some(match n.lit {
+                                    Lit::Str(s) => s
+                                        .value()
+                                        .parse::<TokenStream>()
+                                        .expect("expected example to be path"),
+                                    l => panic!(
+                                        "#[schema(example = \"foo\")]: value of example should be \
+                                         a string literal, but got {}",
+                                        l.dump()
+                                    ),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            true
+        });
+
+        let v = v?;
+        match syn::parse2::<Lit>(v.clone()) {
+            Ok(v) => {
+                let v = match v {
+                    Lit::Str(v) => q!(Vars { v }, { String(v.into()) }),
+                    Lit::ByteStr(_) => panic!("byte string is not a valid example"),
+                    Lit::Byte(_) => panic!("byte is not a valid example"),
+                    Lit::Char(v) => q!(Vars { v }, { String(v.into()) }),
+                    Lit::Int(v) => q!(Vars { v }, { Number(v.into()) }),
+                    Lit::Float(v) => q!(Vars { v }, { Number(v.into()) }),
+                    Lit::Bool(v) => q!(Vars { v }, { Bool(v) }),
+                    Lit::Verbatim(_) => unimplemented!("Verbatim?"),
+                };
+
+                Some(q!(Vars { v }, (rweb::rt::serde_json::Value::v)).into())
+            }
+            Err(..) => Some(v),
+        }
+    }
+
     fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
         let mut doc = None;
         let mut comments = String::new();
@@ -63,11 +123,14 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
         let i = f.ident.as_ref().unwrap();
 
         let desc = extract_doc(&mut f.attrs);
+        let example_v = extract_example(&mut f.attrs);
+
         q!(
             Vars {
                 name: i,
                 desc,
-                Type: &f.ty
+                Type: &f.ty,
+                example_v: quote_option(example_v),
             },
             {
                 map.insert(rweb::rt::Cow::Borrowed(stringify!(name)), {
@@ -77,6 +140,10 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                         let description = desc;
                         if !description.is_empty() {
                             s.description = rweb::rt::Cow::Borrowed(description);
+                        }
+                        let example = example_v;
+                        if let Some(example) = example {
+                            s.example = Some(example);
                         }
                         s
                     }
@@ -110,10 +177,12 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
     let desc = extract_doc(&mut input.attrs);
 
     let mut component = None;
+    let example = extract_example(&mut input.attrs);
+
     input.attrs.retain(|attr| {
         if attr.path.is_ident("schema") {
             for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
-                .expect("schema config is invalid")
+                .expect("schema config of type is invalid")
                 .inner
                 .inner
             {
@@ -121,6 +190,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                     Meta::Path(..) => unimplemented!("Meta::Path in #[schema]"),
                     Meta::NameValue(n) => {
                         //
+
                         if n.path.is_ident("component") {
                             assert!(
                                 component.is_none(),
@@ -147,6 +217,9 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
     });
 
     let mut fields: Punctuated<FieldValue, Token![,]> = Default::default();
+    if let Some(tts) = example {
+        fields.push(q!(Vars { tts }, ({ example: Some(tts) })).parse());
+    }
 
     match input.data {
         Data::Struct(ref mut data) => {
@@ -159,7 +232,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                 _ => {}
             }
 
-            fields.push(q!({ schema_type: rweb::openapi::Type::Object }).parse());
+            fields.push(q!({ schema_type: Some(rweb::openapi::Type::Object) }).parse());
         }
         Data::Enum(ref mut data) => {
             let exprs: Punctuated<Expr, Token![,]> = data

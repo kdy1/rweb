@@ -77,7 +77,7 @@ impl Entity for () {
     #[inline]
     fn describe() -> Schema {
         Schema {
-            schema_type: Type::Object,
+            schema_type: Some(Type::Object),
             ..Default::default()
         }
     }
@@ -89,7 +89,7 @@ macro_rules! integer {
             #[inline]
             fn describe() -> Schema {
                 Schema {
-                    schema_type: Type::Integer,
+                    schema_type: Some(Type::Integer),
                     ..Default::default()
                 }
             }
@@ -118,7 +118,7 @@ macro_rules! number {
             #[inline]
             fn describe() -> Schema {
                 Schema {
-                    schema_type: Type::Number,
+                    schema_type: Some(Type::Number),
                     ..Default::default()
                 }
             }
@@ -133,7 +133,7 @@ impl Entity for bool {
     #[inline]
     fn describe() -> Schema {
         Schema {
-            schema_type: Type::Boolean,
+            schema_type: Some(Type::Boolean),
             ..Default::default()
         }
     }
@@ -143,7 +143,7 @@ impl Entity for char {
     #[inline]
     fn describe() -> Schema {
         Schema {
-            schema_type: Type::String,
+            schema_type: Some(Type::String),
             ..Default::default()
         }
     }
@@ -153,7 +153,7 @@ impl Entity for str {
     #[inline]
     fn describe() -> Schema {
         Schema {
-            schema_type: Type::String,
+            schema_type: Some(Type::String),
             ..Default::default()
         }
     }
@@ -222,7 +222,7 @@ impl<T: Entity> Entity for Vec<T> {
 impl<T: Entity> Entity for [T] {
     fn describe() -> Schema {
         Schema {
-            schema_type: Type::Array,
+            schema_type: Some(Type::Array),
             items: Some(Box::new(T::describe())),
             ..Default::default()
         }
@@ -235,7 +235,7 @@ impl<T: Entity> Entity for [T] {
                 (
                     Cow::Owned(format!("{}List", name)),
                     Schema {
-                        schema_type: Type::Array,
+                        schema_type: Some(Type::Array),
                         items: Some(Box::new(s)),
                         ..Default::default()
                     },

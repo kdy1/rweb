@@ -304,16 +304,21 @@ impl Collector {
             let s = T::describe();
 
             match s.schema_type {
-                Type::Object => {
+                Some(Type::Object) => {
                     //
 
-                    for (name, ty) in s.properties {
-                        if ty.properties.is_empty() {
+                    for (name, s) in s.properties {
+                        if s.properties.is_empty() {
                             op.parameters.push(ObjectOrReference::Object(Parameter {
                                 name,
-                                param_type: ty.schema_type,
+                                param_type: None,
                                 location: Location::Query,
-                                description: ty.description,
+                                description: s.description,
+                                schema: Some(Schema {
+                                    example: s.example,
+                                    schema_type: s.schema_type,
+                                    ..Default::default()
+                                }),
                                 ..Default::default()
                             }));
                         } else {
@@ -322,8 +327,8 @@ impl Collector {
                                 name,
                                 location: Location::Query,
                                 unique_items: None,
-                                description: ty.description.clone(),
-                                schema: Some(ty),
+                                description: s.description.clone(),
+                                schema: Some(s),
                                 ..Default::default()
                             }));
                         }
