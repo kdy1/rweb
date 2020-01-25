@@ -61,7 +61,15 @@ where
     }
 }
 
-#[derive(Deserialize)]
+/// Represents request body or response.
+///
+///
+/// If it is in a parameter, content-type should be `application/json` and
+/// request body will be deserialized.
+///
+/// If it is in a return type, response will contain a content type header with
+/// value `application/json`, and value is serialized.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Json<T>(T);
 
@@ -102,7 +110,8 @@ where
     }
 }
 
-#[derive(Deserialize)]
+/// Represents a request body with `www-url-form-encoded` content type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
 #[serde(transparent)]
 pub struct Form<T>(T);
 
@@ -127,7 +136,8 @@ where
     }
 }
 
-#[derive(Deserialize)]
+/// Represents all query parameters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
 #[serde(transparent)]
 pub struct Query<T>(T);
 

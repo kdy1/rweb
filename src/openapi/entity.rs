@@ -1,6 +1,10 @@
 use crate::{Form, Json, Query};
 pub use rweb_openapi::v3_0::*;
-use std::{borrow::Cow, collections::BTreeMap, convert::Infallible};
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, BTreeSet, HashSet, LinkedList, VecDeque},
+    convert::Infallible,
+};
 use warp::{Rejection, Reply};
 
 pub type Components = Vec<(Cow<'static, str>, Schema)>;
@@ -9,10 +13,69 @@ pub type Responses = BTreeMap<Cow<'static, str>, Response>;
 
 /// This can be derived by `#[derive(Schema)]`.
 ///
+/// # `#[derive(Schema)]`
 ///
-/// You may provide an example value of each field with
+/// It implements [Entity] for the struct or enum. Note that it's recommended to
+/// use `derive(Schema)` even when you are not using openapi, as it is noop when
+/// cargo feature openapi is disabled.
 ///
-/// `#[schema(example = "path_to_function")]`
+/// ## Overriding description
+///
+/// ```rust
+/// use rweb::*;
+///
+/// /// private documentation, for example
+/// #[derive(Debug, Default, Schema)]
+/// #[schema(description = "This is output!!")]
+/// pub struct Output {
+///     /// By default, doc comments become description
+///     data: String,
+///     /// Another private info like implementation detail.
+///     #[schema(description = "field")]
+///     field_example: String,
+/// }
+/// ```
+///
+/// ## Component
+///
+/// ```rust
+/// use rweb::*;
+/// use serde::{Serialize, Deserialize};
+///
+/// // This item is stored at #/components/schema/Item
+/// #[derive(Debug, Serialize, Deserialize, Schema)]
+/// #[schema(component = "Item")]
+/// struct ComponentTestReq {
+///     data: String,
+/// }
+/// ```
+///
+/// ## Example value
+///
+/// `#[schema(example = $path)]` is supported. If `$path` is a literal, it's
+/// automatically converted into json value. Otherwise, you should provide an
+/// expression to get example value.
+///
+///
+/// ```rust
+/// use rweb::*;
+/// use serde::{Serialize, Deserialize};
+///
+/// // This item is stored at #/components/schema/Item
+/// #[derive(Debug, Serialize, Deserialize, Schema)]
+/// struct ExampleTest {
+///     #[schema(example = "10")]
+///     data: usize,
+///     #[schema(example = "\"Example for string values must be escaped like this\"")]
+///     s: String,
+///     #[schema(example = "complex_example()")]
+///     complex: String,
+/// }
+///
+/// fn complex_example() -> serde_json::Value {
+///     serde_json::Value::String(String::from("this is example!"))
+/// }
+/// ```
 pub trait Entity {
     fn describe() -> Schema;
 
@@ -27,29 +90,107 @@ pub trait ResponseEntity: Entity {
     fn describe_responses() -> Responses;
 }
 
-impl<T: Entity> Entity for Vec<T> {
+/// Implements Entity with an empty return value.
+macro_rules! empty_entity {
+    ($T:ty) => {
+        impl Entity for $T {
+            fn describe() -> Schema {
+                <() as Entity>::describe()
+            }
+        }
+    };
+}
+
+impl Entity for () {
+    /// Returns empty schema
+    #[inline]
     fn describe() -> Schema {
         Schema {
-            schema_type: Type::Array,
-            items: Some(Box::new(T::describe())),
+            schema_type: Some(Type::Object),
             ..Default::default()
         }
     }
+}
 
-    fn describe_components() -> Components {
-        T::describe_components()
-            .into_iter()
-            .map(|(name, s)| {
-                (
-                    Cow::Owned(format!("{}List", name)),
-                    Schema {
-                        schema_type: Type::Array,
-                        items: Some(Box::new(s)),
-                        ..Default::default()
-                    },
-                )
-            })
-            .collect()
+macro_rules! integer {
+    ($T:ty) => {
+        impl Entity for $T {
+            #[inline]
+            fn describe() -> Schema {
+                Schema {
+                    schema_type: Some(Type::Integer),
+                    ..Default::default()
+                }
+            }
+        }
+
+    };
+
+    (
+        $(
+            $T:ty
+        ),*
+    ) => {
+        $(
+            integer!($T);
+        )*
+    };
+}
+
+integer!(u8, u16, u32, u64, u128, usize);
+integer!(i8, i16, i32, i64, i128, isize);
+// TODO: non-zero types
+
+macro_rules! number {
+    ($T:ty) => {
+        impl Entity for $T {
+            #[inline]
+            fn describe() -> Schema {
+                Schema {
+                    schema_type: Some(Type::Number),
+                    ..Default::default()
+                }
+            }
+        }
+    };
+}
+
+number!(f32);
+number!(f64);
+
+impl Entity for bool {
+    #[inline]
+    fn describe() -> Schema {
+        Schema {
+            schema_type: Some(Type::Boolean),
+            ..Default::default()
+        }
+    }
+}
+
+impl Entity for char {
+    #[inline]
+    fn describe() -> Schema {
+        Schema {
+            schema_type: Some(Type::String),
+            ..Default::default()
+        }
+    }
+}
+
+impl Entity for str {
+    #[inline]
+    fn describe() -> Schema {
+        Schema {
+            schema_type: Some(Type::String),
+            ..Default::default()
+        }
+    }
+}
+
+impl ResponseEntity for str {
+    fn describe_responses() -> Responses {
+        String::describe_responses()
     }
 }
 
@@ -72,6 +213,64 @@ where
 {
     fn describe_responses() -> Responses {
         T::describe_responses()
+    }
+}
+
+impl<'a, T> Entity for &'a T
+where
+    T: ?Sized + Entity,
+{
+    fn describe() -> Schema {
+        T::describe()
+    }
+
+    fn describe_components() -> Components {
+        T::describe_components()
+    }
+}
+
+impl<'a, T> ResponseEntity for &'a T
+where
+    T: ?Sized + ResponseEntity,
+{
+    fn describe_responses() -> Responses {
+        T::describe_responses()
+    }
+}
+
+impl<T: Entity> Entity for Vec<T> {
+    fn describe() -> Schema {
+        <[T] as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <[T] as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for [T] {
+    fn describe() -> Schema {
+        Schema {
+            schema_type: Some(Type::Array),
+            items: Some(Box::new(T::describe())),
+            ..Default::default()
+        }
+    }
+
+    fn describe_components() -> Components {
+        T::describe_components()
+            .into_iter()
+            .map(|(name, s)| {
+                (
+                    Cow::Owned(format!("{}List", name)),
+                    Schema {
+                        schema_type: Some(Type::Array),
+                        items: Some(Box::new(s)),
+                        ..Default::default()
+                    },
+                )
+            })
+            .collect()
     }
 }
 
@@ -117,167 +316,10 @@ where
     }
 }
 
-impl Entity for () {
-    /// Returns empty schema
-    #[inline]
-    fn describe() -> Schema {
-        Schema {
-            schema_type: Type::Object,
-            ..Default::default()
-        }
-    }
-}
-
-impl<T> Entity for Json<T>
-where
-    T: Entity,
-{
-    #[inline]
-    fn describe() -> Schema {
-        T::describe()
-    }
-
-    fn describe_components() -> Components {
-        T::describe_components()
-    }
-}
-
-impl<T> ResponseEntity for Json<T>
-where
-    T: Entity,
-{
-    fn describe_responses() -> Responses {
-        let schema = Self::describe();
-        let mut content = BTreeMap::new();
-        content.insert(
-            "application/json".into(),
-            MediaType {
-                schema: Some(ObjectOrReference::Object(schema)),
-                examples: None,
-                encoding: Default::default(),
-            },
-        );
-        let mut map = Responses::new();
-
-        map.insert(
-            Cow::Borrowed("200"),
-            Response {
-                content,
-                ..Default::default()
-            },
-        );
-
-        map
-    }
-}
-
-impl<T> Entity for Query<T>
-where
-    T: Entity,
-{
-    #[inline]
-    fn describe() -> Schema {
-        T::describe()
-    }
-
-    fn describe_components() -> Components {
-        T::describe_components()
-    }
-}
-
-impl<T> Entity for Form<T>
-where
-    T: Entity,
-{
-    #[inline]
-    fn describe() -> Schema {
-        T::describe()
-    }
-
-    fn describe_components() -> Components {
-        T::describe_components()
-    }
-}
-
-macro_rules! integer {
-    ($T:ty) => {
-        impl Entity for $T {
-            #[inline]
-            fn describe() -> Schema {
-                Schema {
-                    schema_type: Type::Integer,
-                    ..Default::default()
-                }
-            }
-        }
-
-    };
-
-    (
-        $(
-            $T:ty
-        ),*
-    ) => {
-        $(
-            integer!($T);
-        )*
-    };
-}
-
-integer!(u8, u16, u32, u64, u128, usize);
-integer!(i8, i16, i32, i64, i128, isize);
-// TODO: non-zero types
-
-macro_rules! number {
-    ($T:ty) => {
-        impl Entity for $T {
-            #[inline]
-            fn describe() -> Schema {
-                Schema {
-                    schema_type: Type::Number,
-                    ..Default::default()
-                }
-            }
-        }
-    };
-}
-
-number!(f32);
-number!(f64);
-
-impl Entity for bool {
-    #[inline]
-    fn describe() -> Schema {
-        Schema {
-            schema_type: Type::Boolean,
-            ..Default::default()
-        }
-    }
-}
-
-impl<'a> Entity for &'a str {
-    #[inline]
-    fn describe() -> Schema {
-        Schema {
-            schema_type: Type::String,
-            ..Default::default()
-        }
-    }
-}
-
-impl<'a> ResponseEntity for &'a str {
-    fn describe_responses() -> Responses {
-        String::describe_responses()
-    }
-}
-
 impl Entity for String {
     #[inline]
     fn describe() -> Schema {
-        Schema {
-            schema_type: Type::String,
-            ..Default::default()
-        }
+        str::describe()
     }
 }
 
@@ -340,6 +382,72 @@ where
     }
 }
 
+//impl<K, V> Entity for BTreeMap<K, V> {}
+
+impl<V> Entity for BTreeSet<V>
+where
+    V: Entity,
+{
+    #[inline(always)]
+    fn describe() -> Schema {
+        <[V] as Entity>::describe()
+    }
+
+    #[inline(always)]
+    fn describe_components() -> Components {
+        <[V] as Entity>::describe_components()
+    }
+}
+
+//impl<V> Entity for BinaryHeap<V> {}
+
+//impl<K, V, S> Entity for HashMap<K, V, S> {}
+
+impl<V, S> Entity for HashSet<V, S>
+where
+    V: Entity,
+{
+    #[inline(always)]
+    fn describe() -> Schema {
+        <[V] as Entity>::describe()
+    }
+
+    #[inline(always)]
+    fn describe_components() -> Components {
+        <[V] as Entity>::describe_components()
+    }
+}
+
+impl<V> Entity for LinkedList<V>
+where
+    V: Entity,
+{
+    #[inline(always)]
+    fn describe() -> Schema {
+        <[V] as Entity>::describe()
+    }
+
+    #[inline(always)]
+    fn describe_components() -> Components {
+        <[V] as Entity>::describe_components()
+    }
+}
+
+impl<V> Entity for VecDeque<V>
+where
+    V: Entity,
+{
+    #[inline(always)]
+    fn describe() -> Schema {
+        <[V] as Entity>::describe()
+    }
+
+    #[inline(always)]
+    fn describe_components() -> Components {
+        <[V] as Entity>::describe_components()
+    }
+}
+
 impl Entity for Infallible {
     #[inline]
     fn describe() -> Schema {
@@ -356,6 +464,77 @@ impl ResponseEntity for Infallible {
     #[inline]
     fn describe_responses() -> Responses {
         Default::default()
+    }
+}
+
+impl<T> Entity for Json<T>
+where
+    T: Entity,
+{
+    #[inline]
+    fn describe() -> Schema {
+        T::describe()
+    }
+
+    fn describe_components() -> Components {
+        T::describe_components()
+    }
+}
+
+impl<T> ResponseEntity for Json<T>
+where
+    T: Entity,
+{
+    fn describe_responses() -> Responses {
+        let schema = Self::describe();
+        let mut content = BTreeMap::new();
+        content.insert(
+            Cow::Borrowed("application/json"),
+            MediaType {
+                schema: Some(ObjectOrReference::Object(schema)),
+                examples: None,
+                encoding: Default::default(),
+            },
+        );
+        let mut map = Responses::new();
+
+        map.insert(
+            Cow::Borrowed("200"),
+            Response {
+                content,
+                ..Default::default()
+            },
+        );
+
+        map
+    }
+}
+
+impl<T> Entity for Query<T>
+where
+    T: Entity,
+{
+    #[inline]
+    fn describe() -> Schema {
+        T::describe()
+    }
+
+    fn describe_components() -> Components {
+        T::describe_components()
+    }
+}
+
+impl<T> Entity for Form<T>
+where
+    T: Entity,
+{
+    #[inline]
+    fn describe() -> Schema {
+        T::describe()
+    }
+
+    fn describe_components() -> Components {
+        T::describe_components()
     }
 }
 
@@ -391,15 +570,7 @@ impl ResponseEntity for http::Error {
     }
 }
 
-impl Entity for dyn Reply {
-    fn describe() -> Schema {
-        <() as Entity>::describe()
-    }
-
-    fn describe_components() -> Vec<(Cow<'static, str>, Schema)> {
-        Default::default()
-    }
-}
+empty_entity!(dyn Reply);
 
 impl ResponseEntity for dyn Reply {
     fn describe_responses() -> Responses {

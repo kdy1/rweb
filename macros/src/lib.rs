@@ -79,8 +79,14 @@ pub fn router(
     router::router(attr.into(), item.into()).dump().into()
 }
 
+/// Implements Entity for the type.
+///
+/// See documentation of Entity for details and examples.
 #[proc_macro_derive(Schema, attributes(schema))]
 pub fn derive_schema(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    if !cfg!(feature = "openapi") {
+        return "".parse().unwrap();
+    }
     let input = syn::parse::<syn::DeriveInput>(input).expect("failed to parse derive input");
     openapi::derive_schema(input).into()
 }

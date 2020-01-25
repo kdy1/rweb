@@ -175,40 +175,9 @@
 //! }
 //! ```
 //!
-//! # `#[derive(Schema)]`
+//! # Entity
 //!
-//! It implements [Entity] for the struct or enum.
-//!
-//! ## Overriding description
-//!
-//! ```rust
-//! use rweb::*;
-//!
-//! /// private documentation, for example
-//! #[derive(Debug, Default, Schema)]
-//! #[schema(description = "This is output!!")]
-//! pub struct Output {
-//!     /// By default, doc comments become description
-//!     data: String,
-//!     /// Another private info like implementation detail.
-//!     #[schema(description = "field")]
-//!     field_example: String,
-//! }
-//! ```
-//!
-//! ## Component
-//!
-//! ```rust
-//! use rweb::*;
-//! use serde::{Serialize, Deserialize};
-//!
-//! // This item is stored at #/components/schema/Item
-//! #[derive(Debug, Serialize, Deserialize, Schema)]
-//! #[schema(component = "Item")]
-//! struct ComponentTestReq {
-//!     data: String,
-//! }
-//! ```
+//! See [Entity] for details and examples.
 //!
 //! # Custom error
 //!
@@ -335,18 +304,34 @@ impl Collector {
             let s = T::describe();
 
             match s.schema_type {
-                Type::Object => {
+                Some(Type::Object) => {
                     //
-                    for (name, ty) in s.properties {
-                        op.parameters.push(ObjectOrReference::Object(Parameter {
-                            required: Some(s.required.contains(&name)),
-                            name,
-                            location: Location::Query,
-                            unique_items: None,
-                            description: ty.description.clone(),
-                            schema: Some(ty),
-                            ..Default::default()
-                        }))
+
+                    for (name, s) in s.properties {
+                        if s.properties.is_empty() {
+                            op.parameters.push(ObjectOrReference::Object(Parameter {
+                                name,
+                                param_type: None,
+                                location: Location::Query,
+                                description: s.description,
+                                schema: Some(Schema {
+                                    example: s.example,
+                                    schema_type: s.schema_type,
+                                    ..Default::default()
+                                }),
+                                ..Default::default()
+                            }));
+                        } else {
+                            op.parameters.push(ObjectOrReference::Object(Parameter {
+                                required: Some(s.required.contains(&name)),
+                                name,
+                                location: Location::Query,
+                                unique_items: None,
+                                description: s.description.clone(),
+                                schema: Some(s),
+                                ..Default::default()
+                            }));
+                        }
                     }
                 }
                 _ => {}

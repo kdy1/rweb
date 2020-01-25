@@ -18,7 +18,7 @@ async fn sleepy(seconds: Seconds) -> Result<impl rweb::Reply, Infallible> {
 }
 
 /// A newtype to enforce our maximum allowed seconds.
-#[cfg_attr(feature = "openapi", derive(Schema))]
+#[derive(Schema)]
 struct Seconds(u64);
 
 impl FromStr for Seconds {

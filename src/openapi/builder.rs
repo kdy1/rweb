@@ -4,6 +4,7 @@ use super::*;
 #[derive(Debug, Clone, Default)]
 pub struct Builder {
     spec: Spec,
+    path_prefix: String,
 }
 
 /// Crates a new specification builder
@@ -19,6 +20,21 @@ impl Builder {
         self
     }
 
+    #[inline]
+    pub fn server(mut self, server: Server) -> Self {
+        self.spec.servers.push(server);
+        self
+    }
+
+    /// **Overrides** path prefix with given string.
+    #[inline]
+    pub fn prefix(mut self, path: String) -> Self {
+        assert!(path.starts_with("/"));
+        self.path_prefix = path;
+
+        self
+    }
+
     /// Creates an openapi specification. You can serialize this as json or yaml
     /// to generate client codes.
     pub fn build<F, Ret>(self, op: F) -> (Spec, Ret)
@@ -26,6 +42,7 @@ impl Builder {
         F: FnOnce() -> Ret,
     {
         let mut collector = new();
+        collector.path_prefix = self.path_prefix;
         collector.spec = self.spec;
 
         let cell = RefCell::new(collector);
