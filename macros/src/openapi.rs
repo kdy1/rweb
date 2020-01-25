@@ -28,7 +28,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
         let mut v = None;
 
         attrs.iter().find(|attr| {
-            if attr.path.is_ident("example") {
+            if attr.path.is_ident("schema") {
                 for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
                     .expect("invalid schema config found while extracting example")
                     .inner

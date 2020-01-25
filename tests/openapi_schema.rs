@@ -54,5 +54,5 @@ fn example_test() {
     let yaml = serde_yaml::to_string(&spec).unwrap();
     println!("{}", yaml);
 
-    panic!()
+    assert!(yaml.contains("10"));
 }
