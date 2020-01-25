@@ -76,6 +76,7 @@ If you want to use websocket, just declare a parameter typed `Ws`. It's all.
 ```rust
 use rweb::*;
 
+#[get("/ws")]
 fn example(ws: ws::Ws) -> String {
     String::new("use ws.on_upgrade or extra")
 }
