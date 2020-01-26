@@ -6,7 +6,7 @@
 /// struct DbConnection;
 /// fn display_user(#[data] user: DbConnection) {}
 /// let db_connection = DbConnection;
-/// assert_eq!(routes![db_connection; display_user], get_user(db_connection));
+/// assert_eq!(routes![db_connection; display_user], display_user(db_connection));
 /// ```
 ///
 /// # Example - Multiple routes
