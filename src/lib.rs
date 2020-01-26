@@ -372,3 +372,6 @@ mod factory;
 pub mod openapi;
 #[doc(hidden)]
 pub mod rt;
+
+pub mod routes;
+pub use self::routes::*;
