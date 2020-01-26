@@ -93,3 +93,26 @@ pub fn compile(
 
     (q!(Vars { exprs }, { exprs }).parse(), vars)
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quote::quote;
+
+    #[test]
+    fn should_work() {
+        let path = quote!("/ping");
+        compile(None, path, None, false);
+    }
+    #[test]
+    #[should_panic(expected = "Path should start with /")]
+    fn should_panic_if_path_doesnt_start_with_slash() {
+        let path = quote! {"{word}"};
+        compile(None, path, None, false);
+    }
+    #[test]
+    #[should_panic(expected = "A route containing `//` doesn't make sense")]
+    fn should_panic_if_path_contains_slash_slash() {
+        let path = quote! {"/{word}//"};
+        compile(None, path, None, false);
+    }
+}
