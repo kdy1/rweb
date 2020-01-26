@@ -22,12 +22,11 @@ fn display_user(#[data] user: User) -> impl Reply {
 
 #[tokio::main]
 async fn main() {
-    // Keep track of all connected users, key is usize, value
-    // is an event stream sender.
     let user = User {
         id: 1,
         name: "Christoffer".to_string(),
     };
+    // Sending user so it can be used in display user. Usually you would send a db_connection or something.
     let routes = routes![hi, ping].or(routes![user; display_user]);
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }
