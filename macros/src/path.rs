@@ -31,7 +31,7 @@ pub fn compile(
     assert!(path.starts_with('/'), "Path should start with /");
     assert!(
         path.find("//").is_none(),
-        "A route containing `//` doesn't make sense"
+        "A path containing `//` doesn't make sense"
     );
 
     let mut exprs: Punctuated<Expr, Token![.]> = Default::default();
@@ -110,7 +110,7 @@ mod tests {
         compile(None, path, None, false);
     }
     #[test]
-    #[should_panic(expected = "A route containing `//` doesn't make sense")]
+    #[should_panic(expected = "A path containing `//` doesn't make sense")]
     fn should_panic_if_path_contains_slash_slash() {
         let path = quote! {"/{word}//"};
         compile(None, path, None, false);
