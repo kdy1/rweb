@@ -235,70 +235,80 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
             fields.push(q!({ schema_type: Some(rweb::openapi::Type::Object) }).parse());
         }
         Data::Enum(ref mut data) => {
-            let exprs: Punctuated<Expr, Token![,]> = data
+            if data
                 .variants
-                .iter_mut()
-                .filter_map(|v| {
-                    let desc = extract_doc(&mut v.attrs);
+                .iter()
+                .all(|variant| variant.fields.len() == 0)
+            {
+                // c-like enums
+            } else {
+                let exprs: Punctuated<Expr, Token![,]> = data
+                    .variants
+                    .iter_mut()
+                    .filter_map(|v| {
+                        let desc = extract_doc(&mut v.attrs);
 
-                    match v.fields {
-                        Fields::Named(..) => Some(Pair::Punctuated(
-                            {
-                                let fields = handle_fields(&mut v.fields);
-                                q!(
-                                    Vars { fields, desc },
-                                    ({
-                                        #[allow(unused_mut)]
-                                        let mut s = rweb::openapi::Schema {
-                                            properties: fields,
-                                            ..rweb::rt::Default::default()
-                                        };
-                                        let description = desc;
-                                        if !description.is_empty() {
-                                            s.description = rweb::rt::Cow::Borrowed(description);
-                                        }
+                        match v.fields {
+                            Fields::Named(..) => Some(Pair::Punctuated(
+                                {
+                                    let fields = handle_fields(&mut v.fields);
+                                    q!(
+                                        Vars { fields, desc },
+                                        ({
+                                            #[allow(unused_mut)]
+                                            let mut s = rweb::openapi::Schema {
+                                                properties: fields,
+                                                ..rweb::rt::Default::default()
+                                            };
+                                            let description = desc;
+                                            if !description.is_empty() {
+                                                s.description =
+                                                    rweb::rt::Cow::Borrowed(description);
+                                            }
 
-                                        rweb::openapi::ObjectOrReference::Object(s)
-                                    })
-                                )
-                                .parse()
-                            },
-                            Default::default(),
-                        )),
-                        Fields::Unnamed(ref f) => {
-                            //
-                            assert!(f.unnamed.len() <= 1);
-                            if f.unnamed.len() == 0 {
-                                return None;
-                            }
-
-                            Some(Pair::Punctuated(
-                                q!(
-                                    Vars {
-                                        Type: &f.unnamed.first().unwrap().ty,
-                                        desc
-                                    },
-                                    ({
-                                        #[allow(unused_mut)]
-                                        let mut s = <Type as rweb::openapi::Entity>::describe();
-                                        let description = desc;
-                                        if !description.is_empty() {
-                                            s.description = rweb::rt::Cow::Borrowed(description);
-                                        }
-
-                                        rweb::openapi::ObjectOrReference::Object(s)
-                                    })
-                                )
-                                .parse(),
+                                            rweb::openapi::ObjectOrReference::Object(s)
+                                        })
+                                    )
+                                    .parse()
+                                },
                                 Default::default(),
-                            ))
-                        }
-                        Fields::Unit => None,
-                    }
-                })
-                .collect();
+                            )),
+                            Fields::Unnamed(ref f) => {
+                                //
+                                assert!(f.unnamed.len() <= 1);
+                                if f.unnamed.len() == 0 {
+                                    return None;
+                                }
 
-            fields.push(q!(Vars { exprs }, { one_of: vec![exprs] }).parse());
+                                Some(Pair::Punctuated(
+                                    q!(
+                                        Vars {
+                                            Type: &f.unnamed.first().unwrap().ty,
+                                            desc
+                                        },
+                                        ({
+                                            #[allow(unused_mut)]
+                                            let mut s = <Type as rweb::openapi::Entity>::describe();
+                                            let description = desc;
+                                            if !description.is_empty() {
+                                                s.description =
+                                                    rweb::rt::Cow::Borrowed(description);
+                                            }
+
+                                            rweb::openapi::ObjectOrReference::Object(s)
+                                        })
+                                    )
+                                    .parse(),
+                                    Default::default(),
+                                ))
+                            }
+                            Fields::Unit => None,
+                        }
+                    })
+                    .collect();
+
+                fields.push(q!(Vars { exprs }, { one_of: vec![exprs] }).parse());
+            }
         }
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }
