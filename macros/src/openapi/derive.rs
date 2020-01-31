@@ -14,17 +14,32 @@ use syn::{
 
 /// Search for `#[serde(rename = '')]`
 fn get_rename(attrs: &[Attribute]) -> Option<String> {
-    let attr = attrs.iter().find(|attr| {
+    attrs.iter().find_map(|attr| {
         //
         if !attr.path.is_ident("serde") {
-            return false;
+            return None;
         }
 
-        parse2(attr.tokens.clone())
-    })?;
+        let v = match parse2::<Meta>(attr.tokens.clone()) {
+            Ok(v) => v,
+            Err(..) => return None,
+        };
+
+        println!("Meta: {}", meta.dump());
+
+        return None;
+    })
 }
 
-fn field_name(type_attrs: &[Attribute], field: &Field) {}
+fn field_name(type_attrs: &[Attribute], field: &Field) -> String {
+    if let Some(s) = get_rename(&field.attrs) {
+        return s;
+    }
+
+    // TODO: Handle rename_all
+
+    field.ident.as_ref().unwrap().to_string()
+}
 
 fn extract_example(attrs: &mut Vec<Attribute>) -> Option<TokenStream> {
     let mut v = None;
