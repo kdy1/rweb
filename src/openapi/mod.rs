@@ -301,61 +301,48 @@ impl Collector {
         }
 
         if T::is_query() {
-            let s = T::describe();
+            self.add_query_type_to::<T>(op);
+        }
+    }
 
-            assert!(
-                s.enum_values.is_empty(),
-                "Query<Enum> is invalid. Store enum as a field."
-            );
+    fn add_query_type_to<T: FromRequest + Entity>(&mut self, op: &mut Operation) {
+        debug_assert!(T::is_query());
 
-            match s.schema_type {
-                Some(Type::Object) => {
-                    //
+        let s = T::describe();
 
-                    for (name, s) in s.properties {
-                        if s.properties.is_empty() {
-                            if s.enum_values.is_empty() {
-                                op.parameters.push(ObjectOrReference::Object(Parameter {
-                                    name,
-                                    param_type: None,
-                                    location: Location::Query,
-                                    description: s.description,
-                                    schema: Some(Schema {
-                                        example: s.example,
-                                        schema_type: s.schema_type,
-                                        ..Default::default()
-                                    }),
-                                    ..Default::default()
-                                }));
-                            } else {
-                                op.parameters.push(ObjectOrReference::Object(Parameter {
-                                    name,
-                                    param_type: None,
-                                    location: Location::Query,
-                                    description: s.description,
-                                    schema: Some(Schema {
-                                        example: s.example,
-                                        enum_values: s.enum_values,
-                                        ..Default::default()
-                                    }),
-                                    ..Default::default()
-                                }));
-                            }
-                        } else {
-                            op.parameters.push(ObjectOrReference::Object(Parameter {
-                                required: Some(s.required.contains(&name)),
-                                name,
-                                location: Location::Query,
-                                unique_items: None,
-                                description: s.description.clone(),
-                                schema: Some(s),
-                                ..Default::default()
-                            }));
-                        }
+        assert!(
+            s.enum_values.is_empty(),
+            "Query<Enum> is invalid. Store enum as a field."
+        );
+
+        match s.schema_type {
+            Some(Type::Object) => {
+                //
+
+                for (name, s) in s.properties {
+                    if s.properties.is_empty() {
+                        op.parameters.push(ObjectOrReference::Object(Parameter {
+                            name,
+                            param_type: None,
+                            location: Location::Query,
+                            description: s.description.clone(),
+                            schema: Some(s),
+                            ..Default::default()
+                        }));
+                    } else {
+                        op.parameters.push(ObjectOrReference::Object(Parameter {
+                            required: Some(s.required.contains(&name)),
+                            name,
+                            location: Location::Query,
+                            unique_items: None,
+                            description: s.description.clone(),
+                            schema: Some(s),
+                            ..Default::default()
+                        }));
                     }
                 }
-                _ => {}
             }
+            _ => {}
         }
     }
 
