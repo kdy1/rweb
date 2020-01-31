@@ -241,6 +241,8 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                 .all(|variant| variant.fields.len() == 0)
             {
                 // c-like enums
+
+                fields.push(q!(Vars {}, { enum_values: vec![] }).parse());
             } else {
                 let exprs: Punctuated<Expr, Token![,]> = data
                     .variants

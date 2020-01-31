@@ -19,8 +19,8 @@ impl std::str::FromStr for Color {
     type Err = &'static str;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "black" => Ok(Color::BLACK),
-            "blue" => Ok(Color::BLUE),
+            "black" => Ok(Color::Black),
+            "blue" => Ok(Color::Blue),
             _ => Err("ERR"),
         }
     }
