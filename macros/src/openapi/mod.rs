@@ -22,6 +22,7 @@ use syn::{
     Attribute, Expr, Lit, Meta, NestedMeta, Signature, Token,
 };
 
+mod case;
 mod derive;
 
 pub fn quote_op(op: Operation) -> Expr {
