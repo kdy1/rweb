@@ -303,6 +303,11 @@ impl Collector {
         if T::is_query() {
             let s = T::describe();
 
+            assert!(
+                s.enum_values.is_empty(),
+                "Query<Enum> is invalid. Store enum as a field."
+            );
+
             match s.schema_type {
                 Some(Type::Object) => {
                     //
