@@ -281,9 +281,11 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                     .variants
                     .iter()
                     .map(|variant| {
-                        //
-
-                        let name = &variant.ident.to_string();
+                        let name = if let Some(v) = get_rename(&variant.attrs) {
+                            v
+                        } else {
+                            variant.ident.to_string()
+                        };
                         Pair::Punctuated(
                             q!(Vars { name }, { rweb::rt::Cow::Borrowed(name) }).parse(),
                             Default::default(),

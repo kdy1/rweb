@@ -69,8 +69,13 @@ fn clike_enum() {
         C,
     }
 
+    #[derive(Debug, Serialize, Deserialize, Schema)]
+    struct Data {
+        e: Enum,
+    }
+
     #[get("/")]
-    fn index(_: Query<Enum>) -> String {
+    fn index(_: Query<Data>) -> String {
         String::new()
     }
 

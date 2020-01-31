@@ -314,18 +314,33 @@ impl Collector {
 
                     for (name, s) in s.properties {
                         if s.properties.is_empty() {
-                            op.parameters.push(ObjectOrReference::Object(Parameter {
-                                name,
-                                param_type: None,
-                                location: Location::Query,
-                                description: s.description,
-                                schema: Some(Schema {
-                                    example: s.example,
-                                    schema_type: s.schema_type,
+                            if s.enum_values.is_empty() {
+                                op.parameters.push(ObjectOrReference::Object(Parameter {
+                                    name,
+                                    param_type: None,
+                                    location: Location::Query,
+                                    description: s.description,
+                                    schema: Some(Schema {
+                                        example: s.example,
+                                        schema_type: s.schema_type,
+                                        ..Default::default()
+                                    }),
                                     ..Default::default()
-                                }),
-                                ..Default::default()
-                            }));
+                                }));
+                            } else {
+                                op.parameters.push(ObjectOrReference::Object(Parameter {
+                                    name,
+                                    param_type: None,
+                                    location: Location::Query,
+                                    description: s.description,
+                                    schema: Some(Schema {
+                                        example: s.example,
+                                        enum_values: s.enum_values,
+                                        ..Default::default()
+                                    }),
+                                    ..Default::default()
+                                }));
+                            }
                         } else {
                             op.parameters.push(ObjectOrReference::Object(Parameter {
                                 required: Some(s.required.contains(&name)),
