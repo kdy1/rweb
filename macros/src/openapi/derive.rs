@@ -20,12 +20,21 @@ fn get_rename(attrs: &[Attribute]) -> Option<String> {
             return None;
         }
 
-        let v = match parse2::<Meta>(attr.tokens.clone()) {
-            Ok(v) => v,
+        // Handle #[serde(rename = "foo")]
+        let meta = match parse2::<Paren<Meta>>(attr.tokens.clone()) {
+            Ok(v) => v.inner,
             Err(..) => return None,
         };
 
-        println!("Meta: {}", v.dump());
+        if meta.path().is_ident("rename") {
+            return match meta {
+                Meta::NameValue(meta) => match meta.lit {
+                    Lit::Str(s) => Some(s.value()),
+                    _ => None,
+                },
+                _ => None,
+            };
+        }
 
         return None;
     })
