@@ -242,7 +242,21 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
             {
                 // c-like enums
 
-                fields.push(q!(Vars {}, { enum_values: vec![] }).parse());
+                let exprs: Punctuated<Expr, Token![,]> = data
+                    .variants
+                    .iter()
+                    .map(|variant| {
+                        //
+
+                        let name = &variant.ident.to_string();
+                        Pair::Punctuated(
+                            q!(Vars { name }, { rweb::rt::Cow::Borrowed(name) }).parse(),
+                            Default::default(),
+                        )
+                    })
+                    .collect();
+
+                fields.push(q!(Vars { exprs }, { enum_values: vec![exprs] }).parse());
             } else {
                 let exprs: Punctuated<Expr, Token![,]> = data
                     .variants
