@@ -1,4 +1,5 @@
 use crate::{
+    openapi::case::RenameRule,
     parse::{Delimited, KeyValue, Paren},
     route::EqStr,
     util::ItemImplExt,
@@ -9,8 +10,28 @@ use syn::{
     parse2,
     punctuated::{Pair, Punctuated},
     Attribute, Block, Data, DeriveInput, Expr, Field, FieldValue, Fields, GenericParam, ItemImpl,
-    Lit, Meta, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
+    Lit, LitStr, Meta, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
 };
+
+/// Search for `#[serde(rename_all = '')]`
+fn get_rename_all(attrs: &[Attribute]) -> RenameRule {
+    attrs
+        .iter()
+        .find_map(|attr| {
+            //
+            if !attr.path.is_ident("serde") {
+                return None;
+            }
+
+            match parse2::<Paren<KeyValue<Ident, LitStr>>>(attr.tokens.clone()).map(|v| v.inner) {
+                Ok(kv) if kv.key.to_string() == "rename_all" => {
+                    Some(kv.value.value().parse().unwrap())
+                }
+                _ => None,
+            }
+        })
+        .unwrap_or(RenameRule::None)
+}
 
 /// Search for `#[serde(rename = '')]`
 fn get_rename(attrs: &[Attribute]) -> Option<String> {
@@ -45,9 +66,9 @@ fn field_name(type_attrs: &[Attribute], field: &Field) -> String {
         return s;
     }
 
-    // TODO: Handle rename_all
+    let rule = get_rename_all(type_attrs);
 
-    field.ident.as_ref().unwrap().to_string()
+    rule.apply_to_field(&field.ident.as_ref().unwrap().to_string())
 }
 
 fn extract_example(attrs: &mut Vec<Attribute>) -> Option<TokenStream> {
