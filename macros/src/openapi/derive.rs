@@ -25,7 +25,7 @@ fn get_rename(attrs: &[Attribute]) -> Option<String> {
             Err(..) => return None,
         };
 
-        println!("Meta: {}", meta.dump());
+        println!("Meta: {}", v.dump());
 
         return None;
     })
@@ -136,21 +136,21 @@ fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
     }
 }
 
-fn handle_field(f: &mut Field) -> Stmt {
-    let i = f.ident.as_ref().unwrap();
+fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
+    let name_str = field_name(type_attrs, &*f);
 
     let desc = extract_doc(&mut f.attrs);
     let example_v = extract_example(&mut f.attrs);
 
     q!(
         Vars {
-            name: i,
+            name_str,
             desc,
             Type: &f.ty,
             example_v: super::quote_option(example_v),
         },
         {
-            map.insert(rweb::rt::Cow::Borrowed(stringify!(name)), {
+            map.insert(rweb::rt::Cow::Borrowed(name_str), {
                 {
                     #[allow(unused_mut)]
                     let mut s = <Type as rweb::openapi::Entity>::describe();
@@ -170,7 +170,7 @@ fn handle_field(f: &mut Field) -> Stmt {
     .parse()
 }
 
-fn handle_fields(fields: &mut Fields) -> Block {
+fn handle_fields(type_attrs: &[Attribute], fields: &mut Fields) -> Block {
     // Properties
     let mut block: Block = q!({ {} }).parse();
     block.stmts.push(
@@ -183,7 +183,7 @@ fn handle_fields(fields: &mut Fields) -> Block {
     );
 
     for f in fields {
-        block.stmts.push(handle_field(f));
+        block.stmts.push(handle_field(type_attrs, f));
     }
 
     block.stmts.push(Stmt::Expr(q!({ map }).parse()));
@@ -191,13 +191,21 @@ fn handle_fields(fields: &mut Fields) -> Block {
     block
 }
 
-pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
-    let desc = extract_doc(&mut input.attrs);
+pub fn derive_schema(input: DeriveInput) -> TokenStream {
+    let DeriveInput {
+        mut attrs,
+        mut data,
+        ident,
+        generics,
+        ..
+    } = input;
+
+    let desc = extract_doc(&mut attrs);
 
     let mut component = None;
-    let example = extract_example(&mut input.attrs);
+    let example = extract_example(&mut attrs);
 
-    input.attrs.retain(|attr| {
+    attrs.retain(|attr| {
         if attr.path.is_ident("schema") {
             for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
                 .expect("schema config of type is invalid")
@@ -239,11 +247,11 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
         fields.push(q!(Vars { tts }, ({ example: Some(tts) })).parse());
     }
 
-    match input.data {
+    match data {
         Data::Struct(ref mut data) => {
             match data.fields {
                 Fields::Named(_) => {
-                    let block = handle_fields(&mut data.fields);
+                    let block = handle_fields(&attrs, &mut data.fields);
                     fields.push(q!(Vars { block }, { properties: block }).parse());
                 }
                 Fields::Unnamed(ref n) if n.unnamed.len() == 1 => {}
@@ -285,7 +293,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
                         match v.fields {
                             Fields::Named(..) => Some(Pair::Punctuated(
                                 {
-                                    let fields = handle_fields(&mut v.fields);
+                                    let fields = handle_fields(&attrs, &mut v.fields);
                                     q!(
                                         Vars { fields, desc },
                                         ({
@@ -352,7 +360,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
 
         q!(
             Vars {
-                Type: &input.ident,
+                Type: &ident,
                 desc,
                 path_to_schema,
                 fields,
@@ -383,7 +391,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
     } else {
         q!(
             Vars {
-                Type: &input.ident,
+                Type: &ident,
                 desc,
                 fields
             },
@@ -401,7 +409,7 @@ pub fn derive_schema(mut input: DeriveInput) -> TokenStream {
         )
     }
     .parse::<ItemImpl>()
-    .with_generics(input.generics.clone());
+    .with_generics(generics);
 
     for param in item.generics.params.iter_mut() {
         match param {
