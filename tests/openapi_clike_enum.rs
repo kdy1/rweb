@@ -40,4 +40,6 @@ fn description() {
     println!("{}", yaml);
 
     assert!(yaml.contains("enum:"));
+    assert!(yaml.contains("- Blue"));
+    assert!(yaml.contains("- Black"));
 }
