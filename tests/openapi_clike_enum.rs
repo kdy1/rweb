@@ -11,7 +11,9 @@ fn index(_: Json<Color>) -> String {
 
 #[derive(Debug, Serialize, Deserialize, Schema)]
 pub enum Color {
+    #[serde(rename = "black")]
     Black,
+    #[serde(rename = "blue")]
     Blue,
 }
 
@@ -40,4 +42,6 @@ fn description() {
     println!("{}", yaml);
 
     assert!(yaml.contains("enum:"));
+    assert!(yaml.contains("- blue"));
+    assert!(yaml.contains("- black"));
 }
