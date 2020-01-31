@@ -104,3 +104,41 @@ fn enum_variant() {
 fn enum_field() {
     unimplemented!()
 }
+
+#[test]
+fn enum_rename_all() {
+    #[derive(Debug, Serialize, Deserialize, Schema)]
+    struct Resp {
+        data: String,
+    }
+
+    #[derive(Debug, Serialize, Deserialize, Schema)]
+    #[serde(rename_all = "camelCase")]
+    enum Enum {
+        A(String),
+        B { resp_data: Resp },
+    }
+
+    #[derive(Debug, Serialize, Deserialize, Schema)]
+    struct Data {
+        data: Enum,
+    }
+
+    #[get("/")]
+    fn index(_: Query<Data>) -> String {
+        String::new()
+    }
+
+    let (spec, _) = openapi::spec().build(|| {
+        //
+        index()
+    });
+
+    assert!(spec.paths.get("/").is_some());
+    assert!(spec.paths.get("/").unwrap().get.is_some());
+
+    let yaml = serde_yaml::to_string(&spec).unwrap();
+    println!("{}", yaml);
+
+    assert!(yaml.contains("respData"));
+}
