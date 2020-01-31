@@ -1,3 +1,17 @@
+use crate::{
+    parse::{Delimited, KeyValue, Paren},
+    route::EqStr,
+    util::ItemImplExt,
+};
+use pmutil::{q, ToTokensExt};
+use proc_macro2::{Ident, TokenStream};
+use syn::{
+    parse2,
+    punctuated::{Pair, Punctuated},
+    Attribute, Block, Data, DeriveInput, Expr, Field, FieldValue, Fields, GenericParam, ItemImpl,
+    Lit, Meta, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
+};
+
 /// Search for `#[serde(rename = '')]`
 fn get_rename(attrs: &[Attribute]) -> Option<String> {
     let attr = attrs.iter().find(|attr| {
@@ -118,7 +132,7 @@ fn handle_field(f: &mut Field) -> Stmt {
             name: i,
             desc,
             Type: &f.ty,
-            example_v: quote_option(example_v),
+            example_v: super::quote_option(example_v),
         },
         {
             map.insert(rweb::rt::Cow::Borrowed(stringify!(name)), {

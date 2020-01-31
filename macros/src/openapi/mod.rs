@@ -7,21 +7,19 @@
 
 pub use self::derive::derive_schema;
 use crate::{
-    parse::{Delimited, KeyValue, Paren},
+    parse::{Delimited, Paren},
     path::find_ty,
     route::EqStr,
-    util::ItemImplExt,
 };
 use pmutil::{q, Quote, ToTokensExt};
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use rweb_openapi::v3_0::{Location, ObjectOrReference, Operation, Parameter, Schema};
 use std::borrow::Cow;
 use syn::{
     export::ToTokens,
     parse2,
     punctuated::{Pair, Punctuated},
-    Attribute, Block, Data, DeriveInput, Expr, Field, FieldValue, Fields, GenericParam, ItemImpl,
-    Lit, Meta, NestedMeta, Signature, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
+    Attribute, Expr, Lit, Meta, NestedMeta, Signature, Token,
 };
 
 mod derive;
