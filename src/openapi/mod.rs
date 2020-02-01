@@ -285,7 +285,7 @@ impl Collector {
 
             // TODO
             content.insert(
-                "*/*".into(),
+                Cow::Borrowed(T::content_type()),
                 MediaType {
                     schema: Some(ObjectOrReference::Object(s)),
                     examples: None,
