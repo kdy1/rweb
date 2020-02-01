@@ -12,7 +12,7 @@
 //!
 //! # Attributes on function item
 //!
-//! ## `#[herader("content-type", "applcation/json)]`
+//! ## `#[header("content-type", "applcation/json)]`
 //!
 //! Make a route matches only if value of the header matches provided value.
 //!
