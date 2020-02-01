@@ -1,4 +1,3 @@
-#![feature(map_first_last)]
 #![cfg(feature = "openapi")]
 
 use rweb::*;
