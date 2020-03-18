@@ -468,8 +468,8 @@ impl ResponseEntity for Infallible {
 }
 
 impl<T> Entity for Json<T>
-where
-    T: Entity,
+    where
+        T: Entity,
 {
     #[inline]
     fn describe() -> Schema {
@@ -482,8 +482,8 @@ where
 }
 
 impl<T> ResponseEntity for Json<T>
-where
-    T: Entity,
+    where
+        T: Entity,
 {
     fn describe_responses() -> Responses {
         let schema = Self::describe();
@@ -509,6 +509,46 @@ where
         map
     }
 }
+
+impl Entity for serde_json::Value
+{
+    fn describe() -> Schema {
+        <() as Entity>::describe()
+    }
+
+    fn describe_components() -> Vec<(Cow<'static, str>, Schema)> {
+        Default::default()
+    }
+}
+
+impl ResponseEntity for serde_json::Value
+{
+    fn describe_responses() -> Responses {
+        let schema = Self::describe();
+        let mut content = BTreeMap::new();
+        content.insert(
+            Cow::Borrowed("application/json"),
+            MediaType {
+                schema: Some(ObjectOrReference::Object(schema)),
+                examples: None,
+                encoding: Default::default(),
+            },
+        );
+        let mut map = Responses::new();
+
+        map.insert(
+            Cow::Borrowed("200"),
+            Response {
+                content,
+                ..Default::default()
+            },
+        );
+
+        map
+    }
+}
+
+
 
 impl<T> Entity for Query<T>
 where
