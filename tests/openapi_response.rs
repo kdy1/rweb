@@ -1,7 +1,7 @@
 #![cfg(feature = "openapi")]
 
 use rweb::{
-    rt::{BTreeMap, Cow},
+    rt::{Cow, IndexMap},
     *,
 };
 use rweb_openapi::v3_0::Response;
@@ -12,7 +12,7 @@ enum Error {}
 
 impl openapi::ResponseEntity for Error {
     fn describe_responses() -> openapi::Responses {
-        let mut map = BTreeMap::new();
+        let mut map = IndexMap::new();
 
         map.insert(
             Cow::Borrowed("404"),

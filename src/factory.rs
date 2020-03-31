@@ -31,7 +31,9 @@ pub trait FromRequest: Sized {
         false
     }
 
-    fn content_type() -> &'static str { "*/*" }
+    fn content_type() -> &'static str {
+        "*/*"
+    }
 
     fn new() -> Self::Filter;
 }
@@ -98,7 +100,9 @@ where
         true
     }
 
-    fn content_type() -> &'static str { "application/json" }
+    fn content_type() -> &'static str {
+        "application/json"
+    }
 
     fn new() -> Self::Filter {
         warp::body::json().boxed()
@@ -135,7 +139,9 @@ where
         true
     }
 
-    fn content_type() -> &'static str { "x-www-form-urlencoded" }
+    fn content_type() -> &'static str {
+        "x-www-form-urlencoded"
+    }
 
     fn new() -> Self::Filter {
         warp::body::form().boxed()

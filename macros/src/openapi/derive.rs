@@ -206,8 +206,8 @@ fn handle_fields(type_attrs: &[Attribute], fields: &mut Fields) -> Block {
     block.stmts.push(
         q!({
             #[allow(unused_mut)]
-            let mut map: rweb::rt::BTreeMap<rweb::rt::Cow<'static, str>, _> =
-                rweb::rt::BTreeMap::default();
+            let mut map: rweb::rt::IndexMap<rweb::rt::Cow<'static, str>, _> =
+                rweb::rt::IndexMap::default();
         })
         .parse(),
     );

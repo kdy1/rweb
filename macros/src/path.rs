@@ -40,8 +40,9 @@ pub fn compile(
     let mut vars = vec![];
 
     // Filter empty segments before iterating over them.
-    // Mainly it will come from the required path in the beginning / but could also come from the end /
-    // Example: #[get("/{word}")] or #[get("/{word}/")] with the `/` before and after `{word}`
+    // Mainly it will come from the required path in the beginning / but could also
+    // come from the end / Example: #[get("/{word}")] or #[get("/{word}/")] with
+    // the `/` before and after `{word}`
     let segments: Vec<&str> = path.split('/').into_iter().filter(|&x| x != "").collect();
     for segment in segments {
         let expr = if segment.starts_with('{') {
@@ -54,8 +55,10 @@ pub fn compile(
                     .enumerate()
                     .filter_map(|(idx, arg)| match arg {
                         FnArg::Typed(ty) => match *ty.pat {
-                            // Here if we find a Pat::Ident we get i: &PatIdent and i.ident is the parameter in the route fn.
-                            // I.e dyn_reply(word: String), this would be named: `word` and we compare it to the segment name mentioned above.
+                            // Here if we find a Pat::Ident we get i: &PatIdent and i.ident is the
+                            // parameter in the route fn.
+                            // I.e dyn_reply(word: String), this would be named: `word` and we
+                            // compare it to the segment name mentioned above.
                             // If they match:
                             //      We uses it and adds to our variables.
                             // else

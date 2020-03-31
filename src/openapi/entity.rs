@@ -1,15 +1,16 @@
 use crate::{Form, Json, Query};
+use indexmap::IndexMap;
 pub use rweb_openapi::v3_0::*;
 use std::{
     borrow::Cow,
-    collections::{BTreeMap, BTreeSet, HashSet, LinkedList, VecDeque},
+    collections::{BTreeSet, HashSet, LinkedList, VecDeque},
     convert::Infallible,
 };
 use warp::{Rejection, Reply};
 
 pub type Components = Vec<(Cow<'static, str>, Schema)>;
 
-pub type Responses = BTreeMap<Cow<'static, str>, Response>;
+pub type Responses = IndexMap<Cow<'static, str>, Response>;
 
 /// This can be derived by `#[derive(Schema)]`.
 ///
@@ -325,7 +326,7 @@ impl Entity for String {
 
 impl ResponseEntity for String {
     fn describe_responses() -> Responses {
-        let mut content = BTreeMap::new();
+        let mut content = IndexMap::new();
         content.insert(
             Cow::Borrowed("text/plain"),
             MediaType {
@@ -335,7 +336,7 @@ impl ResponseEntity for String {
             },
         );
 
-        let mut map = BTreeMap::new();
+        let mut map = IndexMap::new();
         map.insert(
             Cow::Borrowed("200"),
             Response {
@@ -375,14 +376,14 @@ where
     T: ResponseEntity,
     E: ResponseEntity,
 {
-    fn describe_responses() -> BTreeMap<Cow<'static, str>, Response> {
+    fn describe_responses() -> IndexMap<Cow<'static, str>, Response> {
         let mut map = T::describe_responses();
         map.extend(E::describe_responses());
         map
     }
 }
 
-//impl<K, V> Entity for BTreeMap<K, V> {}
+//impl<K, V> Entity for IndexMap<K, V> {}
 
 impl<V> Entity for BTreeSet<V>
 where
@@ -468,8 +469,8 @@ impl ResponseEntity for Infallible {
 }
 
 impl<T> Entity for Json<T>
-    where
-        T: Entity,
+where
+    T: Entity,
 {
     #[inline]
     fn describe() -> Schema {
@@ -482,12 +483,12 @@ impl<T> Entity for Json<T>
 }
 
 impl<T> ResponseEntity for Json<T>
-    where
-        T: Entity,
+where
+    T: Entity,
 {
     fn describe_responses() -> Responses {
         let schema = Self::describe();
-        let mut content = BTreeMap::new();
+        let mut content = IndexMap::new();
         content.insert(
             Cow::Borrowed("application/json"),
             MediaType {
@@ -510,8 +511,7 @@ impl<T> ResponseEntity for Json<T>
     }
 }
 
-impl Entity for serde_json::Value
-{
+impl Entity for serde_json::Value {
     fn describe() -> Schema {
         <() as Entity>::describe()
     }
@@ -521,11 +521,10 @@ impl Entity for serde_json::Value
     }
 }
 
-impl ResponseEntity for serde_json::Value
-{
+impl ResponseEntity for serde_json::Value {
     fn describe_responses() -> Responses {
         let schema = Self::describe();
-        let mut content = BTreeMap::new();
+        let mut content = IndexMap::new();
         content.insert(
             Cow::Borrowed("application/json"),
             MediaType {
@@ -547,8 +546,6 @@ impl ResponseEntity for serde_json::Value
         map
     }
 }
-
-
 
 impl<T> Entity for Query<T>
 where

@@ -26,7 +26,8 @@ async fn main() {
         id: 1,
         name: "Christoffer".to_string(),
     };
-    // Sending user so it can be used in display user. Usually you would send a db_connection or something.
+    // Sending user so it can be used in display user. Usually you would send a
+    // db_connection or something.
     let routes = routes![hi, ping].or(routes![user; display_user]);
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }

@@ -183,7 +183,7 @@
 //!
 //! ```rust
 //! use rweb::*;
-//! use std::collections::BTreeMap;
+//! use indexmap::IndexMap;
 //! use std::borrow::Cow;
 //!
 //! #[derive(Debug, Schema)]
@@ -193,7 +193,7 @@
 //!
 //! impl openapi::ResponseEntity for Error {
 //!     fn describe_responses() -> openapi::Responses {
-//!         let mut map = BTreeMap::new();
+//!         let mut map = IndexMap::new();
 //!
 //!         map.insert(
 //!             Cow::Borrowed("404"),
@@ -214,9 +214,10 @@ pub use self::{
 };
 use crate::FromRequest;
 use http::Method;
+use indexmap::IndexMap;
 pub use rweb_openapi::v3_0::*;
 use scoped_tls::scoped_thread_local;
-use std::{borrow::Cow, cell::RefCell, collections::BTreeMap, mem::replace};
+use std::{borrow::Cow, cell::RefCell, mem::replace};
 
 mod builder;
 mod entity;
@@ -281,7 +282,7 @@ impl Collector {
 
             let s = T::describe();
 
-            let mut content = BTreeMap::new();
+            let mut content = IndexMap::new();
 
             // TODO
             content.insert(

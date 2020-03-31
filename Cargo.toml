@@ -2,7 +2,7 @@
 
 [package]
 name = "rweb"
-version = "0.4.3"
+version = "0.5.0"
 authors = ["강동윤 <kdy1997.dev@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/kdy1/rweb.git"
@@ -26,9 +26,10 @@ warp = "0.2.1"
 http = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rweb-openapi = { version = "0.4.0", optional = true }
+rweb-openapi = { version = "0.5.0", optional = true }
 scoped-tls = "1"
 futures = "0.3"
+indexmap = "1"
 
 
 [dev-dependencies]

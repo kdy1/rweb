@@ -39,6 +39,7 @@ pub enum RenameRule {
 impl RenameRule {
     /// Apply a renaming rule to an enum variant, returning the version expected
     /// in the source.
+    #[allow(dead_code)]
     pub fn apply_to_variant(&self, variant: &str) -> String {
         match *self {
             None | PascalCase => variant.to_owned(),
