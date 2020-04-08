@@ -29,7 +29,7 @@ fn output() -> String {
     String::from("this returns 200 with text/plain mime type")
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Schema)]
 struct Product {
     id: String,
     title: String,
@@ -37,20 +37,20 @@ struct Product {
 
 #[get("/products")]
 fn products() -> Json<Vec<Product>> {
-    // This returns 200 with application/json
+    panic!() // This returns 200 with application/json
 }
 
 #[get("/products/{id}")]
 fn product(id: String) -> Json<Product> {
-    // This returns 200 with application/json
+    panic!() // This returns 200 with application/json
 }
 
 #[get("/product")]
 fn new_product(_product: Json<Product>) -> Json<Product> {
-    // This returns 200 with application/json
+    panic!() // This returns 200 with application/json
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Schema)]
 struct SearchOption {
     query: String,
     limit: usize,
@@ -59,7 +59,7 @@ struct SearchOption {
 
 #[get("/search")]
 fn search(_product: Query<SearchOption>) -> Json<Vec<Product>> {
-    // This returns 200 with application/json
+    panic!() // This returns 200 with application/json
 }
 
 #[tokio::main]
