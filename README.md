@@ -8,7 +8,7 @@ Installation (without automatic openapi generation):
 
 ```toml
 [dependencies]
-rweb = "0.4"
+rweb = "0.5"
 tokio = "0.2"
 ```
 
