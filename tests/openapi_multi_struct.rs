@@ -26,5 +26,5 @@ fn description() {
     });
 
     let yaml = serde_yaml::to_string(&spec).unwrap();
-    panic!("{}", yaml);
+    println!!("{}", yaml);
 }
