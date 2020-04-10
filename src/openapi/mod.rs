@@ -264,15 +264,15 @@ impl Collector {
         for (k, s) in T::describe_components() {
             if self.spec.components.is_none() {
                 self.spec.components = Some(Default::default());
-                // TODO: Error reporting
-                // TODO: Remove duplicate work
-                self.spec
-                    .components
-                    .as_mut()
-                    .unwrap()
-                    .schemas
-                    .insert(k, ObjectOrReference::Object(s));
             }
+            // TODO: Error reporting
+            // TODO: Remove duplicate work
+            self.spec
+                .components
+                .as_mut()
+                .unwrap()
+                .schemas
+                .insert(k, ObjectOrReference::Object(s));
         }
 
         if T::is_body() {
