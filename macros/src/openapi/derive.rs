@@ -142,7 +142,7 @@ fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
                 _ => return true,
             };
             doc = Some(v);
-            return false;
+            return true;
         }
 
         if attr.path.is_ident("doc") {
