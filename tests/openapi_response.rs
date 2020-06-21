@@ -63,3 +63,20 @@ fn component_test() {
     let yaml = serde_yaml::to_string(&spec).unwrap();
     println!("{}", yaml);
 }
+
+#[derive(Debug, Serialize, Schema)]
+#[schema(component = "Item")]
+struct Item {}
+
+#[get("/item")]
+fn item() -> Result<Json<Item>, Error> {
+    unimplemented!()
+}
+
+#[test]
+fn component_in_response() {
+    let (spec, _) = openapi::spec().build(|| item());
+    assert!(spec.paths.get("/item").is_some());
+    assert!(spec.paths.get("/item").unwrap().get.is_some());
+    assert!(spec.components.unwrap().schemas.get("Item").is_some());
+}
