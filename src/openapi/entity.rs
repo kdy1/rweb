@@ -27,7 +27,7 @@ pub type Responses = IndexMap<Cow<'static, str>, Response>;
 ///
 /// /// private documentation, for example
 /// #[derive(Debug, Default, Schema)]
-/// #[schema(description = "This is output!!")]
+/// // #[schema(description = "This is output!!")]
 /// pub struct Output {
 ///     /// By default, doc comments become description
 ///     data: String,
