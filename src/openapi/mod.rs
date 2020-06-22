@@ -261,19 +261,7 @@ impl Collector {
     }
 
     pub fn add_request_type_to<T: FromRequest + Entity>(&mut self, op: &mut Operation) {
-        for (k, s) in T::describe_components() {
-            if self.spec.components.is_none() {
-                self.spec.components = Some(Default::default());
-            }
-            // TODO: Error reporting
-            // TODO: Remove duplicate work
-            self.spec
-                .components
-                .as_mut()
-                .unwrap()
-                .schemas
-                .insert(k, ObjectOrReference::Object(s));
-        }
+        self.add_components(T::describe_components());
 
         if T::is_body() {
             if op.request_body.is_some() {
@@ -348,8 +336,23 @@ impl Collector {
     }
 
     pub fn add_response_to<T: ResponseEntity>(&mut self, op: &mut Operation) {
+        self.add_components(T::describe_components());
         let responces = T::describe_responses();
         op.responses.extend(responces);
+    }
+
+    fn add_components(&mut self, components: Components) {
+        for (k, s) in components {
+            if self.spec.components.is_none() {
+                self.spec.components = Some(Default::default());
+            }
+            self.spec
+                .components
+                .as_mut()
+                .unwrap()
+                .schemas
+                .insert(k, ObjectOrReference::Object(s));
+        }
     }
 
     #[doc(hidden)]
