@@ -85,7 +85,7 @@ pub trait Entity {
     }
 }
 
-/// THis should be implemented only for types that know how it should be
+/// This should be implemented only for types that know how it should be
 /// encoded.
 pub trait ResponseEntity: Entity {
     fn describe_responses() -> Responses;
