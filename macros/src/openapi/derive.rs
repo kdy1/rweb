@@ -305,7 +305,8 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                         let name = if let Some(v) = get_rename(&variant.attrs) {
                             v
                         } else {
-                            variant.ident.to_string()
+                            let rule = get_rename_all(&attrs);
+                            rule.apply_to_variant(&variant.ident.to_string())
                         };
                         Pair::Punctuated(
                             q!(Vars { name }, { rweb::rt::Cow::Borrowed(name) }).parse(),

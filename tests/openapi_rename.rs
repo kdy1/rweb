@@ -167,3 +167,37 @@ fn enum_rename_all() {
 
     assert!(yaml.contains("respData"));
 }
+
+#[test]
+fn enum_rename_all_variant() {
+    #[derive(Debug, Serialize, Deserialize, Schema)]
+    #[serde(rename_all = "camelCase")]
+    enum Enum {
+        Foo,
+        Bar,
+    }
+
+    #[derive(Debug, Serialize, Deserialize, Schema)]
+    struct Data {
+        data: Enum,
+    }
+
+    #[get("/")]
+    fn index(_: Query<Data>) -> String {
+        String::new()
+    }
+
+    let (spec, _) = openapi::spec().build(|| {
+        //
+        index()
+    });
+
+    assert!(spec.paths.get("/").is_some());
+    assert!(spec.paths.get("/").unwrap().get.is_some());
+
+    let yaml = serde_yaml::to_string(&spec).unwrap();
+    println!("{}", yaml);
+
+    assert!(yaml.contains("foo"));
+    assert!(yaml.contains("bar"));
+}

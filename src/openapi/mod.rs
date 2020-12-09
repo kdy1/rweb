@@ -253,7 +253,7 @@ impl Collector {
         let ret = COLLECTOR.set(&cell, || op());
 
         let new = cell.into_inner();
-        replace(self, new);
+        let _ = replace(self, new);
 
         self.tags.drain(orig_tag_len..);
         self.path_prefix.drain(orig_len..);
