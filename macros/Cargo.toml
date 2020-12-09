@@ -1,11 +1,11 @@
 [package]
-name = "rweb-macros"
-version = "0.4.4"
 authors = ["강동윤 <kdy1997.dev@gmail.com>"]
-license = "Apache-2.0"
-repository = "https://github.com/kdy1/rweb.git"
 description = "Yet another web server framework for rust"
 edition = "2018"
+license = "Apache-2.0"
+name = "rweb-macros"
+repository = "https://github.com/kdy1/rweb.git"
+version = "0.4.5"
 
 [lib]
 proc-macro = true
@@ -14,8 +14,8 @@ proc-macro = true
 openapi = []
 
 [dependencies]
-rweb-openapi = "0.4.0"
 pmutil = "0.5.3"
-syn = { version = "1", features = ["full", "visit"] }
 proc-macro2 = "1"
 quote = "1"
+rweb-openapi = "0.4.0"
+syn = {version = "1", features = ["full", "visit"]}
