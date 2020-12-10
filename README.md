@@ -37,17 +37,20 @@ struct Product {
 
 #[get("/products")]
 fn products() -> Json<Vec<Product>> {
-    panic!() // This returns 200 with application/json
+    // ...
+    // This returns 200 with application/json
 }
 
 #[get("/products/{id}")]
 fn product(id: String) -> Json<Product> {
-    panic!() // This returns 200 with application/json
+    // ...
+    // This returns 200 with application/json
 }
 
 #[get("/product")]
 fn new_product(_product: Json<Product>) -> Json<Product> {
-    panic!() // This returns 200 with application/json
+    // ...
+    // This returns 200 with application/json
 }
 
 #[derive(Debug, Serialize, Deserialize, Schema)]
@@ -59,7 +62,8 @@ struct SearchOption {
 
 #[get("/search")]
 fn search(_product: Query<SearchOption>) -> Json<Vec<Product>> {
-    panic!() // This returns 200 with application/json
+    // ...
+    // This returns 200 with application/json
 }
 
 #[tokio::main]
