@@ -90,7 +90,7 @@ fn example(ws: ws::Ws) -> String {
 
 rweb supports automatically generating openapi specification file based on your code.
 
-See: [documentation](https://docs.rs/rweb/0.3.0-alpha.1/rweb/openapi/index.html) for usage.
+See: [documentation](https://docs.rs/rweb/latest/rweb/openapi/index.html) for usage.
 
 # Comparison
 
