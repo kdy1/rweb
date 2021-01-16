@@ -13,10 +13,10 @@ use crate::{
 };
 use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
+use quote::ToTokens;
 use rweb_openapi::v3_0::{Location, ObjectOrReference, Operation, Parameter, Schema};
 use std::borrow::Cow;
 use syn::{
-    export::ToTokens,
     parse2,
     punctuated::{Pair, Punctuated},
     Attribute, Expr, Lit, Meta, NestedMeta, Signature, Token,
