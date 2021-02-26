@@ -28,7 +28,7 @@ pub fn router(attr: TokenStream, item: TokenStream) -> ItemFn {
     let mut f: ItemFn = parse2(item).expect("failed to parse input as a function item");
     assert!(
         f.block.stmts.is_empty(),
-        "#{router] function cannot have body"
+        "#[router] function cannot have body"
     );
 
     let router_name = &f.sig.ident;
