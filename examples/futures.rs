@@ -13,7 +13,7 @@ async fn main() {
 
 #[get("/{seconds}")]
 async fn sleepy(seconds: Seconds) -> Result<impl rweb::Reply, Infallible> {
-    tokio::time::delay_for(Duration::from_secs(seconds.0)).await;
+    tokio::time::sleep(Duration::from_secs(seconds.0)).await;
     Ok(format!("I waited {} seconds!", seconds.0))
 }
 
