@@ -1,6 +1,6 @@
 use bytes::Bytes;
-use futures::{Stream, StreamExt};
-use rweb::{get, post, sse::ServerSentEvent, Filter, Rejection, Reply};
+use futures::Stream;
+use rweb::{get, post, sse::Event, Filter, Rejection, Reply};
 use std::{
     collections::HashMap,
     sync::{
@@ -9,6 +9,7 @@ use std::{
     },
 };
 use tokio::sync::{mpsc, oneshot};
+use tokio_stream::{wrappers::UnboundedReceiverStream, StreamExt};
 
 /// Our global unique user id counter.
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
@@ -78,10 +79,7 @@ async fn main() {
     rweb::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }
 
-fn user_connected(
-    users: Users,
-) -> impl Stream<Item = Result<impl ServerSentEvent + Send + 'static, rweb::Error>> + Send + 'static
-{
+fn user_connected(users: Users) -> impl Stream<Item = Result<Event, rweb::Error>> + Send + 'static {
     // Use a counter to assign a new unique ID for this user.
     let my_id = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
 
@@ -119,9 +117,11 @@ fn user_connected(
     });
 
     // Convert messages into Server-Sent Events and return resulting stream.
-    rx.map(|msg| match msg {
-        Message::UserId(my_id) => Ok((rweb::sse::event("user"), rweb::sse::data(my_id)).into_a()),
-        Message::Reply(reply) => Ok(rweb::sse::data(reply).into_b()),
+    UnboundedReceiverStream::new(rx).map(|msg| match msg {
+        Message::UserId(my_id) => Ok(rweb::sse::Event::default()
+            .event("user")
+            .data(my_id.to_string())),
+        Message::Reply(reply) => Ok(rweb::sse::Event::default().data(reply)),
     })
 }
 

@@ -13,6 +13,7 @@ use rweb::{
     Filter,
 };
 use tokio::sync::mpsc;
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 /// Our global unique user id counter.
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
@@ -63,11 +64,15 @@ fn user_connected(ws: WebSocket, users: Users) -> impl Future<Output = Result<()
     // Use an unbounded channel to handle buffering and flushing of messages
     // to the websocket...
     let (tx, rx) = mpsc::unbounded_channel();
-    tokio::task::spawn(rx.forward(user_ws_tx).map(|result| {
-        if let Err(e) = result {
-            eprintln!("websocket send error: {}", e);
-        }
-    }));
+    tokio::task::spawn(
+        UnboundedReceiverStream::new(rx)
+            .forward(user_ws_tx)
+            .map(|result| {
+                if let Err(e) = result {
+                    eprintln!("websocket send error: {}", e);
+                }
+            }),
+    );
 
     // Save the sender in our list of connected users.
     users.lock().unwrap().insert(my_id, tx);
