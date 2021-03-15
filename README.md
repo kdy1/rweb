@@ -4,12 +4,21 @@
 
 Yet another web server framework for rust.
 
-Installation (without automatic openapi generation):
+Installation:
 
 ```toml
 [dependencies]
-rweb = "0.5"
-tokio = "0.2"
+rweb = "0.6"
+tokio = "1"
+```
+
+Installation (with automatic openapi generation):
+
+```toml
+[dependencies]
+rweb = { version = "0.6", features = ["openapi"] }
+serde = "1"
+tokio = "1"
 ```
 
 # Features
@@ -91,6 +100,26 @@ fn example(ws: ws::Ws) -> String {
 rweb supports automatically generating openapi specification file based on your code.
 
 See: [documentation](https://docs.rs/rweb/latest/rweb/openapi/index.html) for usage.
+
+- API UX interaction for openapi
+
+```rust
+// Build openapi for your API
+let (spec, filter) = openapi::spec().build(move || {
+    // Your API's filters
+    math::math()
+        .or(products::products())
+        .or(generic::body())
+        .or(generic::optional())
+        .or(generic::search())
+        .or(response::response())
+});
+
+println!("go to http://localhost:3030/docs to interact with your openapi!");
+serve(filter.or(openapi_docs(spec)))
+    .run(([127, 0, 0, 1], 3030))
+    .await;
+```
 
 # Comparison
 

@@ -367,6 +367,10 @@ pub use self::factory::{Form, FromRequest, Json, Query};
 pub use rweb_macros::{delete, get, head, options, patch, post, put, router, Schema};
 pub use warp::{self, *};
 
+#[cfg(feature = "openapi")]
+pub mod docs;
+#[cfg(feature = "openapi")]
+pub use self::docs::*;
 mod factory;
 #[cfg(feature = "openapi")]
 pub mod openapi;

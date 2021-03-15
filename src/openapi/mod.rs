@@ -5,10 +5,11 @@
 //!
 //! Enable cargo feature by
 //!
-//!```toml
+//! ```toml
 //! [dependencies]
-//! rweb = { version = "0.3.0-alpha.1", features = ["openapi"] }
-//! tokio = "0.2"
+//! rweb = { version = "0.6", features = ["openapi"] }
+//! serde = "1"
+//! tokio = "1"
 //! ```
 //!
 //! and wrap your handlers like

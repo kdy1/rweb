@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 #[tokio::main]
 async fn main() {
-    let (spec, _filter) = openapi::spec().build(|| {
+    let (spec, filter) = openapi::spec().build(move || {
         // Build filters
 
         math::math()
@@ -14,7 +14,10 @@ async fn main() {
             .or(response::response())
     });
 
-    println!("{}", serde_yaml::to_string(&spec).unwrap());
+    println!("go to http://localhost:3030/docs to interact with your openapi!");
+    serve(filter.or(openapi_docs(spec)))
+        .run(([127, 0, 0, 1], 3030))
+        .await;
 }
 
 mod response {
