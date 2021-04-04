@@ -92,7 +92,6 @@ fn errable() -> Json<()> {
 fn response_code_in_response() {
     let (spec, _) = openapi::spec().build(|| errable());
     let op = spec.paths.get("/errable").unwrap().get.as_ref().unwrap();
-    println!("{:?}", op.responses);
     assert!(op.responses.get("417").is_some());
     assert!(op.responses.get("417").unwrap().description == "🍵");
     assert!(op.responses.get("5XX").is_some());
