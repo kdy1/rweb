@@ -82,6 +82,7 @@ mod products {
     #[get("/{id}")]
     #[openapi(id = "products.get")]
     #[openapi(summary = "Get a product")]
+    #[openapi(response(code = "404", description = "Product not found"))]
     fn product(id: String) -> Json<Product> {
         Product {
             id,
