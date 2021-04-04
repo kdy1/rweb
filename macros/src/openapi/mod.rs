@@ -289,7 +289,6 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                                             );
                                         }
                                     };
-                                    println!("{:?}", op.responses);
                                 }
                                 _ => invalid_usage!(),
                             }
