@@ -283,7 +283,7 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
 					}
                     let mut code: Option<String> = None;
                     let mut description: Option<String> = None;
-                    //TODO Schema?
+                    let mut schema: Option<String> = None;
                     match config {
                         Meta::List(l) => {
                             for tag in l.nested {
@@ -294,6 +294,8 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                                                 code = Some(s.value())
                                             } else if v.path.is_ident("description") {
                                                 description = Some(s.value())
+                                            } else if v.path.is_ident("schema") {
+                                                schema = Some(s.value())
                                             } else {
                                                 invalid_usage!()
                                             }
@@ -307,11 +309,11 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                                 (Some(c), Some(d)) => {
                                     match op.responses.get_mut(&Cow::Owned(c.clone())) {
                                         Some(resp) => {
-                                            resp.description = Cow::Owned(c);
+                                            resp.description = Cow::Owned(c.clone());
                                         }
                                         None => {
                                             op.responses.insert(
-                                                Cow::Owned(c),
+                                                Cow::Owned(c.clone()),
                                                 Response {
                                                     description: Cow::Owned(d),
                                                     ..Default::default()
@@ -319,6 +321,21 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                                             );
                                         }
                                     };
+                                    if let Some(s) = schema {
+                                        op.responses
+                                            .get_mut(&Cow::Owned(c.clone()))
+                                            .unwrap()
+                                            .content
+                                            .insert(
+                                                Cow::Borrowed("rweb/intermediate"),
+                                                MediaType {
+                                                    schema: Some(ObjectOrReference::Ref {
+                                                        ref_path: Cow::Owned(s),
+                                                    }),
+                                                    ..Default::default()
+                                                },
+                                            );
+                                    }
                                 }
                                 _ => invalid_usage!(),
                             }
