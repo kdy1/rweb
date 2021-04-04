@@ -14,7 +14,7 @@ use crate::{
 use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use rweb_openapi::v3_0::{Location, ObjectOrReference, Operation, Parameter, Schema};
+use rweb_openapi::v3_0::{Location, ObjectOrReference, Operation, Parameter, Response, Schema};
 use std::borrow::Cow;
 use syn::{
     parse2,
@@ -209,6 +209,57 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                             }
                         }
                         _ => panic!("Correct usage: #[openapi(tags(\"foo\" ,\"bar\")]"),
+                    }
+                } else if config.path().is_ident("response") {
+                    macro_rules! invalid_usage {
+						() => {
+							panic!("Correct usage: #[openapi(response(code = \"409\", description = \"foo already exists\")]")
+						}
+					}
+                    let mut code: Option<String> = None;
+                    let mut description: Option<String> = None;
+                    //TODO Schema?
+                    match config {
+                        Meta::List(l) => {
+                            for tag in l.nested {
+                                match tag {
+                                    NestedMeta::Meta(Meta::NameValue(v)) => match v.lit {
+                                        Lit::Str(s) => {
+                                            if v.path.is_ident("code") {
+                                                code = Some(s.value())
+                                            } else if v.path.is_ident("description") {
+                                                description = Some(s.value())
+                                            } else {
+                                                invalid_usage!()
+                                            }
+                                        }
+                                        _ => invalid_usage!(),
+                                    },
+                                    _ => invalid_usage!(),
+                                }
+                            }
+                            match (code, description) {
+                                (Some(c), Some(d)) => {
+                                    match op.responses.get_mut(&Cow::Owned(c.clone())) {
+                                        Some(resp) => {
+                                            resp.description = Cow::Owned(c);
+                                        }
+                                        None => {
+                                            op.responses.insert(
+                                                Cow::Owned(c),
+                                                Response {
+                                                    description: Cow::Owned(d),
+                                                    ..Default::default()
+                                                },
+                                            );
+                                        }
+                                    };
+                                    println!("{:?}", op.responses);
+                                }
+                                _ => invalid_usage!(),
+                            }
+                        }
+                        _ => invalid_usage!(),
                     }
                 } else {
                     panic!("Unknown openapi config `{}`", config.dump())
