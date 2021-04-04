@@ -25,6 +25,20 @@ use syn::{
 mod case;
 mod derive;
 
+macro_rules! quote_str_indexmap {
+	($map:expr, $quot:ident) => {
+		$map.iter()
+        .map(|(nam, t)| {
+			let tq = $quot(t);
+            Pair::Punctuated(
+                q!(Vars { nam, tq }, { rweb::rt::Cow::Borrowed(nam) => tq }),
+                Default::default(),
+            )
+        })
+        .collect();
+	};
+}
+
 pub fn quote_op(op: Operation) -> Expr {
     let tags_v: Punctuated<Quote, Token![,]> = op
         .tags
@@ -43,6 +57,9 @@ pub fn quote_op(op: Operation) -> Expr {
         .map(|v| Pair::Punctuated(quote_parameter(v), Default::default()))
         .collect();
 
+    let responses_v: Punctuated<Quote, Token![,]> =
+        quote_str_indexmap!(op.responses, quote_response);
+
     q!(
         Vars {
             tags_v,
@@ -50,6 +67,7 @@ pub fn quote_op(op: Operation) -> Expr {
             summary_v: op.summary,
             description_v: op.description,
             params_v,
+            responses_v,
         },
         {
             rweb::openapi::Operation {
@@ -58,6 +76,7 @@ pub fn quote_op(op: Operation) -> Expr {
                 description: rweb::rt::Cow::Borrowed(description_v),
                 operation_id: rweb::rt::Cow::Borrowed(id_v),
                 parameters: vec![params_v],
+                responses: indexmap::indexmap! {responses_v},
                 ..Default::default()
             }
         }
@@ -111,6 +130,22 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
                 schema: Some(<Type as rweb::openapi::Entity>::describe()),
                 ..Default::default()
             })
+        }
+    )
+    .parse()
+}
+
+fn quote_response(r: &Response) -> Expr {
+    //TODO headers, content, links
+    q!(
+        Vars {
+            description_v: &r.description
+        },
+        {
+            rweb::openapi::Response {
+                description: rweb::rt::Cow::Borrowed(description_v),
+                ..Default::default()
+            }
         }
     )
     .parse()
