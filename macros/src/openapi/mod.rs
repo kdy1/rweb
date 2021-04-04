@@ -14,7 +14,9 @@ use crate::{
 use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use rweb_openapi::v3_0::{Location, ObjectOrReference, Operation, Parameter, Response, Schema};
+use rweb_openapi::v3_0::{
+    Location, MediaType, ObjectOrReference, Operation, Parameter, Response, Schema,
+};
 use std::borrow::Cow;
 use syn::{
     parse2,
@@ -136,19 +138,47 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
 }
 
 fn quote_response(r: &Response) -> Expr {
-    //TODO headers, content, links
+    //TODO headers, links
+    let content_v: Punctuated<Quote, Token![,]> = quote_str_indexmap!(r.content, quote_mediatype);
     q!(
         Vars {
-            description_v: &r.description
+            description_v: &r.description,
+            content_v
         },
         {
             rweb::openapi::Response {
                 description: rweb::rt::Cow::Borrowed(description_v),
+                content: indexmap::indexmap! {content_v},
                 ..Default::default()
             }
         }
     )
     .parse()
+}
+
+fn quote_mediatype(m: &MediaType) -> Expr {
+    //TODO examples, encoding
+    let schema_v = quote_option(m.schema.as_ref().map(quote_schema_or_ref));
+    q!(Vars { schema_v }, {
+        rweb::openapi::MediaType {
+            schema: schema_v,
+            ..Default::default()
+        }
+    })
+    .parse()
+}
+
+fn quote_schema_or_ref(ros: &ObjectOrReference<Schema>) -> TokenStream {
+    match ros {
+        ObjectOrReference::Ref { ref_path: r } => r
+            .parse::<TokenStream>()
+            .expect("failed to lex path to type"),
+        ObjectOrReference::Object(schema) => match &schema.ref_path {
+            r => r
+                .parse::<TokenStream>()
+                .expect("failed to lex path to type"),
+        },
+    }
 }
 
 fn quote_location(l: Location) -> Quote {
