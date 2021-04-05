@@ -84,7 +84,7 @@ fn component_in_response() {
 #[get("/errable")]
 #[openapi(response(code = "417", description = "🍵"))]
 #[openapi(response(code = "5XX", description = "😵"))]
-#[openapi(response(code = "201", description = "✨", schema = "Json<Resp<String>>"))]
+#[openapi(response(code = 201, description = "✨", schema = "Json<Resp<String>>"))]
 fn errable() -> Json<()> {
     unimplemented!()
 }

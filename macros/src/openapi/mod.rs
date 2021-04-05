@@ -324,6 +324,13 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                                                 invalid_usage!()
                                             }
                                         }
+                                        Lit::Int(i) => {
+                                            if i.base10_parse::<u16>().is_ok() {
+                                                code = Some(i.to_string())
+                                            } else {
+                                                invalid_usage!()
+                                            }
+                                        }
                                         _ => invalid_usage!(),
                                     },
                                     _ => invalid_usage!(),
