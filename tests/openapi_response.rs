@@ -84,6 +84,7 @@ fn component_in_response() {
 #[get("/errable")]
 #[openapi(response(code = "417", description = "🍵"))]
 #[openapi(response(code = "5XX", description = "😵"))]
+#[openapi(response(code = "201", description = "✨", schema = "Json<Resp<String>>"))]
 fn errable() -> Json<()> {
     unimplemented!()
 }
@@ -96,4 +97,11 @@ fn response_code_in_response() {
     assert!(op.responses.get("417").unwrap().description == "🍵");
     assert!(op.responses.get("5XX").is_some());
     assert!(op.responses.get("5XX").unwrap().description == "😵");
+    assert!(op
+        .responses
+        .get("201")
+        .unwrap()
+        .content
+        .get("application/json")
+        .is_some())
 }
