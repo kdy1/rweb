@@ -138,6 +138,30 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
 }
 
 fn quote_response(r: &Response) -> Expr {
+    if let Some(irim) = r.content.get("rweb/intermediate") {
+        if let Some(ObjectOrReference::Ref { ref_path }) = &irim.schema {
+            let aschema_v: TokenStream = ref_path.parse().unwrap();
+            return q!(
+                Vars {
+                    aschema_v,
+                    description_v: &r.description
+                },
+                {
+                    (|| {
+                        let mut resp =
+                            <aschema_v as rweb::openapi::ResponseEntity>::describe_responses()
+                                .into_iter()
+                                .next()
+                                .map(|(_, r)| r)
+                                .unwrap_or_else(|| Default::default());
+                        resp.description = rweb::rt::Cow::Borrowed(description_v);
+                        resp
+                    })()
+                }
+            )
+            .parse();
+        }
+    }
     //TODO headers, links
     let content_v: Punctuated<Quote, Token![,]> = quote_str_indexmap!(r.content, quote_mediatype);
     q!(
