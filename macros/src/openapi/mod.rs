@@ -14,7 +14,9 @@ use crate::{
 use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use rweb_openapi::v3_0::{Location, ObjectOrReference, Operation, Parameter, Schema};
+use rweb_openapi::v3_0::{
+    Location, MediaType, ObjectOrReference, Operation, Parameter, Response, Schema,
+};
 use std::borrow::Cow;
 use syn::{
     parse2,
@@ -24,6 +26,20 @@ use syn::{
 
 mod case;
 mod derive;
+
+macro_rules! quote_str_indexmap {
+	($map:expr, $quot:ident) => {
+		$map.iter()
+        .map(|(nam, t)| {
+			let tq = $quot(t);
+            Pair::Punctuated(
+                q!(Vars { nam, tq }, { rweb::rt::Cow::Borrowed(nam) => tq }),
+                Default::default(),
+            )
+        })
+        .collect();
+	};
+}
 
 pub fn quote_op(op: Operation) -> Expr {
     let tags_v: Punctuated<Quote, Token![,]> = op
@@ -43,6 +59,9 @@ pub fn quote_op(op: Operation) -> Expr {
         .map(|v| Pair::Punctuated(quote_parameter(v), Default::default()))
         .collect();
 
+    let responses_v: Punctuated<Quote, Token![,]> =
+        quote_str_indexmap!(op.responses, quote_response);
+
     q!(
         Vars {
             tags_v,
@@ -50,6 +69,7 @@ pub fn quote_op(op: Operation) -> Expr {
             summary_v: op.summary,
             description_v: op.description,
             params_v,
+            responses_v,
         },
         {
             rweb::openapi::Operation {
@@ -58,6 +78,7 @@ pub fn quote_op(op: Operation) -> Expr {
                 description: rweb::rt::Cow::Borrowed(description_v),
                 operation_id: rweb::rt::Cow::Borrowed(id_v),
                 parameters: vec![params_v],
+                responses: indexmap::indexmap! {responses_v},
                 ..Default::default()
             }
         }
@@ -114,6 +135,74 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
         }
     )
     .parse()
+}
+
+fn quote_response(r: &Response) -> Expr {
+    if let Some(irim) = r.content.get("rweb/intermediate") {
+        if let Some(ObjectOrReference::Ref { ref_path }) = &irim.schema {
+            let aschema_v: TokenStream = ref_path.parse().unwrap();
+            return q!(
+                Vars {
+                    aschema_v,
+                    description_v: &r.description
+                },
+                {
+                    (|| {
+                        let mut resp =
+                            <aschema_v as rweb::openapi::ResponseEntity>::describe_responses()
+                                .into_iter()
+                                .next()
+                                .map(|(_, r)| r)
+                                .unwrap_or_else(|| Default::default());
+                        resp.description = rweb::rt::Cow::Borrowed(description_v);
+                        resp
+                    })()
+                }
+            )
+            .parse();
+        }
+    }
+    //TODO headers, links
+    let content_v: Punctuated<Quote, Token![,]> = quote_str_indexmap!(r.content, quote_mediatype);
+    q!(
+        Vars {
+            description_v: &r.description,
+            content_v
+        },
+        {
+            rweb::openapi::Response {
+                description: rweb::rt::Cow::Borrowed(description_v),
+                content: indexmap::indexmap! {content_v},
+                ..Default::default()
+            }
+        }
+    )
+    .parse()
+}
+
+fn quote_mediatype(m: &MediaType) -> Expr {
+    //TODO examples, encoding
+    let schema_v = quote_option(m.schema.as_ref().map(quote_schema_or_ref));
+    q!(Vars { schema_v }, {
+        rweb::openapi::MediaType {
+            schema: schema_v,
+            ..Default::default()
+        }
+    })
+    .parse()
+}
+
+fn quote_schema_or_ref(ros: &ObjectOrReference<Schema>) -> TokenStream {
+    match ros {
+        ObjectOrReference::Ref { ref_path: r } => r
+            .parse::<TokenStream>()
+            .expect("failed to lex path to type"),
+        ObjectOrReference::Object(schema) => match &schema.ref_path {
+            r => r
+                .parse::<TokenStream>()
+                .expect("failed to lex path to type"),
+        },
+    }
 }
 
 fn quote_location(l: Location) -> Quote {
@@ -209,6 +298,80 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                             }
                         }
                         _ => panic!("Correct usage: #[openapi(tags(\"foo\" ,\"bar\")]"),
+                    }
+                } else if config.path().is_ident("response") {
+                    macro_rules! invalid_usage {
+						() => {
+							panic!("Correct usage: #[openapi(response(code = \"409\", description = \"foo already exists\")]")
+						}
+					}
+                    let mut code: Option<String> = None;
+                    let mut description: Option<String> = None;
+                    let mut schema: Option<String> = None;
+                    match config {
+                        Meta::List(l) => {
+                            for tag in l.nested {
+                                match tag {
+                                    NestedMeta::Meta(Meta::NameValue(v)) => match v.lit {
+                                        Lit::Str(s) => {
+                                            if v.path.is_ident("code") {
+                                                code = Some(s.value())
+                                            } else if v.path.is_ident("description") {
+                                                description = Some(s.value())
+                                            } else if v.path.is_ident("schema") {
+                                                schema = Some(s.value())
+                                            } else {
+                                                invalid_usage!()
+                                            }
+                                        }
+                                        Lit::Int(i) => {
+                                            if i.base10_parse::<u16>().is_ok() {
+                                                code = Some(i.to_string())
+                                            } else {
+                                                invalid_usage!()
+                                            }
+                                        }
+                                        _ => invalid_usage!(),
+                                    },
+                                    _ => invalid_usage!(),
+                                }
+                            }
+                            match (code, description) {
+                                (Some(c), Some(d)) => {
+                                    match op.responses.get_mut(&Cow::Owned(c.clone())) {
+                                        Some(resp) => {
+                                            resp.description = Cow::Owned(c.clone());
+                                        }
+                                        None => {
+                                            op.responses.insert(
+                                                Cow::Owned(c.clone()),
+                                                Response {
+                                                    description: Cow::Owned(d),
+                                                    ..Default::default()
+                                                },
+                                            );
+                                        }
+                                    };
+                                    if let Some(s) = schema {
+                                        op.responses
+                                            .get_mut(&Cow::Owned(c.clone()))
+                                            .unwrap()
+                                            .content
+                                            .insert(
+                                                Cow::Borrowed("rweb/intermediate"),
+                                                MediaType {
+                                                    schema: Some(ObjectOrReference::Ref {
+                                                        ref_path: Cow::Owned(s),
+                                                    }),
+                                                    ..Default::default()
+                                                },
+                                            );
+                                    }
+                                }
+                                _ => invalid_usage!(),
+                            }
+                        }
+                        _ => invalid_usage!(),
                     }
                 } else {
                     panic!("Unknown openapi config `{}`", config.dump())

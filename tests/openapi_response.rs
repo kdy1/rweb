@@ -80,3 +80,28 @@ fn component_in_response() {
     assert!(spec.paths.get("/item").unwrap().get.is_some());
     assert!(spec.components.unwrap().schemas.get("Item").is_some());
 }
+
+#[get("/errable")]
+#[openapi(response(code = "417", description = "🍵"))]
+#[openapi(response(code = "5XX", description = "😵"))]
+#[openapi(response(code = 201, description = "✨", schema = "Json<Resp<String>>"))]
+fn errable() -> Json<()> {
+    unimplemented!()
+}
+
+#[test]
+fn response_code_in_response() {
+    let (spec, _) = openapi::spec().build(|| errable());
+    let op = spec.paths.get("/errable").unwrap().get.as_ref().unwrap();
+    assert!(op.responses.get("417").is_some());
+    assert!(op.responses.get("417").unwrap().description == "🍵");
+    assert!(op.responses.get("5XX").is_some());
+    assert!(op.responses.get("5XX").unwrap().description == "😵");
+    assert!(op
+        .responses
+        .get("201")
+        .unwrap()
+        .content
+        .get("application/json")
+        .is_some())
+}
