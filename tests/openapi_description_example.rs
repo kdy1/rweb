@@ -8,7 +8,7 @@ use std::borrow::Cow;
 #[schema(component = "TestStruct")]
 pub struct TestStruct {
     ///a description
-    #[schema(example = "an example")]
+    #[schema(example = "\"an example\"")]
     d1: String,
     #[schema(example = "\"an example\"")]
     #[schema(description = "a description")]
