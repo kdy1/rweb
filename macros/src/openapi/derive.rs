@@ -451,7 +451,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                                 rweb::openapi::schema_consistent_component_name(
                                     &<tpn as rweb::openapi::Entity>::describe(),
                                 )
-                                .unwrap()
+                                .expect("To use generic components, all type parameters must themselves be components (or lists of)")
                             }
                         })
                     }),
