@@ -368,12 +368,18 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                             Fields::Named(..) => Some(Pair::Punctuated(
                                 {
                                     let fields = handle_fields(&attrs, &mut v.fields);
+                                    let fields_required = handle_fields_required(&attrs, &v.fields);
                                     q!(
-                                        Vars { fields, desc },
+                                        Vars {
+                                            fields,
+                                            fields_required,
+                                            desc
+                                        },
                                         ({
                                             #[allow(unused_mut)]
                                             let mut s = rweb::openapi::Schema {
                                                 properties: fields,
+                                                required: fields_required,
                                                 ..rweb::rt::Default::default()
                                             };
                                             let description = desc;
