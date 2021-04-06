@@ -10,7 +10,7 @@ use syn::{
     parse2,
     punctuated::{Pair, Punctuated},
     Attribute, Block, Data, DeriveInput, Expr, Field, FieldValue, Fields, GenericParam, ItemImpl,
-    Lit, LitStr, Meta, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
+    Lit, LitStr, Meta, NestedMeta, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
 };
 
 /// Search for `#[serde(rename_all = '')]`
@@ -71,10 +71,43 @@ fn field_name(type_attrs: &[Attribute], field: &Field) -> String {
     rule.apply_to_field(&field.ident.as_ref().unwrap().to_string())
 }
 
+macro_rules! invalid_schema_usage {
+    ($act:expr) => {
+        // rust-lang/rust#54140
+        // panic!("{}", $act.__span().error("Correct usage: #[schema(description = \"foo\", example = \"bar\")]"));
+        panic!(
+            "Invalid schema usage: {}
+Correct usage: #[schema(description = \"foo\", example = \"bar\")]",
+            $act.dump()
+        );
+    };
+}
+
 fn extract_example(attrs: &mut Vec<Attribute>) -> Option<TokenStream> {
     let mut v = None;
 
-    attrs.iter().find(|attr| {
+    let mut process_nv = |n: syn::MetaNameValue| {
+        if n.path.is_ident("example") {
+            assert!(
+                v.is_none(),
+                "duplicate #[schema(example = \"foo\")] detected"
+            );
+
+            v = Some(match n.lit {
+                Lit::Str(s) => s
+                    .value()
+                    .parse::<TokenStream>()
+                    .expect("expected example to be path"),
+                l => panic!(
+                    "#[schema(example = \"foo\")]: value of example should be a \
+					 string literal, but got {}",
+                    l.dump()
+                ),
+            });
+        }
+    };
+
+    for attr in attrs {
         if attr.path.is_ident("schema") {
             for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
                 .expect("invalid schema config found while extracting example")
@@ -82,34 +115,20 @@ fn extract_example(attrs: &mut Vec<Attribute>) -> Option<TokenStream> {
                 .inner
             {
                 match config {
-                    Meta::Path(v) => unimplemented!("#[schema]: Meta::Path({})", v.dump()),
-                    Meta::List(v) => unimplemented!("#[schema]: Meta::List({})", v.dump()),
-                    Meta::NameValue(n) => {
-                        if n.path.is_ident("example") {
-                            assert!(
-                                v.is_none(),
-                                "duplicate #[schema(example = \"foo\")] detected"
-                            );
-
-                            v = Some(match n.lit {
-                                Lit::Str(s) => s
-                                    .value()
-                                    .parse::<TokenStream>()
-                                    .expect("expected example to be path"),
-                                l => panic!(
-                                    "#[schema(example = \"foo\")]: value of example should be a \
-                                     string literal, but got {}",
-                                    l.dump()
-                                ),
-                            });
+                    Meta::NameValue(n) => process_nv(n),
+                    Meta::List(l) => {
+                        for el in l.nested {
+                            match el {
+                                NestedMeta::Meta(Meta::NameValue(n)) => process_nv(n),
+                                _ => invalid_schema_usage!(attr),
+                            }
                         }
                     }
+                    _ => invalid_schema_usage!(attr),
                 }
             }
         }
-
-        true
-    });
+    }
 
     let v = v?;
     match syn::parse2::<Lit>(v.clone()) {
@@ -135,30 +154,48 @@ fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
     let mut doc = None;
     let mut comments = String::new();
 
-    attrs.retain(|attr| {
-        if attr.path.is_ident("schema") {
-            let v = match parse2::<Paren<KeyValue<Ident>>>(attr.tokens.clone()) {
-                Ok(v) if v.inner.key == "description" => v.inner.value.value(),
-                _ => return true,
-            };
-            doc = Some(v);
-            return true;
-        }
-
-        if attr.path.is_ident("doc") {
-            let v = match parse2::<EqStr>(attr.tokens.clone()) {
-                Ok(v) => v.value,
-                _ => return true,
-            };
-
-            if !comments.is_empty() {
-                comments.push(' ');
+    let mut process_doc_nv = |nv: syn::MetaNameValue| {
+        if nv.path.is_ident("description") {
+            if let Lit::Str(s) = nv.lit {
+                doc = Some(s.value())
+            } else {
+                panic!("#[schema(description = \"foo\")]: value of example should be a string literal, but got {}", nv.dump())
             }
-            comments.push_str(&v.value());
         }
+    };
 
-        true
-    });
+    for attr in attrs {
+        if attr.path.is_ident("schema") {
+            for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
+                .expect("invalid schema config found while extracting example")
+                .inner
+                .inner
+            {
+                match config {
+                    Meta::List(l) => {
+                        for tag in l.nested {
+                            match tag {
+                                NestedMeta::Meta(Meta::NameValue(nv)) => process_doc_nv(nv),
+                                _ => invalid_schema_usage!(attr),
+                            }
+                        }
+                    }
+                    Meta::NameValue(nv) => process_doc_nv(nv),
+                    _ => invalid_schema_usage!(attr),
+                }
+            }
+        } else if attr.path.is_ident("doc") {
+            match parse2::<EqStr>(attr.tokens.clone()) {
+                Ok(v) => {
+                    if !comments.is_empty() {
+                        comments.push(' ');
+                    }
+                    comments.push_str(&v.value.value());
+                }
+                _ => {}
+            };
+        }
+    }
 
     match doc {
         Some(v) => v,
