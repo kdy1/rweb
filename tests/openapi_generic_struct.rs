@@ -1,5 +1,3 @@
-//! https://github.com/kdy1/rweb/issues/38
-
 #![cfg(feature = "openapi")]
 
 use rweb::*;
