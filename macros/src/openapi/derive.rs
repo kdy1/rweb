@@ -407,38 +407,86 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     }
 
     let mut item = if let Some(comp) = component {
-        let path_to_schema = format!("#/components/schemas/{}", comp);
+        if generics.params.is_empty() {
+            let path_to_schema = format!("#/components/schemas/{}", comp);
+            q!(
+                Vars {
+                    Type: &ident,
+                    desc,
+                    path_to_schema,
+                    fields,
+                    comp,
+                },
+                {
+                    impl rweb::openapi::Entity for Type {
+                        fn describe() -> rweb::openapi::Schema {
+                            rweb::openapi::Schema {
+                                ref_path: rweb::rt::Cow::Borrowed(path_to_schema),
+                                ..rweb::rt::Default::default()
+                            }
+                        }
 
-        q!(
-            Vars {
-                Type: &ident,
-                desc,
-                path_to_schema,
-                fields,
-                comp,
-            },
-            {
-                impl rweb::openapi::Entity for Type {
-                    fn describe() -> rweb::openapi::Schema {
-                        rweb::openapi::Schema {
-                            ref_path: rweb::rt::Cow::Borrowed(path_to_schema),
-                            ..rweb::rt::Default::default()
+                        fn describe_components() -> rweb::openapi::Components {
+                            vec![(
+                                rweb::rt::Cow::Borrowed(comp),
+                                rweb::openapi::Schema {
+                                    fields,
+                                    description: rweb::rt::Cow::Borrowed(desc),
+                                    ..rweb::rt::Default::default()
+                                },
+                            )]
                         }
                     }
-
-                    fn describe_components() -> rweb::openapi::Components {
-                        vec![(
-                            rweb::rt::Cow::Borrowed(comp),
+                }
+            )
+        } else {
+            let rtcc = q!(Vars { comp }, {
+                {
+                    comp.to_string()
+                        + "---"
+                        + std::any::type_name::<Self>()
+                            .replace("::", ".")
+                            .replace(":", ".")
+                            .replace("<", "-_")
+                            .replace(">", "_-")
+                            .replace(", ", "_")
+                            .replace(",", "_")
+                            .as_str()
+                }
+            });
+            q!(
+                Vars {
+                    Type: &ident,
+                    desc,
+                    fields,
+                    rtcc,
+                },
+                {
+                    impl rweb::openapi::Entity for Type {
+                        fn describe() -> rweb::openapi::Schema {
                             rweb::openapi::Schema {
-                                fields,
-                                description: rweb::rt::Cow::Borrowed(desc),
+                                ref_path: rweb::rt::Cow::Owned(format!(
+                                    "#/components/schemas/{}",
+                                    rtcc
+                                )),
                                 ..rweb::rt::Default::default()
-                            },
-                        )]
+                            }
+                        }
+
+                        fn describe_components() -> rweb::openapi::Components {
+                            vec![(
+                                rweb::rt::Cow::Owned(rtcc),
+                                rweb::openapi::Schema {
+                                    fields,
+                                    description: rweb::rt::Cow::Borrowed(desc),
+                                    ..rweb::rt::Default::default()
+                                },
+                            )]
+                        }
                     }
                 }
-            }
-        )
+            )
+        }
     } else {
         q!(
             Vars {
