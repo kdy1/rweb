@@ -338,8 +338,15 @@ impl Collector {
 
     pub fn add_response_to<T: ResponseEntity>(&mut self, op: &mut Operation) {
         self.add_components(T::describe_components());
-        let responces = T::describe_responses();
-        op.responses.extend(responces);
+        let mut responses = T::describe_responses();
+        for (code, mut resp) in &mut responses {
+            if let Some(ex_resp) = op.responses.remove(code) {
+                if !ex_resp.description.is_empty() {
+                    resp.description = ex_resp.description
+                }
+            }
+        }
+        op.responses.extend(responses);
     }
 
     fn add_components(&mut self, components: Components) {
