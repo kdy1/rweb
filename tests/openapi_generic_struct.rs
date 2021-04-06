@@ -23,8 +23,8 @@ fn test_r(
     _: Query<GenericStruct<String, u64>>,
     _: Json<
         GenericStruct<
-            GenericStruct<String, u64>,
-            GenericStruct<String, GenericStructWithConst<i32, 16>>,
+            GenericStruct<String, Vec<u64>>,
+            GenericStruct<String, GenericStructWithConst<Vec<Vec<i32>>, 16>>,
         >,
     >,
 ) -> String {
