@@ -17,6 +17,7 @@ pub struct Two {}
 #[schema(component = "Three")]
 pub struct Three {
     two: Two,
+    list_of_opt_of_one: Vec<Option<One>>,
 }
 
 #[get("/")]
@@ -35,4 +36,11 @@ fn description() {
     assert!(schemas.contains_key("One"));
     assert!(schemas.contains_key("Two"));
     assert!(schemas.contains_key("Three"));
+    assert!(schemas.contains_key("One_Opt"));
+    assert!(schemas.contains_key("One_Opt_List"));
+    assert!(!schemas.contains_key("One_List"));
+    assert!(!schemas.contains_key("Two_List"));
+    assert!(!schemas.contains_key("Three_List"));
+    assert!(!schemas.contains_key("Two_Opt"));
+    assert!(!schemas.contains_key("Three_Opt"));
 }
