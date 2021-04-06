@@ -440,18 +440,51 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                 }
             )
         } else {
-            let rtcc = q!(Vars { comp }, {
+            let rtcc_v: Punctuated<pmutil::Quote, Token![,]> = generics
+                .params
+                .iter()
+                .flat_map(|g| match g {
+                    syn::GenericParam::Type(t) => Some({
+                        let tpn = &t.ident;
+                        q!(Vars { tpn }, {
+                            {
+                                let ts = <tpn as rweb::openapi::Entity>::describe();
+                                if ts.ref_path.is_empty() {
+                                    match ts.schema_type {
+                                        Some(rweb::openapi::Type::String) => "string".to_string(),
+                                        Some(rweb::openapi::Type::Number) => "number".to_string(),
+                                        Some(rweb::openapi::Type::Integer) => "integer".to_string(),
+                                        Some(rweb::openapi::Type::Boolean) => "boolean".to_string(),
+                                        //TODO Array..?
+                                        _ => std::any::type_name::<tpn>()
+                                            .replace("::", ".")
+                                            .replace(":", ".")
+                                            .replace("<", "-_")
+                                            .replace(">", "_-")
+                                            .replace(", ", "_")
+                                            .replace(",", "_"),
+                                    }
+                                } else {
+                                    ts.ref_path[("#/components/schemas/".len())..].to_string()
+                                }
+                            }
+                        })
+                    }),
+                    syn::GenericParam::Const(con) => Some({
+                        let tpn = &con.ident;
+                        q!(Vars { tpn }, {
+                            {
+                                tpn.to_string()
+                            }
+                        })
+                    }),
+                    _ => None,
+                })
+                .map(|q| Pair::Punctuated(q, Default::default()))
+                .collect();
+            let rtcc = q!(Vars { comp, rtcc_v }, {
                 {
-                    comp.to_string()
-                        + "---"
-                        + std::any::type_name::<Self>()
-                            .replace("::", ".")
-                            .replace(":", ".")
-                            .replace("<", "-_")
-                            .replace(">", "_-")
-                            .replace(", ", "_")
-                            .replace(",", "_")
-                            .as_str()
+                    comp.to_string() + "-_" + vec![rtcc_v].join("_").as_str() + "_-"
                 }
             });
             q!(
