@@ -294,9 +294,31 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     if let Some(tts) = example {
         fields.push(q!(Vars { tts }, ({ example: Some(tts) })).parse());
     }
+    let mut subcomponents: Block = q!({ {} }).parse();
+    subcomponents.stmts.push(
+        q!({
+            #[allow(unused_mut)]
+            let mut compos: rweb::openapi::Components = vec![];
+        })
+        .parse(),
+    );
+    macro_rules! subcomponents_handle_fields {
+        ($fields:expr) => {
+            for f in $fields {
+                subcomponents.stmts.push(
+                    q!(Vars { Type: &f.ty }, {
+                        compos.append(&mut <Type as rweb::openapi::Entity>::describe_components());
+                    })
+                    .parse(),
+                );
+            }
+        };
+    }
 
     match data {
         Data::Struct(ref mut data) => {
+            subcomponents_handle_fields!(&data.fields);
+
             match data.fields {
                 Fields::Named(_) => {
                     let block = handle_fields(&attrs, &mut data.fields);
@@ -335,6 +357,10 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
 
                 fields.push(q!(Vars { exprs }, { enum_values: vec![exprs] }).parse());
             } else {
+                for v in &data.variants {
+                    subcomponents_handle_fields!(&v.fields);
+                }
+
                 let exprs: Punctuated<Expr, Token![,]> = data
                     .variants
                     .iter_mut()
@@ -406,6 +432,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }
 
+    subcomponents.stmts.push(Stmt::Expr(q!({ compos }).parse()));
     let mut item = if let Some(comp) = component {
         if generics.params.is_empty() {
             let path_to_schema = format!("#/components/schemas/{}", comp);
@@ -416,6 +443,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                     path_to_schema,
                     fields,
                     comp,
+                    subcomponents,
                 },
                 {
                     impl rweb::openapi::Entity for Type {
@@ -427,14 +455,16 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                         }
 
                         fn describe_components() -> rweb::openapi::Components {
-                            vec![(
+                            let mut comps = subcomponents;
+                            comps.push((
                                 rweb::rt::Cow::Borrowed(comp),
                                 rweb::openapi::Schema {
                                     fields,
                                     description: rweb::rt::Cow::Borrowed(desc),
                                     ..rweb::rt::Default::default()
                                 },
-                            )]
+                            ));
+                            comps
                         }
                     }
                 }
@@ -478,6 +508,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                     desc,
                     fields,
                     rtcc,
+                    subcomponents,
                 },
                 {
                     impl rweb::openapi::Entity for Type {
@@ -492,14 +523,16 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                         }
 
                         fn describe_components() -> rweb::openapi::Components {
-                            vec![(
+                            let mut comps = subcomponents;
+                            comps.push((
                                 rweb::rt::Cow::Owned(rtcc),
                                 rweb::openapi::Schema {
                                     fields,
                                     description: rweb::rt::Cow::Borrowed(desc),
                                     ..rweb::rt::Default::default()
                                 },
-                            )]
+                            ));
+                            comps
                         }
                     }
                 }
@@ -510,7 +543,8 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
             Vars {
                 Type: &ident,
                 desc,
-                fields
+                fields,
+                subcomponents,
             },
             {
                 impl rweb::openapi::Entity for Type {
@@ -520,6 +554,9 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                             description: rweb::rt::Cow::Borrowed(desc),
                             ..rweb::rt::Default::default()
                         }
+                    }
+                    fn describe_components() -> rweb::openapi::Components {
+                        subcomponents
                     }
                 }
             }
