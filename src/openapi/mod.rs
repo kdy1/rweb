@@ -439,12 +439,9 @@ pub fn schema_consistent_component_name(s: &Schema) -> Result<String, &'static s
             Some(Type::Number) => Ok("number".to_string()),
             Some(Type::Integer) => Ok("integer".to_string()),
             Some(Type::Boolean) => Ok("boolean".to_string()),
-            Some(Type::Array) => Ok("-".to_string()
-                + schema_consistent_component_name(
-                    s.items.as_ref().ok_or("array types must declare `items`")?,
-                )?
-                .as_str()
-                + "-"),
+            Some(Type::Array) => Ok(schema_consistent_component_name(
+                s.items.as_ref().ok_or("array types must declare `items`")?,
+            )? + "_List"),
             _ => Err("anonymous types don't have component names"),
         }
     } else {
