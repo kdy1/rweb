@@ -13,8 +13,14 @@ pub struct One {}
 #[schema(component = "Two")]
 pub struct Two {}
 
+#[derive(Debug, Serialize, Deserialize, Schema)]
+#[schema(component = "Three")]
+pub struct Three {
+    two: Two,
+}
+
 #[get("/")]
-fn index(_: Query<One>, _: Json<Two>) -> String {
+fn index(_: Query<One>, _: Json<Three>) -> String {
     String::new()
 }
 
@@ -24,7 +30,9 @@ fn description() {
         //
         index()
     });
-
-    let yaml = serde_yaml::to_string(&spec).unwrap();
-    println!("{}", yaml);
+    let schemas = &spec.components.as_ref().unwrap().schemas;
+    println!("{}", serde_yaml::to_string(&schemas).unwrap());
+    assert!(schemas.contains_key("One"));
+    assert!(schemas.contains_key("Two"));
+    assert!(schemas.contains_key("Three"));
 }
