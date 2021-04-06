@@ -448,25 +448,10 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                         let tpn = &t.ident;
                         q!(Vars { tpn }, {
                             {
-                                let ts = <tpn as rweb::openapi::Entity>::describe();
-                                if ts.ref_path.is_empty() {
-                                    match ts.schema_type {
-                                        Some(rweb::openapi::Type::String) => "string".to_string(),
-                                        Some(rweb::openapi::Type::Number) => "number".to_string(),
-                                        Some(rweb::openapi::Type::Integer) => "integer".to_string(),
-                                        Some(rweb::openapi::Type::Boolean) => "boolean".to_string(),
-                                        //TODO Array..?
-                                        _ => std::any::type_name::<tpn>()
-                                            .replace("::", ".")
-                                            .replace(":", ".")
-                                            .replace("<", "-_")
-                                            .replace(">", "_-")
-                                            .replace(", ", "_")
-                                            .replace(",", "_"),
-                                    }
-                                } else {
-                                    ts.ref_path[("#/components/schemas/".len())..].to_string()
-                                }
+                                rweb::openapi::schema_consistent_component_name(
+                                    &<tpn as rweb::openapi::Entity>::describe(),
+                                )
+                                .unwrap()
                             }
                         })
                     }),
