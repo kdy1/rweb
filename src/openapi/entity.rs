@@ -281,14 +281,25 @@ where
 {
     fn describe() -> Schema {
         let mut s = T::describe();
-        s.nullable = Some(true);
+        if s.ref_path.is_empty() {
+            s.nullable = Some(true);
+        } else {
+            s.ref_path = Cow::Owned(format!("{}_Opt", s.ref_path))
+        }
         s
     }
 
     fn describe_components() -> Components {
         let mut v = T::describe_components();
-        for (_, s) in v.iter_mut() {
-            s.nullable = Some(true);
+        let s = T::describe();
+        if !s.ref_path.is_empty() {
+            let cn = &s.ref_path[("#/components/schemas/".len())..];
+            if let Some((_, sc)) = v.iter().find(|(path, _)| path == cn) {
+                let mut sc = sc.clone();
+                sc.ref_path = Cow::Owned(format!("{}_Opt", s.ref_path));
+                sc.nullable = Some(true);
+                v.push((Cow::Owned(format!("{}_Opt", cn)), sc));
+            }
         }
         v
     }
