@@ -221,6 +221,61 @@ fn handle_fields(type_attrs: &[Attribute], fields: &mut Fields) -> Block {
     block
 }
 
+fn extract_component(attrs: &Vec<Attribute>) -> Option<String> {
+    let mut component = None;
+    let mut process_nv = |nv: syn::MetaNameValue| {
+        if nv.path.is_ident("component") {
+            if let Lit::Str(s) = nv.lit {
+                assert!(
+                    component.is_none(),
+                    "duplicate #[schema(component = \"foo\")] detected"
+                );
+                component = Some(s.value())
+            } else {
+                panic!(
+                    "#[schema]: value of component should be a string literal, but got {}",
+                    nv.dump()
+                )
+            }
+        } else {
+            panic!("#[schema]: unknown option {}", nv.path.dump())
+        }
+    };
+    for attr in attrs {
+        if attr.path.is_ident("schema") {
+            for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
+                .expect("schema config of type is invalid")
+                .inner
+                .inner
+            {
+                match config {
+                    Meta::List(l) => {
+                        for el in l.nested {
+                            match el {
+                                syn::NestedMeta::Meta(Meta::NameValue(n)) => process_nv(n),
+                                syn::NestedMeta::Meta(unk) => panic!(
+                                    "#[schema]: parameters are name-value pair(s), but got {}",
+                                    unk.dump()
+                                ),
+                                syn::NestedMeta::Lit(unk) => panic!(
+                                    "#[schema]: parameters are name-value pair(s), but got {}",
+                                    unk.dump()
+                                ),
+                            }
+                        }
+                    }
+                    Meta::NameValue(nv) => process_nv(nv),
+                    _ => panic!(
+                        "#[schema]: parameters are name-value pair(s), but got {}",
+                        config.dump()
+                    ),
+                }
+            }
+        }
+    }
+    component
+}
+
 pub fn derive_schema(input: DeriveInput) -> TokenStream {
     let DeriveInput {
         mut attrs,
@@ -232,45 +287,8 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
 
     let desc = extract_doc(&mut attrs);
 
-    let mut component = None;
+    let component = extract_component(&attrs);
     let example = extract_example(&mut attrs);
-
-    attrs.retain(|attr| {
-        if attr.path.is_ident("schema") {
-            for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
-                .expect("schema config of type is invalid")
-                .inner
-                .inner
-            {
-                match config {
-                    Meta::Path(..) => unimplemented!("Meta::Path in #[schema]"),
-                    Meta::NameValue(n) => {
-                        //
-
-                        if n.path.is_ident("component") {
-                            assert!(
-                                component.is_none(),
-                                "duplicate #[schema(component = \"foo\")] detected"
-                            );
-                            component = Some(match n.lit {
-                                Lit::Str(s) => s.value(),
-                                l => panic!(
-                                    "#[schema]: value of component should be a string literal, \
-                                     but got {}",
-                                    l.dump()
-                                ),
-                            })
-                        } else {
-                            panic!("#[schema]: Unknown option {}", n.path.dump())
-                        }
-                    }
-                    Meta::List(l) => unimplemented!("Meta::List in #[schema]: {}", l.dump()),
-                }
-            }
-        }
-
-        true
-    });
 
     let mut fields: Punctuated<FieldValue, Token![,]> = Default::default();
     if let Some(tts) = example {
