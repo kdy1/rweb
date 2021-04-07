@@ -343,6 +343,16 @@ impl<T: Entity> Entity for [T] {
     }
 }
 
+impl<T: Entity, const N: usize> Entity for [T; N] {
+    fn describe() -> Schema {
+        <[T] as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <[T] as Entity>::describe_components()
+    }
+}
+
 impl<T> Entity for Option<T>
 where
     T: Entity,
