@@ -258,6 +258,61 @@ fn handle_fields(type_attrs: &[Attribute], fields: &mut Fields) -> Block {
     block
 }
 
+fn extract_component(attrs: &Vec<Attribute>) -> Option<String> {
+    let mut component = None;
+    let mut process_nv = |nv: syn::MetaNameValue| {
+        if nv.path.is_ident("component") {
+            if let Lit::Str(s) = nv.lit {
+                assert!(
+                    component.is_none(),
+                    "duplicate #[schema(component = \"foo\")] detected"
+                );
+                component = Some(s.value())
+            } else {
+                panic!(
+                    "#[schema]: value of component should be a string literal, but got {}",
+                    nv.dump()
+                )
+            }
+        } else {
+            panic!("#[schema]: unknown option {}", nv.path.dump())
+        }
+    };
+    for attr in attrs {
+        if attr.path.is_ident("schema") {
+            for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
+                .expect("schema config of type is invalid")
+                .inner
+                .inner
+            {
+                match config {
+                    Meta::List(l) => {
+                        for el in l.nested {
+                            match el {
+                                syn::NestedMeta::Meta(Meta::NameValue(n)) => process_nv(n),
+                                syn::NestedMeta::Meta(unk) => panic!(
+                                    "#[schema]: parameters are name-value pair(s), but got {}",
+                                    unk.dump()
+                                ),
+                                syn::NestedMeta::Lit(unk) => panic!(
+                                    "#[schema]: parameters are name-value pair(s), but got {}",
+                                    unk.dump()
+                                ),
+                            }
+                        }
+                    }
+                    Meta::NameValue(nv) => process_nv(nv),
+                    _ => panic!(
+                        "#[schema]: parameters are name-value pair(s), but got {}",
+                        config.dump()
+                    ),
+                }
+            }
+        }
+    }
+    component
+}
+
 pub fn derive_schema(input: DeriveInput) -> TokenStream {
     let DeriveInput {
         mut attrs,
@@ -269,53 +324,38 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
 
     let desc = extract_doc(&mut attrs);
 
-    let mut component = None;
+    let component = extract_component(&attrs);
     let example = extract_example(&mut attrs);
-
-    attrs.retain(|attr| {
-        if attr.path.is_ident("schema") {
-            for config in parse2::<Paren<Delimited<Meta>>>(attr.tokens.clone())
-                .expect("schema config of type is invalid")
-                .inner
-                .inner
-            {
-                match config {
-                    Meta::Path(..) => unimplemented!("Meta::Path in #[schema]"),
-                    Meta::NameValue(n) => {
-                        //
-
-                        if n.path.is_ident("component") {
-                            assert!(
-                                component.is_none(),
-                                "duplicate #[schema(component = \"foo\")] detected"
-                            );
-                            component = Some(match n.lit {
-                                Lit::Str(s) => s.value(),
-                                l => panic!(
-                                    "#[schema]: value of component should be a string literal, \
-                                     but got {}",
-                                    l.dump()
-                                ),
-                            })
-                        } else {
-                            panic!("#[schema]: Unknown option {}", n.path.dump())
-                        }
-                    }
-                    Meta::List(l) => unimplemented!("Meta::List in #[schema]: {}", l.dump()),
-                }
-            }
-        }
-
-        true
-    });
 
     let mut fields: Punctuated<FieldValue, Token![,]> = Default::default();
     if let Some(tts) = example {
         fields.push(q!(Vars { tts }, ({ example: Some(tts) })).parse());
     }
+    let mut subcomponents: Block = q!({ {} }).parse();
+    subcomponents.stmts.push(
+        q!({
+            #[allow(unused_mut)]
+            let mut compos: rweb::openapi::Components = vec![];
+        })
+        .parse(),
+    );
+    macro_rules! subcomponents_handle_fields {
+        ($fields:expr) => {
+            for f in $fields {
+                subcomponents.stmts.push(
+                    q!(Vars { Type: &f.ty }, {
+                        compos.append(&mut <Type as rweb::openapi::Entity>::describe_components());
+                    })
+                    .parse(),
+                );
+            }
+        };
+    }
 
     match data {
         Data::Struct(ref mut data) => {
+            subcomponents_handle_fields!(&data.fields);
+
             match data.fields {
                 Fields::Named(_) => {
                     let block = handle_fields(&attrs, &mut data.fields);
@@ -354,6 +394,10 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
 
                 fields.push(q!(Vars { exprs }, { enum_values: vec![exprs] }).parse());
             } else {
+                for v in &data.variants {
+                    subcomponents_handle_fields!(&v.fields);
+                }
+
                 let exprs: Punctuated<Expr, Token![,]> = data
                     .variants
                     .iter_mut()
@@ -425,45 +469,119 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }
 
+    subcomponents.stmts.push(Stmt::Expr(q!({ compos }).parse()));
     let mut item = if let Some(comp) = component {
-        let path_to_schema = format!("#/components/schemas/{}", comp);
+        if generics.params.is_empty() {
+            let path_to_schema = format!("#/components/schemas/{}", comp);
+            q!(
+                Vars {
+                    Type: &ident,
+                    desc,
+                    path_to_schema,
+                    fields,
+                    comp,
+                    subcomponents,
+                },
+                {
+                    impl rweb::openapi::Entity for Type {
+                        fn describe() -> rweb::openapi::Schema {
+                            rweb::openapi::Schema {
+                                ref_path: rweb::rt::Cow::Borrowed(path_to_schema),
+                                ..rweb::rt::Default::default()
+                            }
+                        }
 
-        q!(
-            Vars {
-                Type: &ident,
-                desc,
-                path_to_schema,
-                fields,
-                comp,
-            },
-            {
-                impl rweb::openapi::Entity for Type {
-                    fn describe() -> rweb::openapi::Schema {
-                        rweb::openapi::Schema {
-                            ref_path: rweb::rt::Cow::Borrowed(path_to_schema),
-                            ..rweb::rt::Default::default()
+                        fn describe_components() -> rweb::openapi::Components {
+                            let mut comps = subcomponents;
+                            comps.push((
+                                rweb::rt::Cow::Borrowed(comp),
+                                rweb::openapi::Schema {
+                                    fields,
+                                    description: rweb::rt::Cow::Borrowed(desc),
+                                    ..rweb::rt::Default::default()
+                                },
+                            ));
+                            comps
                         }
                     }
-
-                    fn describe_components() -> rweb::openapi::Components {
-                        vec![(
-                            rweb::rt::Cow::Borrowed(comp),
+                }
+            )
+        } else {
+            let rtcc_v: Punctuated<pmutil::Quote, Token![,]> = generics
+                .params
+                .iter()
+                .flat_map(|g| match g {
+                    syn::GenericParam::Type(t) => Some({
+                        let tpn = &t.ident;
+                        q!(Vars { tpn }, {
+                            {
+                                rweb::openapi::schema_consistent_component_name(
+                                    &<tpn as rweb::openapi::Entity>::describe(),
+                                )
+                                .expect("To use generic components, all type parameters must themselves be components (or lists of)")
+                            }
+                        })
+                    }),
+                    syn::GenericParam::Const(con) => Some({
+                        let tpn = &con.ident;
+                        q!(Vars { tpn }, {
+                            {
+                                tpn.to_string()
+                            }
+                        })
+                    }),
+                    _ => None,
+                })
+                .map(|q| Pair::Punctuated(q, Default::default()))
+                .collect();
+            let rtcc = q!(Vars { comp, rtcc_v }, {
+                {
+                    comp.to_string() + "-_" + vec![rtcc_v].join("_").as_str() + "_-"
+                }
+            });
+            q!(
+                Vars {
+                    Type: &ident,
+                    desc,
+                    fields,
+                    rtcc,
+                    subcomponents,
+                },
+                {
+                    impl rweb::openapi::Entity for Type {
+                        fn describe() -> rweb::openapi::Schema {
                             rweb::openapi::Schema {
-                                fields,
-                                description: rweb::rt::Cow::Borrowed(desc),
+                                ref_path: rweb::rt::Cow::Owned(format!(
+                                    "#/components/schemas/{}",
+                                    rtcc
+                                )),
                                 ..rweb::rt::Default::default()
-                            },
-                        )]
+                            }
+                        }
+
+                        fn describe_components() -> rweb::openapi::Components {
+                            let mut comps = subcomponents;
+                            comps.push((
+                                rweb::rt::Cow::Owned(rtcc),
+                                rweb::openapi::Schema {
+                                    fields,
+                                    description: rweb::rt::Cow::Borrowed(desc),
+                                    ..rweb::rt::Default::default()
+                                },
+                            ));
+                            comps
+                        }
                     }
                 }
-            }
-        )
+            )
+        }
     } else {
         q!(
             Vars {
                 Type: &ident,
                 desc,
-                fields
+                fields,
+                subcomponents,
             },
             {
                 impl rweb::openapi::Entity for Type {
@@ -473,6 +591,9 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                             description: rweb::rt::Cow::Borrowed(desc),
                             ..rweb::rt::Default::default()
                         }
+                    }
+                    fn describe_components() -> rweb::openapi::Components {
+                        subcomponents
                     }
                 }
             }

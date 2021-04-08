@@ -251,27 +251,39 @@ impl<T: Entity> Entity for Vec<T> {
 
 impl<T: Entity> Entity for [T] {
     fn describe() -> Schema {
-        Schema {
-            schema_type: Some(Type::Array),
-            items: Some(Box::new(T::describe())),
-            ..Default::default()
+        let s = T::describe();
+        if s.ref_path.is_empty() {
+            Schema {
+                schema_type: Some(Type::Array),
+                items: Some(Box::new(s)),
+                ..Default::default()
+            }
+        } else {
+            Schema {
+                ref_path: Cow::Owned(format!("{}_List", s.ref_path)),
+                ..Default::default()
+            }
         }
     }
 
     fn describe_components() -> Components {
-        T::describe_components()
-            .into_iter()
-            .map(|(name, s)| {
-                (
-                    Cow::Owned(format!("{}List", name)),
+        let mut v = T::describe_components();
+        let s = T::describe();
+        if !s.ref_path.is_empty() {
+            let cn = &s.ref_path[("#/components/schemas/".len())..];
+            if let Some((_, sc)) = v.iter().find(|(path, _)| path == cn) {
+                let sc = sc.clone();
+                v.push((
+                    Cow::Owned(format!("{}_List", cn)),
                     Schema {
                         schema_type: Some(Type::Array),
-                        items: Some(Box::new(s)),
+                        items: Some(Box::new(sc)),
                         ..Default::default()
                     },
-                )
-            })
-            .collect()
+                ));
+            }
+        }
+        v
     }
 }
 
@@ -281,14 +293,25 @@ where
 {
     fn describe() -> Schema {
         let mut s = T::describe();
-        s.nullable = Some(true);
+        if s.ref_path.is_empty() {
+            s.nullable = Some(true);
+        } else {
+            s.ref_path = Cow::Owned(format!("{}_Opt", s.ref_path))
+        }
         s
     }
 
     fn describe_components() -> Components {
         let mut v = T::describe_components();
-        for (_, s) in v.iter_mut() {
-            s.nullable = Some(true);
+        let s = T::describe();
+        if !s.ref_path.is_empty() {
+            let cn = &s.ref_path[("#/components/schemas/".len())..];
+            if let Some((_, sc)) = v.iter().find(|(path, _)| path == cn) {
+                let mut sc = sc.clone();
+                sc.ref_path = Cow::Owned(format!("{}_Opt", s.ref_path));
+                sc.nullable = Some(true);
+                v.push((Cow::Owned(format!("{}_Opt", cn)), sc));
+            }
         }
         v
     }
