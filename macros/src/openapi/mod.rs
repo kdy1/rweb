@@ -340,7 +340,7 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                                 (Some(c), Some(d)) => {
                                     match op.responses.get_mut(&Cow::Owned(c.clone())) {
                                         Some(resp) => {
-                                            resp.description = Cow::Owned(c.clone());
+                                            resp.description = Cow::Owned(d);
                                         }
                                         None => {
                                             op.responses.insert(

@@ -338,8 +338,15 @@ impl Collector {
 
     pub fn add_response_to<T: ResponseEntity>(&mut self, op: &mut Operation) {
         self.add_components(T::describe_components());
-        let responces = T::describe_responses();
-        op.responses.extend(responces);
+        let mut responses = T::describe_responses();
+        for (code, mut resp) in &mut responses {
+            if let Some(ex_resp) = op.responses.remove(code) {
+                if !ex_resp.description.is_empty() {
+                    resp.description = ex_resp.description
+                }
+            }
+        }
+        op.responses.extend(responses);
     }
 
     fn add_components(&mut self, components: Components) {
@@ -429,6 +436,23 @@ where
         })
     } else {
         op(None)
+    }
+}
+
+pub fn schema_consistent_component_name(s: &Schema) -> Result<String, &'static str> {
+    if s.ref_path.is_empty() {
+        match s.schema_type {
+            Some(Type::String) => Ok("string".to_string()),
+            Some(Type::Number) => Ok("number".to_string()),
+            Some(Type::Integer) => Ok("integer".to_string()),
+            Some(Type::Boolean) => Ok("boolean".to_string()),
+            Some(Type::Array) => Ok(schema_consistent_component_name(
+                s.items.as_ref().ok_or("array types must declare `items`")?,
+            )? + "_List"),
+            _ => Err("anonymous types don't have component names"),
+        }
+    } else {
+        Ok(s.ref_path[("#/components/schemas/".len())..].to_string())
     }
 }
 
