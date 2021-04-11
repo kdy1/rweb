@@ -359,12 +359,16 @@ where
         let s = T::describe();
         if !s.ref_path.is_empty() {
             let cn = &s.ref_path[("#/components/schemas/".len())..];
-            if let Some((_, sc)) = v.iter().find(|(path, _)| path == cn) {
-                let mut sc = sc.clone();
-                sc.ref_path = Cow::Owned(format!("{}_Opt", s.ref_path));
-                sc.nullable = Some(true);
-                v.push((Cow::Owned(format!("{}_Opt", cn)), sc));
-            }
+            v.push((
+                Cow::Owned(format!("{}_Opt", cn)),
+                Schema {
+                    nullable: Some(true),
+                    one_of: vec![ObjectOrReference::Ref {
+                        ref_path: s.ref_path,
+                    }],
+                    ..Default::default()
+                },
+            ));
         }
         v
     }
