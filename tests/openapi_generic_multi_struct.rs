@@ -1,7 +1,9 @@
 #![cfg(feature = "openapi")]
 
+use rweb::openapi::*;
 use rweb::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Schema)]
 #[schema(component = "One")]
@@ -15,7 +17,7 @@ pub struct Two {}
 #[schema(component = "GenericStruct")]
 struct GenericStruct<A, B> {
     a: A,
-    b: B,
+    b: HashMap<String, B>,
 }
 
 #[get("/")]
@@ -39,6 +41,40 @@ fn test_multi_generics_compile() {
     assert!(schemas.contains_key("One"));
     assert!(schemas.contains_key("Two"));
     assert!(schemas.contains_key("One_Opt"));
+    assert!(schemas.contains_key("One_Map"));
     assert!(schemas.contains_key("Two_List"));
     assert!(schemas.contains_key("GenericStruct-_One_One_-_Opt"));
+    macro_rules! component {
+        ($cn:expr) => {
+            match schemas.get($cn) {
+                Some(ObjectOrReference::Object(s)) => s,
+                Some(..) => panic!("Component schema can't be a reference"),
+                None => panic!("No component schema for {}", $cn),
+            }
+        };
+    }
+    match &component!("One_Opt").one_of[0] {
+        ObjectOrReference::Object(s) => {
+            assert_eq!(s.ref_path, "#/components/schemas/One");
+            assert_eq!(s.schema_type, None);
+        }
+        ObjectOrReference::Ref { ref_path } => assert_eq!(ref_path, "#/components/schemas/One"),
+    }
+    match &component!("One_Map").additional_properties {
+        Some(ObjectOrReference::Object(s)) => {
+            assert_eq!(s.ref_path, "#/components/schemas/One");
+            assert_eq!(s.schema_type, None);
+        }
+        Some(ObjectOrReference::Ref { ref_path }) => {
+            assert_eq!(ref_path, "#/components/schemas/One")
+        }
+        None => panic!("Map component missing `additional_properties`"),
+    }
+    match &component!("Two_List").items {
+        Some(s) => {
+            assert_eq!(s.ref_path, "#/components/schemas/Two");
+            assert_eq!(s.schema_type, None);
+        }
+        None => panic!("Array component missing `items`"),
+    }
 }
