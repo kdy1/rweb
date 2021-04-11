@@ -1,0 +1,14 @@
+name: CI
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          cargo test
