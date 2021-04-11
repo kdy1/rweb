@@ -22,8 +22,8 @@ struct GenericStruct<A, B> {
 
 #[get("/")]
 fn test_r(
-    _: Query<GenericStruct<Option<One>, u64>>,
-    _: Json<Vec<GenericStruct<Vec<Two>, Option<GenericStruct<One, One>>>>>,
+    _: Query<GenericStruct<Option<String>, u64>>,
+    _: Json<Vec<GenericStruct<Vec<Two>, Option<GenericStruct<Option<One>, One>>>>>,
 ) -> String {
     String::new()
 }
@@ -40,10 +40,11 @@ fn test_multi_generics_compile() {
     }
     assert!(schemas.contains_key("One"));
     assert!(schemas.contains_key("Two"));
+    assert!(schemas.contains_key("GenericStruct-_string_Opt_integer_-"));
     assert!(schemas.contains_key("One_Opt"));
     assert!(schemas.contains_key("One_Map"));
     assert!(schemas.contains_key("Two_List"));
-    assert!(schemas.contains_key("GenericStruct-_One_One_-_Opt"));
+    assert!(schemas.contains_key("GenericStruct-_One_Opt_One_-_Opt"));
     macro_rules! component {
         ($cn:expr) => {
             match schemas.get($cn) {
