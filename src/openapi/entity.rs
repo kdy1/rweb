@@ -1,14 +1,14 @@
 use crate::{Form, Json, Query};
 use indexmap::IndexMap;
 pub use rweb_openapi::v3_0::*;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
 use std::{
     borrow::Cow,
     collections::{BTreeSet, HashSet, LinkedList, VecDeque},
     convert::Infallible,
 };
 use warp::{Rejection, Reply};
-use std::sync::Arc;
-use std::collections::HashMap;
 
 pub type Components = Vec<(Cow<'static, str>, Schema)>;
 
@@ -291,17 +291,81 @@ impl<T: Entity> Entity for HashMap<String, T> {
 
 impl<T: Entity> Entity for HashMap<Arc<String>, T> {
     fn describe() -> Schema {
-        Schema {
-            schema_type: Some(Type::Object),
-            additional_properties: Some(ObjectOrReference::Object(Box::new(
-                <T as Entity>::describe()
-            ))),
-            ..Default::default()
-        }
+        <HashMap<String, T> as Entity>::describe()
     }
 
     fn describe_components() -> Components {
-        <T as Entity>::describe_components()
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for HashMap<Cow<'_, String>, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for BTreeMap<String, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for BTreeMap<Arc<String>, T> {
+    fn describe() -> Schema {
+        <BTreeMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <BTreeMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for BTreeMap<Cow<'_, String>, T> {
+    fn describe() -> Schema {
+        <BTreeMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <BTreeMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for IndexMap<String, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for IndexMap<Arc<String>, T> {
+    fn describe() -> Schema {
+        <IndexMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <IndexMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for IndexMap<Cow<'_, String>, T> {
+    fn describe() -> Schema {
+        <IndexMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <IndexMap<String, T> as Entity>::describe_components()
     }
 }
 
