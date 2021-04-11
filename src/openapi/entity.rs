@@ -275,17 +275,36 @@ impl<T: Entity> Entity for Vec<T> {
 
 impl<T: Entity> Entity for HashMap<String, T> {
     fn describe() -> Schema {
-        Schema {
-            schema_type: Some(Type::Object),
-            additional_properties: Some(ObjectOrReference::Object(Box::new(
-                <T as Entity>::describe()
-            ))),
-            ..Default::default()
+        let s = <T as Entity>::describe();
+        if s.ref_path.is_empty() {
+            Schema {
+                schema_type: Some(Type::Object),
+                additional_properties: Some(ObjectOrReference::Object(Box::new(s))),
+                ..Default::default()
+            }
+        } else {
+            Schema {
+                ref_path: Cow::Owned(format!("{}_Map", s.ref_path)),
+                ..Default::default()
+            }
         }
     }
 
     fn describe_components() -> Components {
-        <T as Entity>::describe_components()
+        let mut v = T::describe_components();
+        let s = T::describe();
+        if !s.ref_path.is_empty() {
+            let cn = &s.ref_path[("#/components/schemas/".len())..];
+            v.push((
+                Cow::Owned(format!("{}_Map", cn)),
+                Schema {
+                    schema_type: Some(Type::Object),
+                    additional_properties: Some(ObjectOrReference::Object(Box::new(s))),
+                    ..Default::default()
+                },
+            ));
+        }
+        v
     }
 }
 
