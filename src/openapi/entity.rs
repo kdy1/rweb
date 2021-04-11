@@ -308,86 +308,6 @@ impl<T: Entity> Entity for HashMap<String, T> {
     }
 }
 
-impl<T: Entity> Entity for HashMap<Arc<String>, T> {
-    fn describe() -> Schema {
-        <HashMap<String, T> as Entity>::describe()
-    }
-
-    fn describe_components() -> Components {
-        <HashMap<String, T> as Entity>::describe_components()
-    }
-}
-
-impl<T: Entity> Entity for HashMap<Cow<'_, String>, T> {
-    fn describe() -> Schema {
-        <HashMap<String, T> as Entity>::describe()
-    }
-
-    fn describe_components() -> Components {
-        <HashMap<String, T> as Entity>::describe_components()
-    }
-}
-
-impl<T: Entity> Entity for BTreeMap<String, T> {
-    fn describe() -> Schema {
-        <HashMap<String, T> as Entity>::describe()
-    }
-
-    fn describe_components() -> Components {
-        <HashMap<String, T> as Entity>::describe_components()
-    }
-}
-
-impl<T: Entity> Entity for BTreeMap<Arc<String>, T> {
-    fn describe() -> Schema {
-        <BTreeMap<String, T> as Entity>::describe()
-    }
-
-    fn describe_components() -> Components {
-        <BTreeMap<String, T> as Entity>::describe_components()
-    }
-}
-
-impl<T: Entity> Entity for BTreeMap<Cow<'_, String>, T> {
-    fn describe() -> Schema {
-        <BTreeMap<String, T> as Entity>::describe()
-    }
-
-    fn describe_components() -> Components {
-        <BTreeMap<String, T> as Entity>::describe_components()
-    }
-}
-
-impl<T: Entity> Entity for IndexMap<String, T> {
-    fn describe() -> Schema {
-        <HashMap<String, T> as Entity>::describe()
-    }
-
-    fn describe_components() -> Components {
-        <HashMap<String, T> as Entity>::describe_components()
-    }
-}
-
-impl<T: Entity> Entity for IndexMap<Arc<String>, T> {
-    fn describe() -> Schema {
-        <IndexMap<String, T> as Entity>::describe()
-    }
-
-    fn describe_components() -> Components {
-        <IndexMap<String, T> as Entity>::describe_components()
-    }
-}
-
-impl<T: Entity> Entity for IndexMap<Cow<'_, String>, T> {
-    fn describe() -> Schema {
-        <IndexMap<String, T> as Entity>::describe()
-    }
-
-    fn describe_components() -> Components {
-        <IndexMap<String, T> as Entity>::describe_components()
-    }
-}
-
 impl<T: Entity> Entity for [T] {
     fn describe() -> Schema {
         let s = T::describe();
@@ -609,6 +529,86 @@ where
     #[inline(always)]
     fn describe_components() -> Components {
         <[V] as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for HashMap<Arc<String>, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for HashMap<Cow<'_, String>, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for BTreeMap<String, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for BTreeMap<Arc<String>, T> {
+    fn describe() -> Schema {
+        <BTreeMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <BTreeMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for BTreeMap<Cow<'_, String>, T> {
+    fn describe() -> Schema {
+        <BTreeMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <BTreeMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for IndexMap<String, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for IndexMap<Arc<String>, T> {
+    fn describe() -> Schema {
+        <IndexMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <IndexMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for IndexMap<Cow<'_, String>, T> {
+    fn describe() -> Schema {
+        <IndexMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <IndexMap<String, T> as Entity>::describe_components()
     }
 }
 
