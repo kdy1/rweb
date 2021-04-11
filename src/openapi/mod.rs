@@ -441,6 +441,10 @@ where
 
 pub fn schema_consistent_component_name(s: &Schema) -> Result<String, &'static str> {
     if s.ref_path.is_empty() {
+        let optsuff = match s.nullable {
+            Some(true) => "_Opt",
+            _ => "",
+        };
         match s.schema_type {
             Some(Type::String) => Ok("string".to_string()),
             Some(Type::Number) => Ok("number".to_string()),
@@ -451,6 +455,7 @@ pub fn schema_consistent_component_name(s: &Schema) -> Result<String, &'static s
             )? + "_List"),
             _ => Err("anonymous types don't have component names"),
         }
+        .map(|s| s + optsuff)
     } else {
         Ok(s.ref_path[("#/components/schemas/".len())..].to_string())
     }
