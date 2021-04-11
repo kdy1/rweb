@@ -78,7 +78,7 @@ pub fn quote_op(op: Operation) -> Expr {
                 description: rweb::rt::Cow::Borrowed(description_v),
                 operation_id: rweb::rt::Cow::Borrowed(id_v),
                 parameters: vec![params_v],
-                responses: indexmap::indexmap! {responses_v},
+                responses: rweb::rt::indexmap! {responses_v},
                 ..Default::default()
             }
         }
@@ -172,7 +172,7 @@ fn quote_response(r: &Response) -> Expr {
         {
             rweb::openapi::Response {
                 description: rweb::rt::Cow::Borrowed(description_v),
-                content: indexmap::indexmap! {content_v},
+                content: rweb::rt::indexmap! {content_v},
                 ..Default::default()
             }
         }
