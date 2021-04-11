@@ -366,9 +366,7 @@ where
                 Cow::Owned(format!("{}_Opt", cn)),
                 Schema {
                     nullable: Some(true),
-                    one_of: vec![ObjectOrReference::Ref {
-                        ref_path: s.ref_path,
-                    }],
+                    one_of: vec![ObjectOrReference::Object(s)],
                     ..Default::default()
                 },
             ));
