@@ -327,17 +327,14 @@ impl<T: Entity> Entity for [T] {
         let s = T::describe();
         if !s.ref_path.is_empty() {
             let cn = &s.ref_path[("#/components/schemas/".len())..];
-            if let Some((_, sc)) = v.iter().find(|(path, _)| path == cn) {
-                let sc = sc.clone();
-                v.push((
-                    Cow::Owned(format!("{}_List", cn)),
-                    Schema {
-                        schema_type: Some(Type::Array),
-                        items: Some(Box::new(sc)),
-                        ..Default::default()
-                    },
-                ));
-            }
+            v.push((
+                Cow::Owned(format!("{}_List", cn)),
+                Schema {
+                    schema_type: Some(Type::Array),
+                    items: Some(Box::new(s)),
+                    ..Default::default()
+                },
+            ));
         }
         v
     }
