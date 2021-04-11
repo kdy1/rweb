@@ -7,6 +7,8 @@ use std::{
     convert::Infallible,
 };
 use warp::{Rejection, Reply};
+use std::sync::Arc;
+use std::collections::HashMap;
 
 pub type Components = Vec<(Cow<'static, str>, Schema)>;
 
@@ -217,6 +219,28 @@ where
     }
 }
 
+impl<T> Entity for Arc<T>
+where
+    T: ?Sized + Entity,
+{
+    fn describe() -> Schema {
+        T::describe()
+    }
+
+    fn describe_components() -> Components {
+        T::describe_components()
+    }
+}
+
+impl<T> ResponseEntity for Arc<T>
+where
+    T: ?Sized + ResponseEntity,
+{
+    fn describe_responses() -> Responses {
+        T::describe_responses()
+    }
+}
+
 impl<'a, T> Entity for &'a T
 where
     T: ?Sized + Entity,
@@ -246,6 +270,38 @@ impl<T: Entity> Entity for Vec<T> {
 
     fn describe_components() -> Components {
         <[T] as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for HashMap<String, T> {
+    fn describe() -> Schema {
+        Schema {
+            schema_type: Some(Type::Object),
+            additional_properties: Some(ObjectOrReference::Object(Box::new(
+                <T as Entity>::describe()
+            ))),
+            ..Default::default()
+        }
+    }
+
+    fn describe_components() -> Components {
+        <T as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for HashMap<Arc<String>, T> {
+    fn describe() -> Schema {
+        Schema {
+            schema_type: Some(Type::Object),
+            additional_properties: Some(ObjectOrReference::Object(Box::new(
+                <T as Entity>::describe()
+            ))),
+            ..Default::default()
+        }
+    }
+
+    fn describe_components() -> Components {
+        <T as Entity>::describe_components()
     }
 }
 
