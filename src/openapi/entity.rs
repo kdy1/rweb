@@ -1,14 +1,14 @@
 use crate::{Form, Json, Query};
 use indexmap::IndexMap;
 pub use rweb_openapi::v3_0::*;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
 use std::{
     borrow::Cow,
     collections::{BTreeSet, HashSet, LinkedList, VecDeque},
     convert::Infallible,
 };
 use warp::{Rejection, Reply};
-use std::sync::Arc;
-use std::collections::HashMap;
 
 pub type Components = Vec<(Cow<'static, str>, Schema)>;
 
@@ -275,33 +275,36 @@ impl<T: Entity> Entity for Vec<T> {
 
 impl<T: Entity> Entity for HashMap<String, T> {
     fn describe() -> Schema {
-        Schema {
-            schema_type: Some(Type::Object),
-            additional_properties: Some(ObjectOrReference::Object(Box::new(
-                <T as Entity>::describe()
-            ))),
-            ..Default::default()
+        let s = <T as Entity>::describe();
+        if s.ref_path.is_empty() {
+            Schema {
+                schema_type: Some(Type::Object),
+                additional_properties: Some(ObjectOrReference::Object(Box::new(s))),
+                ..Default::default()
+            }
+        } else {
+            Schema {
+                ref_path: Cow::Owned(format!("{}_Map", s.ref_path)),
+                ..Default::default()
+            }
         }
     }
 
     fn describe_components() -> Components {
-        <T as Entity>::describe_components()
-    }
-}
-
-impl<T: Entity> Entity for HashMap<Arc<String>, T> {
-    fn describe() -> Schema {
-        Schema {
-            schema_type: Some(Type::Object),
-            additional_properties: Some(ObjectOrReference::Object(Box::new(
-                <T as Entity>::describe()
-            ))),
-            ..Default::default()
+        let mut v = T::describe_components();
+        let s = T::describe();
+        if !s.ref_path.is_empty() {
+            let cn = &s.ref_path[("#/components/schemas/".len())..];
+            v.push((
+                Cow::Owned(format!("{}_Map", cn)),
+                Schema {
+                    schema_type: Some(Type::Object),
+                    additional_properties: Some(ObjectOrReference::Object(Box::new(s))),
+                    ..Default::default()
+                },
+            ));
         }
-    }
-
-    fn describe_components() -> Components {
-        <T as Entity>::describe_components()
+        v
     }
 }
 
@@ -327,17 +330,14 @@ impl<T: Entity> Entity for [T] {
         let s = T::describe();
         if !s.ref_path.is_empty() {
             let cn = &s.ref_path[("#/components/schemas/".len())..];
-            if let Some((_, sc)) = v.iter().find(|(path, _)| path == cn) {
-                let sc = sc.clone();
-                v.push((
-                    Cow::Owned(format!("{}_List", cn)),
-                    Schema {
-                        schema_type: Some(Type::Array),
-                        items: Some(Box::new(sc)),
-                        ..Default::default()
-                    },
-                ));
-            }
+            v.push((
+                Cow::Owned(format!("{}_List", cn)),
+                Schema {
+                    schema_type: Some(Type::Array),
+                    items: Some(Box::new(s)),
+                    ..Default::default()
+                },
+            ));
         }
         v
     }
@@ -362,12 +362,14 @@ where
         let s = T::describe();
         if !s.ref_path.is_empty() {
             let cn = &s.ref_path[("#/components/schemas/".len())..];
-            if let Some((_, sc)) = v.iter().find(|(path, _)| path == cn) {
-                let mut sc = sc.clone();
-                sc.ref_path = Cow::Owned(format!("{}_Opt", s.ref_path));
-                sc.nullable = Some(true);
-                v.push((Cow::Owned(format!("{}_Opt", cn)), sc));
-            }
+            v.push((
+                Cow::Owned(format!("{}_Opt", cn)),
+                Schema {
+                    nullable: Some(true),
+                    one_of: vec![ObjectOrReference::Object(s)],
+                    ..Default::default()
+                },
+            ));
         }
         v
     }
@@ -525,6 +527,86 @@ where
     #[inline(always)]
     fn describe_components() -> Components {
         <[V] as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for HashMap<Arc<String>, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for HashMap<Cow<'_, String>, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for BTreeMap<String, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for BTreeMap<Arc<String>, T> {
+    fn describe() -> Schema {
+        <BTreeMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <BTreeMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for BTreeMap<Cow<'_, String>, T> {
+    fn describe() -> Schema {
+        <BTreeMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <BTreeMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for IndexMap<String, T> {
+    fn describe() -> Schema {
+        <HashMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <HashMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for IndexMap<Arc<String>, T> {
+    fn describe() -> Schema {
+        <IndexMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <IndexMap<String, T> as Entity>::describe_components()
+    }
+}
+
+impl<T: Entity> Entity for IndexMap<Cow<'_, String>, T> {
+    fn describe() -> Schema {
+        <IndexMap<String, T> as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <IndexMap<String, T> as Entity>::describe_components()
     }
 }
 
