@@ -15,7 +15,8 @@ use pmutil::{q, Quote, ToTokensExt};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 use rweb_openapi::v3_0::{
-    Location, MediaType, ObjectOrReference, Operation, Parameter, Response, Schema,
+    Location, MediaType, ObjectOrReference, Operation, Parameter, ParameterRepresentation,
+    Response, Schema,
 };
 use std::borrow::Cow;
 use syn::{
@@ -105,18 +106,22 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
 
     let required_v = quote_option(param.required);
 
-    assert!(
-        param.schema.is_some(),
-        "Schema should contain a (rust) path to the type"
-    );
-    let ty = param
-        .schema
-        .as_ref()
-        .unwrap()
-        .ref_path
-        .parse::<TokenStream>()
-        .expect("failed to lex path to the type of parameter?");
-
+    let ty = match &param.representation {
+        Some(ParameterRepresentation::Simple {
+            schema: ObjectOrReference::Ref { ref_path },
+        }) => ref_path.parse::<TokenStream>(),
+        Some(ParameterRepresentation::Simple {
+            schema: ObjectOrReference::Object(Schema { ref_path, .. }),
+        }) if !ref_path.is_empty() => ref_path.parse::<TokenStream>(),
+        Some(ParameterRepresentation::Simple {
+            schema: ObjectOrReference::Object(_),
+        }) => panic!("Inline parameter schemas are currently not supported"),
+        Some(ParameterRepresentation::Content { .. }) => {
+            panic!("Content-type specific parameters are currently not supported")
+        } //TODO Implement
+        None => panic!("Schema should contain a (rust) path to the type"),
+    }
+    .expect("failed to lex path to the type of parameter?");
     q!(
         Vars {
             Type: ty,
@@ -129,7 +134,11 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
                 name: rweb::rt::Cow::Borrowed(name_v),
                 location: location_v,
                 required: required_v,
-                schema: Some(<Type as rweb::openapi::Entity>::describe()),
+                representation: Some(rweb::openapi::ParameterRepresentation::Simple {
+                    schema: rweb::openapi::ObjectOrReference::Object(
+                        <Type as rweb::openapi::Entity>::describe(),
+                    ),
+                }),
                 ..Default::default()
             })
         }
@@ -234,9 +243,11 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                 name: Cow::Owned(var.to_string()),
                 location: Location::Path,
                 required: Some(true),
-                schema: Some(Schema {
-                    ref_path: Cow::Owned(ty.dump().to_string()),
-                    ..Default::default()
+                representation: Some(ParameterRepresentation::Simple {
+                    schema: ObjectOrReference::Object(Schema {
+                        ref_path: Cow::Owned(ty.dump().to_string()),
+                        ..Default::default()
+                    }),
                 }),
                 ..Default::default()
             }));

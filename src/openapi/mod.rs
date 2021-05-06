@@ -313,10 +313,11 @@ impl Collector {
                     if s.properties.is_empty() {
                         op.parameters.push(ObjectOrReference::Object(Parameter {
                             name,
-                            param_type: None,
                             location: Location::Query,
                             description: s.description.clone(),
-                            schema: Some(s),
+                            representation: Some(ParameterRepresentation::Simple {
+                                schema: ObjectOrReference::Object(s),
+                            }),
                             ..Default::default()
                         }));
                     } else {
@@ -324,9 +325,10 @@ impl Collector {
                             required: Some(s.required.contains(&name)),
                             name,
                             location: Location::Query,
-                            unique_items: None,
                             description: s.description.clone(),
-                            schema: Some(s),
+                            representation: Some(ParameterRepresentation::Simple {
+                                schema: ObjectOrReference::Object(s),
+                            }),
                             ..Default::default()
                         }));
                     }
