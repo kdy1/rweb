@@ -569,6 +569,43 @@ where
     }
 }
 
+impl<T: Entity> Entity for (T, T) {
+    fn describe() -> Schema {
+        <[T; 2] as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <[T; 2] as Entity>::describe_components()
+    }
+}
+impl<T: Entity> Entity for (T, T, T) {
+    fn describe() -> Schema {
+        <[T; 3] as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <[T; 3] as Entity>::describe_components()
+    }
+}
+impl<T: Entity> Entity for (T, T, T, T) {
+    fn describe() -> Schema {
+        <[T; 4] as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <[T; 4] as Entity>::describe_components()
+    }
+}
+impl<T: Entity> Entity for (T, T, T, T, T) {
+    fn describe() -> Schema {
+        <[T; 5] as Entity>::describe()
+    }
+
+    fn describe_components() -> Components {
+        <[T; 5] as Entity>::describe_components()
+    }
+}
+
 impl<T: Entity> Entity for HashMap<Arc<String>, T> {
     fn describe() -> Schema {
         <HashMap<String, T> as Entity>::describe()
