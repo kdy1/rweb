@@ -382,6 +382,43 @@ impl<T: Entity, const N: usize> Entity for [T; N] {
     }
 }
 
+impl<T: Entity> Entity for BTreeSet<T> {
+    fn describe() -> Schema {
+        let s = T::describe();
+        if s.ref_path.is_empty() {
+            Schema {
+                schema_type: Some(Type::Array),
+                items: Some(Box::new(s)),
+                unique_items: Some(true),
+                ..Default::default()
+            }
+        } else {
+            Schema {
+                ref_path: Cow::Owned(format!("{}_Set", s.ref_path)),
+                ..Default::default()
+            }
+        }
+    }
+
+    fn describe_components() -> Components {
+        let mut v = T::describe_components();
+        let s = T::describe();
+        if !s.ref_path.is_empty() {
+            let cn = &s.ref_path[("#/components/schemas/".len())..];
+            v.push((
+                Cow::Owned(format!("{}_Set", cn)),
+                Schema {
+                    schema_type: Some(Type::Array),
+                    items: Some(Box::new(s)),
+                    unique_items: Some(true),
+                    ..Default::default()
+                },
+            ));
+        }
+        v
+    }
+}
+
 impl<T> Entity for Option<T>
 where
     T: Entity,
@@ -503,39 +540,18 @@ where
     }
 }
 
-//impl<K, V> Entity for IndexMap<K, V> {}
-
-impl<V> Entity for BTreeSet<V>
-where
-    V: Entity,
-{
-    #[inline(always)]
-    fn describe() -> Schema {
-        <[V] as Entity>::describe()
-    }
-
-    #[inline(always)]
-    fn describe_components() -> Components {
-        <[V] as Entity>::describe_components()
-    }
-}
-
-//impl<V> Entity for BinaryHeap<V> {}
-
-//impl<K, V, S> Entity for HashMap<K, V, S> {}
-
 impl<V, S> Entity for HashSet<V, S>
 where
     V: Entity,
 {
     #[inline(always)]
     fn describe() -> Schema {
-        <[V] as Entity>::describe()
+        <BTreeSet<V> as Entity>::describe()
     }
 
     #[inline(always)]
     fn describe_components() -> Components {
-        <[V] as Entity>::describe_components()
+        <BTreeSet<V> as Entity>::describe_components()
     }
 }
 

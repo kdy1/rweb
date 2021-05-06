@@ -1,5 +1,7 @@
 #![cfg(feature = "openapi")]
 
+use std::collections::HashSet;
+
 use rweb::*;
 use serde::{Deserialize, Serialize};
 
@@ -9,6 +11,7 @@ struct Things {
     yarr: [u64; 24],
     yarr0: [u64; 0],
     tuple: (String, String, String),
+    set: HashSet<String>,
 }
 
 #[get("/")]
@@ -59,6 +62,21 @@ fn test_skip() {
         things
             .properties
             .get("tuple")
+            .unwrap()
+            .items
+            .as_ref()
+            .unwrap()
+            .schema_type,
+        Some(openapi::Type::String)
+    );
+    assert_eq!(
+        things.properties.get("set").unwrap().unique_items,
+        Some(true)
+    );
+    assert_eq!(
+        things
+            .properties
+            .get("set")
             .unwrap()
             .items
             .as_ref()
