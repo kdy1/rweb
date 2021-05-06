@@ -260,6 +260,9 @@ fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
                     if let Some(example) = example {
                         s.example = Some(example);
                     }
+                    if skip_ser {
+                        s.write_only = Some(true);
+                    }
                     if skip_de {
                         s.read_only = Some(true);
                     }

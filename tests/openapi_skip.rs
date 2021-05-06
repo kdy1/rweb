@@ -34,12 +34,15 @@ fn test_skip() {
     assert!(whence.properties.contains_key("only_take"));
     assert!(!whence.properties.contains_key("nevah"));
     assert_eq!(whence.properties.get("always").unwrap().read_only, None);
-    // assert_eq!(whence.properties.get("always").unwrap().write_only, None);
+    assert_eq!(whence.properties.get("always").unwrap().write_only, None);
     assert_eq!(
         whence.properties.get("only_yeet").unwrap().read_only,
         Some(true)
     );
-    // assert_eq!(whence.properties.get("only_yeet").unwrap().write_only, None);
+    assert_eq!(whence.properties.get("only_yeet").unwrap().write_only, None);
     assert_eq!(whence.properties.get("only_take").unwrap().read_only, None);
-    // assert_eq!(whence.properties.get("only_take").unwrap().write_only, Some(true));
+    assert_eq!(
+        whence.properties.get("only_take").unwrap().write_only,
+        Some(true)
+    );
 }
