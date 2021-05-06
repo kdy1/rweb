@@ -345,11 +345,40 @@ impl<T: Entity> Entity for [T] {
 
 impl<T: Entity, const N: usize> Entity for [T; N] {
     fn describe() -> Schema {
-        <[T] as Entity>::describe()
+        let s = T::describe();
+        if s.ref_path.is_empty() {
+            Schema {
+                schema_type: Some(Type::Array),
+                items: Some(Box::new(s)),
+                min_items: Some(N),
+                max_items: Some(N),
+                ..Default::default()
+            }
+        } else {
+            Schema {
+                ref_path: Cow::Owned(format!("{}_Array_{}", s.ref_path, N)),
+                ..Default::default()
+            }
+        }
     }
 
     fn describe_components() -> Components {
-        <[T] as Entity>::describe_components()
+        let mut v = T::describe_components();
+        let s = T::describe();
+        if !s.ref_path.is_empty() {
+            let cn = &s.ref_path[("#/components/schemas/".len())..];
+            v.push((
+                Cow::Owned(format!("{}_Array_{}", cn, N)),
+                Schema {
+                    schema_type: Some(Type::Array),
+                    items: Some(Box::new(s)),
+                    min_items: Some(N),
+                    max_items: Some(N),
+                    ..Default::default()
+                },
+            ));
+        }
+        v
     }
 }
 
