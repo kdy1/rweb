@@ -225,7 +225,7 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
     let mut op = Operation::default();
     let mut has_description = false;
 
-    for segment in path.split('/').filter(|&s| s != "") {
+    for segment in path.split('/').filter(|s| !s.is_empty()) {
         if !segment.starts_with('{') {
             continue;
         }
