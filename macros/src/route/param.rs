@@ -80,7 +80,7 @@ pub fn compile(
                         panic!("rweb currently support only one attribute on a parameter")
                     }
 
-                    let attr = pat.attrs.iter().next().unwrap().clone();
+                    let attr = pat.attrs.get(0).cloned().unwrap();
                     pat.attrs = vec![];
 
                     if attr.path.is_ident("form") {
