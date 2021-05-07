@@ -208,14 +208,11 @@ fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
                 }
             }
         } else if attr.path.is_ident("doc") {
-            match parse2::<EqStr>(attr.tokens.clone()) {
-                Ok(v) => {
-                    if !comments.is_empty() {
-                        comments.push(' ');
-                    }
-                    comments.push_str(&v.value.value());
+            if let Ok(v) = parse2::<EqStr>(attr.tokens.clone()) {
+                if !comments.is_empty() {
+                    comments.push(' ');
                 }
-                _ => {}
+                comments.push_str(&v.value.value());
             };
         }
     }
