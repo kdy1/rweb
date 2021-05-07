@@ -55,7 +55,7 @@ fn get_rename(attrs: &[Attribute]) -> Option<String> {
             };
         }
 
-        return None;
+        None
     })
 }
 
