@@ -65,7 +65,7 @@ async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
     } else if let Some(DivideByZero) = err.find() {
         code = StatusCode::BAD_REQUEST;
         message = "DIVIDE_BY_ZERO";
-    } else if let Some(_) = err.find::<rweb::reject::MethodNotAllowed>() {
+    } else if err.find::<rweb::reject::MethodNotAllowed>().is_some() {
         // We can handle a specific error, here METHOD_NOT_ALLOWED,
         // and render it however we want
         code = StatusCode::METHOD_NOT_ALLOWED;
