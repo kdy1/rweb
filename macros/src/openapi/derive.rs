@@ -61,6 +61,31 @@ fn get_rename(attrs: &[Attribute]) -> Option<String> {
     })
 }
 
+fn get_skip_mode(attrs: &[Attribute]) -> (bool, bool) {
+    let mut ser = false;
+    let mut de = false;
+    for attr in attrs {
+        if attr.path.is_ident("serde") {
+            match parse2::<Paren<Meta>>(attr.tokens.clone()) {
+                Ok(Paren {
+                    inner: Meta::Path(pa),
+                }) => {
+                    if pa.is_ident("skip") {
+                        ser = true;
+                        de = true;
+                    } else if pa.is_ident("skip_serializing") {
+                        ser = true
+                    } else if pa.is_ident("skip_deserializing") {
+                        de = true
+                    }
+                }
+                Ok(..) | Err(..) => {}
+            };
+        }
+    }
+    (ser, de)
+}
+
 fn field_name(type_attrs: &[Attribute], field: &Field) -> String {
     if let Some(s) = get_rename(&field.attrs) {
         return s;
@@ -208,13 +233,19 @@ fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
 
     let desc = extract_doc(&mut f.attrs);
     let example_v = extract_example(&mut f.attrs);
+    let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
 
+    if skip_ser && skip_de {
+        return q!({ {} }).parse();
+    }
     q!(
         Vars {
             name_str,
             desc,
             Type: &f.ty,
             example_v: super::quote_option(example_v),
+            skip_ser,
+            skip_de,
         },
         {
             map.insert(rweb::rt::Cow::Borrowed(name_str), {
@@ -228,6 +259,12 @@ fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
                     let example = example_v;
                     if let Some(example) = example {
                         s.example = Some(example);
+                    }
+                    if skip_ser {
+                        s.write_only = Some(true);
+                    }
+                    if skip_de {
+                        s.read_only = Some(true);
                     }
                     s
                 }
