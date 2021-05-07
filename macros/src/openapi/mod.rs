@@ -232,13 +232,6 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
 
         let var = &segment[1..segment.len() - 1];
         if let Some(ty) = find_ty(sig, var) {
-            let p = Parameter {
-                name: var.to_string().into(),
-                location: Location::Path,
-                required: Some(true),
-                ..Parameter::default()
-            };
-
             op.parameters.push(ObjectOrReference::Object(Parameter {
                 name: Cow::Owned(var.to_string()),
                 location: Location::Path,
