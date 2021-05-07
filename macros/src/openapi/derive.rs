@@ -329,7 +329,7 @@ fn handle_fields_required(type_attrs: &[Attribute], fields: &Fields) -> Expr {
     .parse()
 }
 
-fn extract_component(attrs: &Vec<Attribute>) -> Option<String> {
+fn extract_component(attrs: &[Attribute]) -> Option<String> {
     let mut component = None;
     let mut process_nv = |nv: syn::MetaNameValue| {
         if nv.path.is_ident("component") {
