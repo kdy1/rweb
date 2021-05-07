@@ -867,3 +867,14 @@ impl ResponseEntity for dyn Reply {
         Default::default()
     }
 }
+
+#[cfg(feature = "uuid")]
+impl Entity for uuid::Uuid {
+    fn describe() -> Schema {
+        Schema {
+            schema_type: Some(Type::String),
+            format: "uuid".into(),
+            ..Default::default()
+        }
+    }
+}
