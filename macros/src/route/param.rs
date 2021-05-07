@@ -145,12 +145,11 @@ pub fn compile(
                     }
 
                     // Don't add unit type to argument list
-                    match i.value() {
-                        FnArg::Typed(pat) => match &*pat.ty {
+                    if let FnArg::Typed(pat) = i.value() {
+                        match &*pat.ty {
                             Type::Tuple(tuple) if tuple.elems.is_empty() => continue,
                             _ => {}
-                        },
-                        _ => {}
+                        }
                     }
 
                     actual_inputs.push(i);
