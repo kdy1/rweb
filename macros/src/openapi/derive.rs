@@ -444,7 +444,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
             if data
                 .variants
                 .iter()
-                .all(|variant| variant.fields.len() == 0)
+                .all(|variant| variant.fields.is_empty())
             {
                 // c-like enums
 
@@ -511,7 +511,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                             Fields::Unnamed(ref f) => {
                                 //
                                 assert!(f.unnamed.len() <= 1);
-                                if f.unnamed.len() == 0 {
+                                if f.unnamed.is_empty() {
                                     return None;
                                 }
 
