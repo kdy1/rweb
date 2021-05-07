@@ -24,9 +24,7 @@ fn get_rename_all(attrs: &[Attribute]) -> RenameRule {
             }
 
             match parse2::<Paren<KeyValue<Ident, LitStr>>>(attr.tokens.clone()).map(|v| v.inner) {
-                Ok(kv) if kv.key.to_string() == "rename_all" => {
-                    Some(kv.value.value().parse().unwrap())
-                }
+                Ok(kv) if kv.key == "rename_all" => Some(kv.value.value().parse().unwrap()),
                 _ => None,
             }
         })
