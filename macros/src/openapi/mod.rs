@@ -202,16 +202,14 @@ fn quote_mediatype(m: &MediaType) -> Expr {
 }
 
 fn quote_schema_or_ref(ros: &ObjectOrReference<Schema>) -> TokenStream {
-    match ros {
-        ObjectOrReference::Ref { ref_path: r } => r
-            .parse::<TokenStream>()
-            .expect("failed to lex path to type"),
-        ObjectOrReference::Object(schema) => match &schema.ref_path {
-            r => r
-                .parse::<TokenStream>()
-                .expect("failed to lex path to type"),
-        },
-    }
+    let r#ref = match ros {
+        ObjectOrReference::Ref { ref_path } => ref_path,
+        ObjectOrReference::Object(schema) => &schema.ref_path,
+    };
+
+    r#ref
+        .parse::<TokenStream>()
+        .expect("failed to lex path to type")
 }
 
 fn quote_location(l: Location) -> Quote {
