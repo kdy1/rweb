@@ -27,16 +27,15 @@ pub fn compile(
                 continue;
             }
 
-            match &sig.inputs[idx] {
-                FnArg::Typed(pat) => match *pat.pat {
+            if let FnArg::Typed(pat) = &sig.inputs[idx] {
+                match *pat.pat {
                     Pat::Ident(ref i) if i.ident == name => {
                         inputs[orig_idx] = sig.inputs[idx].clone();
                         inputs[idx] = sig.inputs[orig_idx].clone();
                         path_params.insert(orig_idx);
                     }
                     _ => {}
-                },
-                _ => {}
+                }
             }
         }
     }
