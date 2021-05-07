@@ -30,7 +30,7 @@ pub fn compile(
     let path = path.value();
     assert!(path.starts_with('/'), "Path should start with /");
     assert!(
-        path.find("//").is_none(),
+        !path.contains("//"),
         "A path containing `//` doesn't make sense"
     );
 
