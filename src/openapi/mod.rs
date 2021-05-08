@@ -305,36 +305,33 @@ impl Collector {
             "Query<Enum> is invalid. Store enum as a field."
         );
 
-        match s.schema_type {
-            Some(Type::Object) => {
-                //
+        if let Some(Type::Object) = s.schema_type {
+            //
 
-                for (name, s) in s.properties {
-                    if s.properties.is_empty() {
-                        op.parameters.push(ObjectOrReference::Object(Parameter {
-                            name,
-                            location: Location::Query,
-                            description: s.description.clone(),
-                            representation: Some(ParameterRepresentation::Simple {
-                                schema: ObjectOrReference::Object(s),
-                            }),
-                            ..Default::default()
-                        }));
-                    } else {
-                        op.parameters.push(ObjectOrReference::Object(Parameter {
-                            required: Some(s.required.contains(&name)),
-                            name,
-                            location: Location::Query,
-                            description: s.description.clone(),
-                            representation: Some(ParameterRepresentation::Simple {
-                                schema: ObjectOrReference::Object(s),
-                            }),
-                            ..Default::default()
-                        }));
-                    }
+            for (name, s) in s.properties {
+                if s.properties.is_empty() {
+                    op.parameters.push(ObjectOrReference::Object(Parameter {
+                        name,
+                        location: Location::Query,
+                        description: s.description.clone(),
+                        representation: Some(ParameterRepresentation::Simple {
+                            schema: ObjectOrReference::Object(s),
+                        }),
+                        ..Default::default()
+                    }));
+                } else {
+                    op.parameters.push(ObjectOrReference::Object(Parameter {
+                        required: Some(s.required.contains(&name)),
+                        name,
+                        location: Location::Query,
+                        description: s.description.clone(),
+                        representation: Some(ParameterRepresentation::Simple {
+                            schema: ObjectOrReference::Object(s),
+                        }),
+                        ..Default::default()
+                    }));
                 }
             }
-            _ => {}
         }
     }
 
