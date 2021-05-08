@@ -30,7 +30,7 @@ pub fn compile(
     let path = path.value();
     assert!(path.starts_with('/'), "Path should start with /");
     assert!(
-        path.find("//").is_none(),
+        !path.contains("//"),
         "A path containing `//` doesn't make sense"
     );
 
@@ -43,7 +43,11 @@ pub fn compile(
     // Mainly it will come from the required path in the beginning / but could also
     // come from the end / Example: #[get("/{word}")] or #[get("/{word}/")] with
     // the `/` before and after `{word}`
-    let segments: Vec<&str> = path.split('/').into_iter().filter(|&x| x != "").collect();
+    let segments: Vec<&str> = path
+        .split('/')
+        .into_iter()
+        .filter(|x| !x.is_empty())
+        .collect();
     for segment in segments {
         let expr = if segment.starts_with('{') {
             // Example if {word} we only want to extract `word` here

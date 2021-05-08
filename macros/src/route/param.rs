@@ -27,16 +27,15 @@ pub fn compile(
                 continue;
             }
 
-            match &sig.inputs[idx] {
-                FnArg::Typed(pat) => match *pat.pat {
+            if let FnArg::Typed(pat) = &sig.inputs[idx] {
+                match *pat.pat {
                     Pat::Ident(ref i) if i.ident == name => {
                         inputs[orig_idx] = sig.inputs[idx].clone();
                         inputs[idx] = sig.inputs[orig_idx].clone();
                         path_params.insert(orig_idx);
                     }
                     _ => {}
-                },
-                _ => {}
+                }
             }
         }
     }
@@ -81,7 +80,7 @@ pub fn compile(
                         panic!("rweb currently support only one attribute on a parameter")
                     }
 
-                    let attr = pat.attrs.iter().next().unwrap().clone();
+                    let attr = pat.attrs.get(0).cloned().unwrap();
                     pat.attrs = vec![];
 
                     if attr.path.is_ident("form") {
@@ -146,12 +145,11 @@ pub fn compile(
                     }
 
                     // Don't add unit type to argument list
-                    match i.value() {
-                        FnArg::Typed(pat) => match &*pat.ty {
+                    if let FnArg::Typed(pat) = i.value() {
+                        match &*pat.ty {
                             Type::Tuple(tuple) if tuple.elems.is_empty() => continue,
                             _ => {}
-                        },
-                        _ => {}
+                        }
                     }
 
                     actual_inputs.push(i);

@@ -24,9 +24,7 @@ fn get_rename_all(attrs: &[Attribute]) -> RenameRule {
             }
 
             match parse2::<Paren<KeyValue<Ident, LitStr>>>(attr.tokens.clone()).map(|v| v.inner) {
-                Ok(kv) if kv.key.to_string() == "rename_all" => {
-                    Some(kv.value.value().parse().unwrap())
-                }
+                Ok(kv) if kv.key == "rename_all" => Some(kv.value.value().parse().unwrap()),
                 _ => None,
             }
         })
@@ -57,7 +55,7 @@ fn get_rename(attrs: &[Attribute]) -> Option<String> {
             };
         }
 
-        return None;
+        None
     })
 }
 
@@ -210,14 +208,11 @@ fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
                 }
             }
         } else if attr.path.is_ident("doc") {
-            match parse2::<EqStr>(attr.tokens.clone()) {
-                Ok(v) => {
-                    if !comments.is_empty() {
-                        comments.push(' ');
-                    }
-                    comments.push_str(&v.value.value());
+            if let Ok(v) = parse2::<EqStr>(attr.tokens.clone()) {
+                if !comments.is_empty() {
+                    comments.push(' ');
                 }
-                _ => {}
+                comments.push_str(&v.value.value());
             };
         }
     }
@@ -334,7 +329,7 @@ fn handle_fields_required(type_attrs: &[Attribute], fields: &Fields) -> Expr {
     .parse()
 }
 
-fn extract_component(attrs: &Vec<Attribute>) -> Option<String> {
+fn extract_component(attrs: &[Attribute]) -> Option<String> {
     let mut component = None;
     let mut process_nv = |nv: syn::MetaNameValue| {
         if nv.path.is_ident("component") {
@@ -449,7 +444,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
             if data
                 .variants
                 .iter()
-                .all(|variant| variant.fields.len() == 0)
+                .all(|variant| variant.fields.is_empty())
             {
                 // c-like enums
 
@@ -516,7 +511,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                             Fields::Unnamed(ref f) => {
                                 //
                                 assert!(f.unnamed.len() <= 1);
-                                if f.unnamed.len() == 0 {
+                                if f.unnamed.is_empty() {
                                     return None;
                                 }
 

@@ -29,7 +29,7 @@ impl Builder {
     /// **Overrides** path prefix with given string.
     #[inline]
     pub fn prefix(mut self, path: String) -> Self {
-        assert!(path.starts_with("/"));
+        assert!(path.starts_with('/'));
         self.path_prefix = path;
 
         self

@@ -202,16 +202,14 @@ fn quote_mediatype(m: &MediaType) -> Expr {
 }
 
 fn quote_schema_or_ref(ros: &ObjectOrReference<Schema>) -> TokenStream {
-    match ros {
-        ObjectOrReference::Ref { ref_path: r } => r
-            .parse::<TokenStream>()
-            .expect("failed to lex path to type"),
-        ObjectOrReference::Object(schema) => match &schema.ref_path {
-            r => r
-                .parse::<TokenStream>()
-                .expect("failed to lex path to type"),
-        },
-    }
+    let r#ref = match ros {
+        ObjectOrReference::Ref { ref_path } => ref_path,
+        ObjectOrReference::Object(schema) => &schema.ref_path,
+    };
+
+    r#ref
+        .parse::<TokenStream>()
+        .expect("failed to lex path to type")
 }
 
 fn quote_location(l: Location) -> Quote {
@@ -227,18 +225,13 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
     let mut op = Operation::default();
     let mut has_description = false;
 
-    for segment in path.split('/').filter(|&s| s != "") {
+    for segment in path.split('/').filter(|s| !s.is_empty()) {
         if !segment.starts_with('{') {
             continue;
         }
 
         let var = &segment[1..segment.len() - 1];
         if let Some(ty) = find_ty(sig, var) {
-            let mut p = Parameter::default();
-            p.name = Cow::Owned(var.to_string());
-            p.location = Location::Path;
-            p.required = Some(true);
-
             op.parameters.push(ObjectOrReference::Object(Parameter {
                 name: Cow::Owned(var.to_string()),
                 location: Location::Path,

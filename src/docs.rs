@@ -16,7 +16,7 @@ use warp::Reply;
 pub fn openapi_docs(spec: Spec) -> BoxedFilter<(impl Reply,)> {
     let docs_openapi = warp::path("openapi.json").map(move || warp::reply::json(&spec.to_owned()));
     let docs = warp::path("docs").map(|| {
-        return warp::reply::html(
+        warp::reply::html(
             r#"
             <!doctype html>
             <html lang="en">
@@ -47,7 +47,7 @@ pub fn openapi_docs(spec: Spec) -> BoxedFilter<(impl Reply,)> {
             </body>
             </html>
         "#,
-        );
+        )
     });
     docs.or(docs_openapi).boxed()
 }
