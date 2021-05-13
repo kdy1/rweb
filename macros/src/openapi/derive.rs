@@ -466,6 +466,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                     .collect();
 
                 fields.push(q!(Vars { exprs }, { enum_values: vec![exprs] }).parse());
+                fields.push(q!({ schema_type: Some(rweb::openapi::Type::String) }).parse());
             } else {
                 for v in &data.variants {
                     subcomponents_handle_fields!(&v.fields);

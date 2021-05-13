@@ -10,6 +10,7 @@ fn index(_: Json<Color>) -> String {
 }
 
 #[derive(Debug, Serialize, Deserialize, Schema)]
+#[schema(component = "Color")]
 pub enum Color {
     #[serde(rename = "black")]
     Black,
@@ -34,14 +35,17 @@ fn description() {
         //
         index()
     });
-
-    assert!(spec.paths.get("/").is_some());
-    assert!(spec.paths.get("/").unwrap().get.is_some());
-
-    let yaml = serde_yaml::to_string(&spec).unwrap();
-    println!("{}", yaml);
-
-    assert!(yaml.contains("enum:"));
-    assert!(yaml.contains("- blue"));
-    assert!(yaml.contains("- black"));
+    let schemas = &spec.components.as_ref().unwrap().schemas;
+    macro_rules! component {
+        ($cn:expr) => {
+            match schemas.get($cn) {
+                Some(openapi::ObjectOrReference::Object(s)) => s,
+                Some(..) => panic!("Component schema can't be a reference"),
+                None => panic!("No component schema for {}", $cn),
+            }
+        };
+    }
+    let schema = component!("Color");
+    assert_eq!(schema.schema_type, Some(openapi::Type::String));
+    assert_eq!(schema.enum_values, vec!["black", "blue"]);
 }
