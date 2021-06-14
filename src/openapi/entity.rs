@@ -899,9 +899,6 @@ mod enumsetrepr {
 
     // A `EnumSet<T>` can be serialized as either some number, or list of strings
     // depending on the presence of `#[enumset(serialize_as_list)]` attr.
-    //
-    // Passive detection of the attribute would require _adding_ conditional derives
-    // to the derivation of `Schema` for `T` to additionally derive `Schema` for `EnumSet<T>`.
 
     impl<T: EnumSetType + Entity> Entity for EnumSet<T> {
         fn describe() -> Schema {
