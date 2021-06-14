@@ -878,3 +878,77 @@ impl Entity for uuid::Uuid {
         }
     }
 }
+
+#[cfg(feature = "enumset")]
+mod enumsetrepr {
+    use super::*;
+    use enumset::*;
+    use serde::*;
+
+    #[derive(Deserialize, Clone)]
+    #[serde(untagged)]
+    enum EnumSetRepr {
+        BitFlags(u64),
+        List(Vec<String>),
+    }
+    impl EnumSetRepr {
+        fn detect<T: EnumSetType>() -> Self {
+            serde_json::from_value(serde_json::to_value(EnumSet::<T>::new()).unwrap()).unwrap()
+        }
+    }
+
+    // A `EnumSet<T>` can be serialized as either some number, or list of strings
+    // depending on the presence of `#[enumset(serialize_as_list)]` attr.
+    //
+    // Passive detection of the attribute would require _adding_ conditional derives
+    // to the derivation of `Schema` for `T` to additionally derive `Schema` for `EnumSet<T>`.
+
+    impl<T: EnumSetType + Entity> Entity for EnumSet<T> {
+        fn describe() -> Schema {
+            let s = T::describe();
+            if s.ref_path.is_empty() {
+                match EnumSetRepr::detect::<T>() {
+                    EnumSetRepr::BitFlags(_) => Schema {
+                        schema_type: Some(Type::Integer),
+                        description: s.description,
+                        ..Default::default()
+                    },
+                    EnumSetRepr::List(_) => Schema {
+                        schema_type: Some(Type::Array),
+                        items: Some(Box::new(s)),
+                        ..Default::default()
+                    },
+                }
+            } else {
+                Schema {
+                    ref_path: Cow::Owned(format!("{}_EnumSet", s.ref_path)),
+                    ..Default::default()
+                }
+            }
+        }
+
+        fn describe_components() -> Components {
+            let mut v = T::describe_components();
+            let s = T::describe();
+            if !s.ref_path.is_empty() {
+                let cn = &s.ref_path[("#/components/schemas/".len())..];
+                v.push((
+                    Cow::Owned(format!("{}_EnumSet", cn)),
+                    match EnumSetRepr::detect::<T>() {
+                        EnumSetRepr::BitFlags(_) => Schema {
+                            schema_type: Some(Type::Integer),
+                            description: s.description,
+                            ..Default::default()
+                        },
+                        EnumSetRepr::List(_) => Schema {
+                            schema_type: Some(Type::Array),
+                            items: Some(Box::new(s)),
+                            ..Default::default()
+                        },
+                    },
+                ));
+            }
+            v
+        }
+    }
+}
