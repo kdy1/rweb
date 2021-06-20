@@ -7,6 +7,17 @@
 //!   - Has a type which implements [FromRequest].
 //!
 //!
+//! # Cargo features
+//!
+//! ## form
+//!
+//! Add `Valid<T>`, which is used like `Json<Valid<T>>`. See [Valid] for more information.
+//!
+//! ## openapi
+//!
+//! Enable openapi spec generation.
+//!
+//!
 //! # Path parmeters
 //!
 //!
