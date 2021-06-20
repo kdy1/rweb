@@ -382,6 +382,9 @@ pub use self::{
     routes::*,
 };
 pub use rweb_macros::{delete, get, head, options, patch, post, put, router, Schema};
+/// Reexported so you don't have to depend on validator.
+#[cfg(feature = "validator")]
+pub use validator;
 pub use warp::{self, *};
 
 #[cfg(feature = "openapi")]
