@@ -11,7 +11,8 @@
 //!
 //! ## form
 //!
-//! Add `Valid<T>`, which is used like `Json<Valid<T>>`. See [Valid] for more information.
+//! Add `Valid<T>`, which is used like `Json<Valid<T>>`. See [Valid] for more
+//! information.
 //!
 //! ## openapi
 //!
@@ -374,19 +375,24 @@
 //! fn admin() {}
 //! ```
 
-pub use self::factory::{Form, FromRequest, Json, Query};
+#[cfg(feature = "openapi")]
+pub use self::docs::*;
+#[cfg(feature = "form")]
+pub use self::form::*;
+pub use self::{
+    factory::{Form, FromRequest, Json, Query},
+    routes::*,
+};
 pub use rweb_macros::{delete, get, head, options, patch, post, put, router, Schema};
 pub use warp::{self, *};
 
 #[cfg(feature = "openapi")]
 pub mod docs;
-#[cfg(feature = "openapi")]
-pub use self::docs::*;
 mod factory;
+#[cfg(feature = "form")]
+mod form;
 #[cfg(feature = "openapi")]
 pub mod openapi;
+pub mod routes;
 #[doc(hidden)]
 pub mod rt;
-
-pub mod routes;
-pub use self::routes::*;
