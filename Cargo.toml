@@ -17,7 +17,7 @@ all-features = true
 
 [features]
 default = ["multipart", "websocket"]
-form = ["validator"]
+form = ["rweb-macros/form", "validator"]
 multipart = ["warp/multipart"]
 openapi = ["rweb-macros/openapi", "rweb-openapi"]
 tls = ["warp/tls"]
