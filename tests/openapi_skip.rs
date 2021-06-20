@@ -1,4 +1,5 @@
 #![cfg(feature = "openapi")]
+#![allow(dead_code)]
 
 use rweb::*;
 use serde::{Deserialize, Serialize};
