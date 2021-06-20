@@ -1,4 +1,5 @@
 [workspace]
+members = ["form"]
 
 [package]
 authors = ["강동윤 <kdy1997.dev@gmail.com>"]
@@ -23,6 +24,7 @@ tls = ["warp/tls"]
 websocket = ["warp/websocket"]
 
 [dependencies]
+enumset = {version = "1.0", features = ["serde"], optional = true}
 futures = "0.3"
 http = "0.2"
 indexmap = "1"
@@ -34,7 +36,6 @@ serde_json = "1"
 tokio = {version = "1.2", features = ["macros", "rt-multi-thread"]}
 tokio-stream = "0.1"
 uuid = {version = "0.8", features = ["serde"], optional = true}
-enumset = {version = "1.0", features = ["serde"], optional = true}
 warp = "0.3.0"
 
 [dev-dependencies]
