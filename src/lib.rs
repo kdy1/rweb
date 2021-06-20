@@ -377,8 +377,6 @@
 
 #[cfg(feature = "openapi")]
 pub use self::docs::*;
-#[cfg(feature = "form")]
-pub use self::form::*;
 pub use self::{
     factory::{Form, FromRequest, Json, Query},
     routes::*,
@@ -390,7 +388,7 @@ pub use warp::{self, *};
 pub mod docs;
 mod factory;
 #[cfg(feature = "form")]
-mod form;
+pub mod form;
 #[cfg(feature = "openapi")]
 pub mod openapi;
 pub mod routes;
