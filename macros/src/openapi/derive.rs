@@ -304,8 +304,13 @@ fn handle_fields(type_attrs: &[Attribute], fields: &mut Fields) -> Block {
 fn handle_fields_required(type_attrs: &[Attribute], fields: &Fields) -> Expr {
     let reqf_v: Punctuated<Expr, Token![,]> = fields
         .iter()
-        .map(|f| {
-            Pair::Punctuated(
+        .filter_map(|f| {
+            let (skip, _) = get_skip_mode(&f.attrs);
+            if skip {
+                return None;
+            }
+
+            Some(Pair::Punctuated(
                 q!(
                     Vars {
                         name_str: field_name(type_attrs, &*f),
@@ -326,7 +331,7 @@ fn handle_fields_required(type_attrs: &[Attribute], fields: &Fields) -> Expr {
                 )
                 .parse(),
                 Default::default(),
-            )
+            ))
         })
         .collect();
 
