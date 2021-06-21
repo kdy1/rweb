@@ -1,7 +1,6 @@
 #![cfg(feature = "openapi")]
 
-use rweb::openapi::*;
-use rweb::*;
+use rweb::{openapi::*, *};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

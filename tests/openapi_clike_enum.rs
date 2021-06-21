@@ -2,7 +2,6 @@
 
 use rweb::*;
 use serde::{Deserialize, Serialize};
-use serde_yaml;
 
 #[get("/")]
 fn index(_: Json<Color>) -> String {

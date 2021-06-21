@@ -2,7 +2,6 @@
 
 use rweb::*;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 
 #[derive(Debug, Serialize, Deserialize, Schema)]
 #[schema(component = "TestStruct")]
