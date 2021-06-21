@@ -1,12 +1,11 @@
 use crate::{Form, Json, Query};
 use indexmap::IndexMap;
 pub use rweb_openapi::v3_0::*;
-use std::collections::{BTreeMap, HashMap};
-use std::sync::Arc;
 use std::{
     borrow::Cow,
-    collections::{BTreeSet, HashSet, LinkedList, VecDeque},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet, LinkedList, VecDeque},
     convert::Infallible,
+    sync::Arc,
 };
 use warp::{Rejection, Reply};
 
@@ -946,6 +945,59 @@ mod enumsetrepr {
                 ));
             }
             v
+        }
+    }
+}
+
+#[cfg(feature = "chrono")]
+mod chrono_impls {
+    use chrono::TimeZone;
+
+    use super::*;
+
+    impl Entity for chrono::NaiveDateTime {
+        fn describe() -> Schema {
+            Schema {
+                schema_type: Some(Type::String),
+                format: "date-time".into(),
+                ..Default::default()
+            }
+        }
+    }
+
+    impl Entity for chrono::NaiveDate {
+        fn describe() -> Schema {
+            Schema {
+                schema_type: Some(Type::String),
+                format: "date".into(),
+                ..Default::default()
+            }
+        }
+    }
+
+    impl<T> Entity for chrono::Date<T>
+    where
+        T: TimeZone,
+    {
+        fn describe() -> Schema {
+            Schema {
+                schema_type: Some(Type::String),
+                format: "date".into(),
+                ..Default::default()
+            }
+        }
+    }
+
+    impl<T> Entity for chrono::DateTime<T>
+    where
+        T: TimeZone,
+    {
+        fn describe() -> Schema {
+            Schema {
+                schema_type: Some(Type::String),
+                format: "date-time".into(),
+                ..Default::default()
+            }
         }
     }
 }
