@@ -1,12 +1,11 @@
 use crate::{Form, Json, Query};
 use indexmap::IndexMap;
 pub use rweb_openapi::v3_0::*;
-use std::collections::{BTreeMap, HashMap};
-use std::sync::Arc;
 use std::{
     borrow::Cow,
-    collections::{BTreeSet, HashSet, LinkedList, VecDeque},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet, LinkedList, VecDeque},
     convert::Infallible,
+    sync::Arc,
 };
 use warp::{Rejection, Reply};
 
