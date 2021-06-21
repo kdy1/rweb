@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[schema(component = "Item")]
 struct ComponentTestReq {
     data: String,
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     not_schema: NotSchema,
 }
 
