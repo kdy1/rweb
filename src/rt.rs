@@ -1,6 +1,5 @@
 pub use http::StatusCode;
-pub use indexmap::indexmap;
-pub use indexmap::IndexMap;
+pub use indexmap::{indexmap, IndexMap};
 pub use serde_json;
 use std::convert::Infallible;
 pub use std::{borrow::Cow, clone::Clone, default::Default};

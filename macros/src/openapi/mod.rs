@@ -305,10 +305,13 @@ pub fn parse(path: &str, sig: &Signature, attrs: &mut Vec<Attribute>) -> Operati
                     }
                 } else if config.path().is_ident("response") {
                     macro_rules! invalid_usage {
-						() => {
-							panic!("Correct usage: #[openapi(response(code = \"409\", description = \"foo already exists\")]")
-						}
-					}
+                        () => {
+                            panic!(
+                                "Correct usage: #[openapi(response(code = \"409\", description = \
+         \"foo already exists\")]"
+                            )
+                        };
+                    }
                     let mut code: Option<String> = None;
                     let mut description: Option<String> = None;
                     let mut schema: Option<String> = None;

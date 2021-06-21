@@ -1,7 +1,5 @@
 use crate::openapi::Spec;
-use warp::filters::BoxedFilter;
-use warp::Filter;
-use warp::Reply;
+use warp::{filters::BoxedFilter, Filter, Reply};
 
 /// Helper filter that exposes an openapi spec on the `/docs` endpoint.
 ///
