@@ -69,8 +69,7 @@ fn get_skip_mode(attrs: &[Attribute]) -> (bool, bool) {
                     inner: Meta::Path(pa),
                 }) => {
                     if pa.is_ident("skip") {
-                        ser = true;
-                        de = true;
+                        return (true, true);
                     } else if pa.is_ident("skip_serializing") {
                         ser = true
                     } else if pa.is_ident("skip_deserializing") {
