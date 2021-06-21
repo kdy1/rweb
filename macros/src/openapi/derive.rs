@@ -69,8 +69,7 @@ fn get_skip_mode(attrs: &[Attribute]) -> (bool, bool) {
                     inner: Meta::Path(pa),
                 }) => {
                     if pa.is_ident("skip") {
-                        ser = true;
-                        de = true;
+                        return (true, true);
                     } else if pa.is_ident("skip_serializing") {
                         ser = true
                     } else if pa.is_ident("skip_deserializing") {
@@ -97,7 +96,8 @@ fn field_name(type_attrs: &[Attribute], field: &Field) -> String {
 macro_rules! invalid_schema_usage {
     ($act:expr) => {
         // rust-lang/rust#54140
-        // panic!("{}", $act.__span().error("Correct usage: #[schema(description = \"foo\", example = \"bar\")]"));
+        // panic!("{}", $act.__span().error("Correct usage: #[schema(description =
+        // \"foo\", example = \"bar\")]"));
         panic!(
             "Invalid schema usage: {}
 Correct usage: #[schema(description = \"foo\", example = \"bar\")]",
@@ -122,8 +122,8 @@ fn extract_example(attrs: &mut Vec<Attribute>) -> Option<TokenStream> {
                     .parse::<TokenStream>()
                     .expect("expected example to be path"),
                 l => panic!(
-                    "#[schema(example = \"foo\")]: value of example should be a \
-					 string literal, but got {}",
+                    "#[schema(example = \"foo\")]: value of example should be a string literal, \
+                     but got {}",
                     l.dump()
                 ),
             });
@@ -182,7 +182,11 @@ fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
             if let Lit::Str(s) = nv.lit {
                 doc = Some(s.value())
             } else {
-                panic!("#[schema(description = \"foo\")]: value of example should be a string literal, but got {}", nv.dump())
+                panic!(
+                    "#[schema(description = \"foo\")]: value of example should be a string \
+                     literal, but got {}",
+                    nv.dump()
+                )
             }
         }
     };
@@ -230,9 +234,11 @@ fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
     let example_v = extract_example(&mut f.attrs);
     let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
 
+    // We don't require it to be `Entity`
     if skip_ser && skip_de {
         return q!({ {} }).parse();
     }
+
     q!(
         Vars {
             name_str,
@@ -293,8 +299,13 @@ fn handle_fields(type_attrs: &[Attribute], fields: &mut Fields) -> Block {
 fn handle_fields_required(type_attrs: &[Attribute], fields: &Fields) -> Expr {
     let reqf_v: Punctuated<Expr, Token![,]> = fields
         .iter()
-        .map(|f| {
-            Pair::Punctuated(
+        .filter_map(|f| {
+            let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
+            if skip_ser && skip_de {
+                return None;
+            }
+
+            Some(Pair::Punctuated(
                 q!(
                     Vars {
                         name_str: field_name(type_attrs, &*f),
@@ -315,7 +326,7 @@ fn handle_fields_required(type_attrs: &[Attribute], fields: &Fields) -> Expr {
                 )
                 .parse(),
                 Default::default(),
-            )
+            ))
         })
         .collect();
 
@@ -413,12 +424,17 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     macro_rules! subcomponents_handle_fields {
         ($fields:expr) => {
             for f in $fields {
-                subcomponents.stmts.push(
-                    q!(Vars { Type: &f.ty }, {
-                        compos.append(&mut <Type as rweb::openapi::Entity>::describe_components());
-                    })
-                    .parse(),
-                );
+                let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
+
+                if !skip_ser || !skip_de {
+                    subcomponents.stmts.push(
+                        q!(Vars { Type: &f.ty }, {
+                            compos.append(&mut <Type as rweb::openapi::Entity>::describe_components());
+                        })
+                        .parse(),
+                    );
+                }
+
             }
         };
     }
@@ -598,7 +614,10 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                                 rweb::openapi::schema_consistent_component_name(
                                     &<tpn as rweb::openapi::Entity>::describe(),
                                 )
-                                .expect("To use generic components, all type parameters must themselves be components (or lists of)")
+                                .expect(
+                                    "To use generic components, all type parameters must \
+                                     themselves be components (or lists of)",
+                                )
                             }
                         })
                     }),
