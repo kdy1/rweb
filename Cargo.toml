@@ -10,7 +10,7 @@ keywords = ["rweb", "server", "http", "hyper"]
 license = "Apache-2.0"
 name = "rweb"
 repository = "https://github.com/kdy1/rweb.git"
-version = "0.12.1"
+version = "0.12.2"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -23,7 +23,7 @@ tls = ["warp/tls"]
 websocket = ["warp/websocket"]
 
 [dependencies]
-chrono = {version = "0.4.19", optional = true}
+chrono = {version = "0.4.19", features = ["serde"], optional = true}
 enumset = {version = "1.0", features = ["serde"], optional = true}
 futures = "0.3"
 http = "0.2"
