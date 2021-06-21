@@ -426,7 +426,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
             for f in $fields {
                 let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
 
-                if skip_ser || skip_de {
+                if !skip_ser || !skip_de {
                     subcomponents.stmts.push(
                         q!(Vars { Type: &f.ty }, {
                             compos.append(&mut <Type as rweb::openapi::Entity>::describe_components());
