@@ -97,7 +97,8 @@ fn field_name(type_attrs: &[Attribute], field: &Field) -> String {
 macro_rules! invalid_schema_usage {
     ($act:expr) => {
         // rust-lang/rust#54140
-        // panic!("{}", $act.__span().error("Correct usage: #[schema(description = \"foo\", example = \"bar\")]"));
+        // panic!("{}", $act.__span().error("Correct usage: #[schema(description =
+        // \"foo\", example = \"bar\")]"));
         panic!(
             "Invalid schema usage: {}
 Correct usage: #[schema(description = \"foo\", example = \"bar\")]",
@@ -122,8 +123,8 @@ fn extract_example(attrs: &mut Vec<Attribute>) -> Option<TokenStream> {
                     .parse::<TokenStream>()
                     .expect("expected example to be path"),
                 l => panic!(
-                    "#[schema(example = \"foo\")]: value of example should be a \
-					 string literal, but got {}",
+                    "#[schema(example = \"foo\")]: value of example should be a string literal, \
+                     but got {}",
                     l.dump()
                 ),
             });
@@ -182,7 +183,11 @@ fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
             if let Lit::Str(s) = nv.lit {
                 doc = Some(s.value())
             } else {
-                panic!("#[schema(description = \"foo\")]: value of example should be a string literal, but got {}", nv.dump())
+                panic!(
+                    "#[schema(description = \"foo\")]: value of example should be a string \
+                     literal, but got {}",
+                    nv.dump()
+                )
             }
         }
     };
@@ -233,6 +238,12 @@ fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
     if skip_ser && skip_de {
         return q!({ {} }).parse();
     }
+
+    // If we don't serialize a field, we don't require it to be `Entity`
+    if skip_ser {
+        return q!({ {} }).parse();
+    }
+
     q!(
         Vars {
             name_str,
@@ -413,12 +424,17 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     macro_rules! subcomponents_handle_fields {
         ($fields:expr) => {
             for f in $fields {
-                subcomponents.stmts.push(
-                    q!(Vars { Type: &f.ty }, {
-                        compos.append(&mut <Type as rweb::openapi::Entity>::describe_components());
-                    })
-                    .parse(),
-                );
+                let (skip, _) = get_skip_mode(&f.attrs);
+
+                if !skip{
+                    subcomponents.stmts.push(
+                        q!(Vars { Type: &f.ty }, {
+                            compos.append(&mut <Type as rweb::openapi::Entity>::describe_components());
+                        })
+                        .parse(),
+                    );
+                }
+
             }
         };
     }
@@ -598,7 +614,10 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                                 rweb::openapi::schema_consistent_component_name(
                                     &<tpn as rweb::openapi::Entity>::describe(),
                                 )
-                                .expect("To use generic components, all type parameters must themselves be components (or lists of)")
+                                .expect(
+                                    "To use generic components, all type parameters must \
+                                     themselves be components (or lists of)",
+                                )
                             }
                         })
                     }),
