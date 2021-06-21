@@ -235,12 +235,8 @@ fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
     let example_v = extract_example(&mut f.attrs);
     let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
 
+    // We don't require it to be `Entity`
     if skip_ser && skip_de {
-        return q!({ {} }).parse();
-    }
-
-    // If we don't serialize a field, we don't require it to be `Entity`
-    if skip_ser {
         return q!({ {} }).parse();
     }
 
@@ -305,8 +301,8 @@ fn handle_fields_required(type_attrs: &[Attribute], fields: &Fields) -> Expr {
     let reqf_v: Punctuated<Expr, Token![,]> = fields
         .iter()
         .filter_map(|f| {
-            let (skip, _) = get_skip_mode(&f.attrs);
-            if skip {
+            let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
+            if skip_ser && skip_de {
                 return None;
             }
 
@@ -429,9 +425,9 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     macro_rules! subcomponents_handle_fields {
         ($fields:expr) => {
             for f in $fields {
-                let (skip, _) = get_skip_mode(&f.attrs);
+                let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
 
-                if !skip{
+                if skip_ser || skip_de {
                     subcomponents.stmts.push(
                         q!(Vars { Type: &f.ty }, {
                             compos.append(&mut <Type as rweb::openapi::Entity>::describe_components());
