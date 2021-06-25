@@ -175,6 +175,12 @@ pub fn compile_route(
             .parse(),
         );
 
+        expr = if cfg!(feature = "boxed") {
+            q!(Vars { expr }, { expr.boxed() }).parse()
+        } else {
+            expr
+        };
+
         expr = q!(Vars { expr, op_body }, {
             rweb::openapi::with(|__collector: Option<&mut rweb::openapi::Collector>| {
                 if let Some(__collector) = __collector {
@@ -197,12 +203,12 @@ pub fn compile_route(
             },
             {
                 fn handler(
-                ) -> rweb::filters::BoxedFilter<(Ret,)> + rweb::rt::Clone {
+                ) -> rweb::filters::BoxedFilter<(Ret,)>  {
                     use rweb::Filter;
 
                     handler_fn
 
-                    expr.boxed()
+                    expr
                 }
             }
         )
