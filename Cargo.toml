@@ -10,12 +10,13 @@ keywords = ["rweb", "server", "http", "hyper"]
 license = "Apache-2.0"
 name = "rweb"
 repository = "https://github.com/kdy1/rweb.git"
-version = "0.12.3"
+version = "0.12.4"
 
 [package.metadata.docs.rs]
 all-features = true
 
 [features]
+boxed = ["rweb-macros/boxed"]
 default = ["multipart", "websocket"]
 multipart = ["warp/multipart"]
 openapi = ["rweb-macros/openapi", "rweb-openapi"]
@@ -28,7 +29,7 @@ enumset = {version = "1.0", features = ["serde"], optional = true}
 futures = "0.3"
 http = "0.2"
 indexmap = "1"
-rweb-macros = {version = "0.11.1", path = "./macros"}
+rweb-macros = {version = "0.11.2", path = "./macros"}
 rweb-openapi = {version = "0.6.0", optional = true}
 scoped-tls = "1"
 serde = {version = "1", features = ["derive"]}
