@@ -187,26 +187,48 @@ pub fn compile_route(
         .parse();
     }
 
-    let mut outer = q!(
-        Vars {
-            expr,
-            handler: &sig.ident,
-            Ret: ret,
-            handler_fn,
-        },
-        {
-            fn handler(
-            ) -> impl rweb::Filter<Extract = (Ret,), Error = rweb::warp::Rejection>
-                   + rweb::rt::Clone {
-                use rweb::Filter;
+    let mut outer = if cfg!(feature = "boxed") {
+        q!(
+            Vars {
+                expr,
+                handler: &sig.ident,
+                Ret: ret,
+                handler_fn,
+            },
+            {
+                fn handler(
+                ) -> rweb::filters::BoxedFilter<(Ret,)> + rweb::rt::Clone {
+                    use rweb::Filter;
 
-                handler_fn
+                    handler_fn
 
-                expr
+                    expr.boxed()
+                }
             }
-        }
-    )
-    .parse::<ItemFn>();
+        )
+        .parse::<ItemFn>()
+    } else {
+        q!(
+            Vars {
+                expr,
+                handler: &sig.ident,
+                Ret: ret,
+                handler_fn,
+            },
+            {
+                fn handler(
+                ) -> impl rweb::Filter<Extract = (Ret,), Error = rweb::warp::Rejection>
+                       + rweb::rt::Clone {
+                    use rweb::Filter;
+
+                    handler_fn
+
+                    expr
+                }
+            }
+        )
+        .parse::<ItemFn>()
+    };
 
     outer.vis = f.vis;
     outer.sig = Signature {
