@@ -512,8 +512,22 @@ where
     fn describe() -> Schema {
         Schema {
             one_of: vec![
-                ObjectOrReference::Object(T::describe()),
-                ObjectOrReference::Object(E::describe()),
+                ObjectOrReference::Object(Schema {
+                    schema_type: Some(Type::Object),
+                    properties: indexmap::indexmap! {
+                        Cow::Borrowed("Ok") => T::describe(),
+                    },
+                    required: vec![Cow::Borrowed("Ok")],
+                    ..Default::default()
+                }),
+                ObjectOrReference::Object(Schema {
+                    schema_type: Some(Type::Object),
+                    properties: indexmap::indexmap! {
+                        Cow::Borrowed("Err") => E::describe(),
+                    },
+                    required: vec![Cow::Borrowed("Err")],
+                    ..Default::default()
+                }),
             ],
             ..Default::default()
         }
