@@ -37,9 +37,9 @@ fn test_description_example() {
     };
     println!("{}", serde_yaml::to_string(&schema).unwrap());
     for (_, p) in &schema.properties {
-        assert_eq!(p.description, "a description");
+        assert_eq!(p.unwrap().unwrap().description, "a description");
         assert_eq!(
-            p.example,
+            p.unwrap().unwrap().example,
             Some(serde_json::from_str("\"an example\"").unwrap())
         );
     }
