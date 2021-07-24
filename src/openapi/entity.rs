@@ -374,148 +374,61 @@ where
 }
 
 impl<T: Entity> Entity for HashMap<String, T> {
-    fn describe() -> Schema {
-        let s = <T as Entity>::describe();
-        if s.ref_path.is_empty() {
-            Schema {
-                schema_type: Some(Type::Object),
-                additional_properties: Some(ObjectOrReference::Object(Box::new(s))),
-                ..Default::default()
-            }
-        } else {
-            Schema {
-                ref_path: Cow::Owned(format!("{}_Map", s.ref_path)),
-                ..Default::default()
-            }
-        }
+    fn type_name() -> Cow<'static, str> {
+        Cow::Owned(format!("Map-string_{}-", T::type_name()))
     }
 
-    fn describe_components() -> Components {
-        let mut v = T::describe_components();
-        let s = T::describe();
-        if !s.ref_path.is_empty() {
-            let cn = &s.ref_path[("#/components/schemas/".len())..];
-            v.push((
-                Cow::Owned(format!("{}_Map", cn)),
-                Schema {
-                    schema_type: Some(Type::Object),
-                    additional_properties: Some(ObjectOrReference::Object(Box::new(s))),
-                    ..Default::default()
-                },
-            ));
-        }
-        v
+    fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        ComponentOrInlineSchema::Inline(Schema {
+            schema_type: Some(Type::Object),
+            additional_properties: Some(Box::new(T::describe(comp_d))),
+            ..Default::default()
+        })
     }
 }
 
 impl<T: Entity> Entity for [T] {
-    fn describe() -> Schema {
-        let s = T::describe();
-        if s.ref_path.is_empty() {
-            Schema {
-                schema_type: Some(Type::Array),
-                items: Some(Box::new(s)),
-                ..Default::default()
-            }
-        } else {
-            Schema {
-                ref_path: Cow::Owned(format!("{}_List", s.ref_path)),
-                ..Default::default()
-            }
-        }
+    fn type_name() -> Cow<'static, str> {
+        Cow::Owned(format!("{}_List", T::type_name()))
     }
 
-    fn describe_components() -> Components {
-        let mut v = T::describe_components();
-        let s = T::describe();
-        if !s.ref_path.is_empty() {
-            let cn = &s.ref_path[("#/components/schemas/".len())..];
-            v.push((
-                Cow::Owned(format!("{}_List", cn)),
-                Schema {
-                    schema_type: Some(Type::Array),
-                    items: Some(Box::new(s)),
-                    ..Default::default()
-                },
-            ));
-        }
-        v
+    fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        ComponentOrInlineSchema::Inline(Schema {
+            schema_type: Some(Type::Array),
+            items: Some(Box::new(T::describe(comp_d))),
+            ..Default::default()
+        })
     }
 }
 
 impl<T: Entity, const N: usize> Entity for [T; N] {
-    fn describe() -> Schema {
-        let s = T::describe();
-        if s.ref_path.is_empty() {
-            Schema {
-                schema_type: Some(Type::Array),
-                items: Some(Box::new(s)),
-                min_items: Some(N),
-                max_items: Some(N),
-                ..Default::default()
-            }
-        } else {
-            Schema {
-                ref_path: Cow::Owned(format!("{}_Array_{}", s.ref_path, N)),
-                ..Default::default()
-            }
-        }
+    fn type_name() -> Cow<'static, str> {
+        Cow::Owned(format!("{}_Array_{}", T::type_name(), N))
     }
 
-    fn describe_components() -> Components {
-        let mut v = T::describe_components();
-        let s = T::describe();
-        if !s.ref_path.is_empty() {
-            let cn = &s.ref_path[("#/components/schemas/".len())..];
-            v.push((
-                Cow::Owned(format!("{}_Array_{}", cn, N)),
-                Schema {
-                    schema_type: Some(Type::Array),
-                    items: Some(Box::new(s)),
-                    min_items: Some(N),
-                    max_items: Some(N),
-                    ..Default::default()
-                },
-            ));
-        }
-        v
+    fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        ComponentOrInlineSchema::Inline(Schema {
+            schema_type: Some(Type::Array),
+            items: Some(Box::new(T::describe(comp_d))),
+            min_items: Some(N),
+            max_items: Some(N),
+            ..Default::default()
+        })
     }
 }
 
 impl<T: Entity> Entity for BTreeSet<T> {
-    fn describe() -> Schema {
-        let s = T::describe();
-        if s.ref_path.is_empty() {
-            Schema {
-                schema_type: Some(Type::Array),
-                items: Some(Box::new(s)),
-                unique_items: Some(true),
-                ..Default::default()
-            }
-        } else {
-            Schema {
-                ref_path: Cow::Owned(format!("{}_Set", s.ref_path)),
-                ..Default::default()
-            }
-        }
+    fn type_name() -> Cow<'static, str> {
+        Cow::Owned(format!("{}_Set", T::type_name()))
     }
 
-    fn describe_components() -> Components {
-        let mut v = T::describe_components();
-        let s = T::describe();
-        if !s.ref_path.is_empty() {
-            let cn = &s.ref_path[("#/components/schemas/".len())..];
-            v.push((
-                Cow::Owned(format!("{}_Set", cn)),
-                Schema {
-                    schema_type: Some(Type::Array),
-                    items: Some(Box::new(s)),
-                    unique_items: Some(true),
-                    ..Default::default()
-                },
-            ));
-        }
-        v
+    fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        ComponentOrInlineSchema::Inline(Schema {
+            schema_type: Some(Type::Array),
+            items: Some(Box::new(T::describe(comp_d))),
+            unique_items: Some(true),
+            ..Default::default()
+        })
     }
 }
 
@@ -523,31 +436,25 @@ impl<T> Entity for Option<T>
 where
     T: Entity,
 {
-    fn describe() -> Schema {
-        let mut s = T::describe();
-        if s.ref_path.is_empty() {
-            s.nullable = Some(true);
-        } else {
-            s.ref_path = Cow::Owned(format!("{}_Opt", s.ref_path))
-        }
-        s
+    fn type_name() -> Cow<'static, str> {
+        Cow::Owned(format!("{}_Opt", T::type_name()))
     }
 
-    fn describe_components() -> Components {
-        let mut v = T::describe_components();
-        let s = T::describe();
-        if !s.ref_path.is_empty() {
-            let cn = &s.ref_path[("#/components/schemas/".len())..];
-            v.push((
-                Cow::Owned(format!("{}_Opt", cn)),
-                Schema {
-                    nullable: Some(true),
-                    one_of: vec![ObjectOrReference::Object(s)],
-                    ..Default::default()
-                },
-            ));
+    fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        let desc = T::describe(comp_d);
+        let schema = comp_d.get_unpack(&desc);
+        if schema.nullable == Some(true) {
+            desc
+        } else {
+            let mut schema = schema.clone();
+            schema.nullable = Some(false);
+            match desc {
+                ComponentOrInlineSchema::Component { .. } => {
+                    comp_d.describe_component(&Self::type_name(), |_| schema)
+                }
+                ComponentOrInlineSchema::Inline(_) => ComponentOrInlineSchema::Inline(schema),
+            }
         }
-        v
     }
 }
 
@@ -605,35 +512,32 @@ where
     T: Entity,
     E: Entity,
 {
-    fn describe() -> Schema {
-        Schema {
+    fn type_name() -> Cow<'static, str> {
+        Cow::Owned(format!("Result-{}_{}-", T::type_name(), E::type_name()))
+    }
+
+    fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        ComponentOrInlineSchema::Inline(Schema {
             one_of: vec![
-                ObjectOrReference::Object(Schema {
+                ComponentOrInlineSchema::Inline(Schema {
                     schema_type: Some(Type::Object),
                     properties: indexmap::indexmap! {
-                        Cow::Borrowed("Ok") => T::describe(),
+                        Cow::Borrowed("Ok") => T::describe(comp_d),
                     },
                     required: vec![Cow::Borrowed("Ok")],
                     ..Default::default()
                 }),
-                ObjectOrReference::Object(Schema {
+                ComponentOrInlineSchema::Inline(Schema {
                     schema_type: Some(Type::Object),
                     properties: indexmap::indexmap! {
-                        Cow::Borrowed("Err") => E::describe(),
+                        Cow::Borrowed("Err") => E::describe(comp_d),
                     },
                     required: vec![Cow::Borrowed("Err")],
                     ..Default::default()
                 }),
             ],
             ..Default::default()
-        }
-    }
-
-    fn describe_components() -> Components {
-        let mut buf = vec![];
-        buf.extend(T::describe_components());
-        buf.extend(E::describe_components());
-        buf
+        })
     }
 }
 
@@ -771,12 +675,16 @@ impl ResponseEntity for dyn Reply {
 
 #[cfg(feature = "uuid")]
 impl Entity for uuid::Uuid {
-    fn describe() -> Schema {
-        Schema {
+    fn type_name() -> Cow<'static, str> {
+        Cow::Borrowed("uuid")
+    }
+
+    fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        ComponentOrInlineSchema::Inline(Schema {
             schema_type: Some(Type::String),
-            format: "uuid".into(),
+            format: Self::type_name(),
             ..Default::default()
-        }
+        })
     }
 }
 
@@ -802,104 +710,64 @@ mod enumsetrepr {
     // depending on the presence of `#[enumset(serialize_as_list)]` attr.
 
     impl<T: EnumSetType + Entity> Entity for EnumSet<T> {
-        fn describe() -> Schema {
-            let s = T::describe();
-            if s.ref_path.is_empty() {
-                match EnumSetRepr::detect::<T>() {
-                    EnumSetRepr::BitFlags(_) => Schema {
-                        schema_type: Some(Type::Integer),
-                        description: s.description,
-                        ..Default::default()
-                    },
-                    EnumSetRepr::List(_) => Schema {
-                        schema_type: Some(Type::Array),
-                        items: Some(Box::new(s)),
-                        ..Default::default()
-                    },
-                }
-            } else {
-                Schema {
-                    ref_path: Cow::Owned(format!("{}_EnumSet", s.ref_path)),
-                    ..Default::default()
-                }
-            }
+        fn type_name() -> Cow<'static, str> {
+            Cow::Owned(format!("{}_EnumSet", T::type_name()))
         }
 
-        fn describe_components() -> Components {
-            let mut v = T::describe_components();
-            let s = T::describe();
-            if !s.ref_path.is_empty() {
-                let cn = &s.ref_path[("#/components/schemas/".len())..];
-                v.push((
-                    Cow::Owned(format!("{}_EnumSet", cn)),
-                    match EnumSetRepr::detect::<T>() {
-                        EnumSetRepr::BitFlags(_) => Schema {
-                            schema_type: Some(Type::Integer),
-                            description: s.description,
-                            ..Default::default()
-                        },
-                        EnumSetRepr::List(_) => Schema {
-                            schema_type: Some(Type::Array),
-                            items: Some(Box::new(s)),
-                            ..Default::default()
-                        },
-                    },
-                ));
-            }
-            v
+        fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+            let t = T::describe(comp_d);
+            let s = comp_d.get_unpack(&t);
+            ComponentOrInlineSchema::Inline(match EnumSetRepr::detect::<T>() {
+                EnumSetRepr::BitFlags(_) => Schema {
+                    schema_type: Some(Type::Integer),
+                    description: s.description.clone(),
+                    ..Default::default()
+                },
+                EnumSetRepr::List(_) => Schema {
+                    schema_type: Some(Type::Array),
+                    items: Some(Box::new(t)),
+                    ..Default::default()
+                },
+            })
         }
     }
 }
 
 #[cfg(feature = "chrono")]
 mod chrono_impls {
-    use chrono::TimeZone;
+    use chrono::*;
 
     use super::*;
 
-    impl Entity for chrono::NaiveDateTime {
-        fn describe() -> Schema {
-            Schema {
+    impl Entity for NaiveDateTime {
+        fn type_name() -> Cow<'static, str> {
+            Cow::Borrowed("date-time")
+        }
+
+        fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+            ComponentOrInlineSchema::Inline(Schema {
                 schema_type: Some(Type::String),
-                format: "date-time".into(),
+                format: Self::type_name(),
                 ..Default::default()
-            }
+            })
         }
     }
+
+    delegate_entity!(<T: TimeZone> DateTime<T> => NaiveDateTime);
 
     impl Entity for chrono::NaiveDate {
-        fn describe() -> Schema {
-            Schema {
+        fn type_name() -> Cow<'static, str> {
+            Cow::Borrowed("date")
+        }
+
+        fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+            ComponentOrInlineSchema::Inline(Schema {
                 schema_type: Some(Type::String),
-                format: "date".into(),
+                format: Self::type_name(),
                 ..Default::default()
-            }
+            })
         }
     }
 
-    impl<T> Entity for chrono::Date<T>
-    where
-        T: TimeZone,
-    {
-        fn describe() -> Schema {
-            Schema {
-                schema_type: Some(Type::String),
-                format: "date".into(),
-                ..Default::default()
-            }
-        }
-    }
-
-    impl<T> Entity for chrono::DateTime<T>
-    where
-        T: TimeZone,
-    {
-        fn describe() -> Schema {
-            Schema {
-                schema_type: Some(Type::String),
-                format: "date-time".into(),
-                ..Default::default()
-            }
-        }
-    }
+    delegate_entity!(<T: TimeZone> Date<T> => NaiveDate);
 }
