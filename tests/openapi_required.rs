@@ -51,7 +51,7 @@ enum TestEnum {
 }
 
 #[get("/")]
-fn test_enum_r(_: Query<TestEnum>) -> String {
+fn test_enum_r(_: Json<TestEnum>) -> String {
     String::new()
 }
 
