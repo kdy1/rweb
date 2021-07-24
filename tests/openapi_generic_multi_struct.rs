@@ -39,7 +39,7 @@ fn test_multi_generics_compile() {
     }
     assert!(schemas.contains_key("One"));
     assert!(schemas.contains_key("Two"));
-    assert!(schemas.contains_key("GenericStruct-string_Opt_integer-"));
+    assert!(schemas.contains_key("GenericStruct-string_Opt_uinteger-"));
     assert!(schemas.contains_key("One_Opt"));
     assert!(schemas.contains_key("GenericStruct-One_Opt_One-_Opt"));
     /*macro_rules! component {
