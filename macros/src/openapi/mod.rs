@@ -156,11 +156,13 @@ fn quote_response(r: &Response) -> Expr {
                 {
                     (|| {
                         let mut resp =
-                            <aschema_v as rweb::openapi::ResponseEntity>::describe_responses()
-                                .into_iter()
-                                .next()
-                                .map(|(_, r)| r)
-                                .unwrap_or_else(|| Default::default());
+                            <aschema_v as rweb::openapi::ResponseEntity>::describe_responses(
+                                __collector.components(),
+                            )
+                            .into_iter()
+                            .next()
+                            .map(|(_, r)| r)
+                            .unwrap_or_else(|| Default::default());
                         resp.description = rweb::rt::Cow::Borrowed(description_v);
                         resp
                     })()
