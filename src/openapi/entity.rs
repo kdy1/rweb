@@ -170,19 +170,19 @@ pub trait ResponseEntity: Entity {
 
 /// Implements entity by another entity
 macro_rules! delegate_entity {
-	// full paths (with `::`) not supported
-	( $T:tt $(< $( $tlt:tt $(< $( $tltt:tt ),+ >)? ),+ >)? => $D:tt $(< $( $plt:tt $(< $( $pltt:tt ),+ >)? ),+ >)? ) => {
-		impl Entity for $T $(< $( $tlt $(< $( $tltt ),+ >)? ),+ >)? {
-			fn type_name() -> Cow<'static, str> {
-				<$D $(< $( $plt $(< $( $pltt ),+ >)? ),+ >)? as Entity>::type_name()
-			}
-			fn describe(d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
-				<$D $(< $( $plt $(< $( $pltt ),+ >)? ),+ >)? as Entity>::describe(d)
-			}
-		}
+    // full paths (with `::`) not supported
+    ( $T:tt $(< $( $tlt:tt $(< $( $tltt:tt ),+ >)? ),+ >)? => $D:tt $(< $( $plt:tt $(< $( $pltt:tt ),+ >)? ),+ >)? ) => {
+        impl Entity for $T $(< $( $tlt $(< $( $tltt ),+ >)? ),+ >)? {
+            fn type_name() -> Cow<'static, str> {
+                <$D $(< $( $plt $(< $( $pltt ),+ >)? ),+ >)? as Entity>::type_name()
+            }
+            fn describe(d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+                <$D $(< $( $plt $(< $( $pltt ),+ >)? ),+ >)? as Entity>::describe(d)
+            }
+        }
     };
-	// Doesn't work with `?Sized` :(
-	( < $( $lt:tt $( : $clt:tt $(+ $dlt:tt )* )? ),+ > $T:tt $(< $( $tlt:tt $(< $( $tltt:tt ),+ >)? ),+ >)? => $D:tt $(< $( $plt:tt $(< $( $pltt:tt ),+ >)? ),+ >)? ) => {
+    // Doesn't work with `?Sized` :(
+    ( < $( $lt:tt $( : $clt:tt $(+ $dlt:tt )* )? ),+ > $T:tt $(< $( $tlt:tt $(< $( $tltt:tt ),+ >)? ),+ >)? => $D:tt $(< $( $plt:tt $(< $( $pltt:tt ),+ >)? ),+ >)? ) => {
         impl < $( $lt $( : $clt $(+ $dlt )* )? ),+ > Entity for $T $(< $( $tlt $(< $( $tltt ),+ >)? ),+ >)? {
             fn type_name() -> Cow<'static, str> {
                 <$D $(< $( $plt $(< $( $pltt ),+ >)? ),+ >)? as Entity>::type_name()
@@ -211,18 +211,18 @@ impl Entity for () {
 macro_rules! integer {
     ($T:ty) => {
         impl Entity for $T {
-			fn type_name() -> Cow<'static, str> {
-				Cow::Borrowed("integer")
-			}
+            fn type_name() -> Cow<'static, str> {
+                Cow::Borrowed("integer")
+            }
             #[inline]
             fn describe(_: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
                 ComponentOrInlineSchema::Inline(Schema {
                     schema_type: Some(Type::Integer),
-					minimum: if <$T>::MIN == 0 {
-						Some(serde_json::json!(0))
-					} else {
-						None
-					},
+                    minimum: if <$T>::MIN == 0 {
+                        Some(serde_json::json!(0))
+                    } else {
+                        None
+                    },
                     ..Default::default()
                 })
             }

@@ -29,17 +29,17 @@ mod case;
 mod derive;
 
 macro_rules! quote_str_indexmap {
-	($map:expr, $quot:ident) => {
-		$map.iter()
+    ($map:expr, $quot:ident) => {
+        $map.iter()
         .map(|(nam, t)| {
-			let tq = $quot(t);
+            let tq = $quot(t);
             Pair::Punctuated(
                 q!(Vars { nam, tq }, { rweb::rt::Cow::Borrowed(nam) => tq }),
                 Default::default(),
             )
         })
         .collect();
-	};
+    };
 }
 
 pub fn quote_op(op: Operation) -> Expr {
