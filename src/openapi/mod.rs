@@ -234,6 +234,12 @@ pub struct Collector {
 }
 
 impl Collector {
+    /// Method used by `#[op]`
+    #[doc(hidden)]
+    pub fn components(&mut self) -> &mut ComponentDescriptor {
+        &mut self.components
+    }
+
     /// Method used by `#[router]`.
     #[doc(hidden)]
     pub fn with_appended_prefix<F, Ret>(

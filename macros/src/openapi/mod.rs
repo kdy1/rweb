@@ -135,9 +135,7 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
                 location: location_v,
                 required: required_v,
                 representation: Some(rweb::openapi::ParameterRepresentation::Simple {
-                    schema: rweb::openapi::ObjectOrReference::Object(
-                        <Type as rweb::openapi::Entity>::describe(),
-                    ),
+                    schema: <Type as rweb::openapi::Entity>::describe(__collector.components()),
                 }),
                 ..Default::default()
             })
