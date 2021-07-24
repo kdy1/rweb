@@ -13,6 +13,73 @@ pub type Components = Vec<(Cow<'static, str>, Schema)>;
 
 pub type Responses = IndexMap<Cow<'static, str>, Response>;
 
+#[derive(Debug)]
+pub struct ComponentDescriptor {
+    components: IndexMap<Cow<'static, str>, Schema>,
+}
+impl ComponentDescriptor {
+    pub(crate) fn new() -> Self {
+        Self {
+            components: IndexMap::new(),
+        }
+    }
+    /// Get a reference to the component named `name`, if such exists.
+    pub fn get_component(&self, name: &str) -> Option<&Schema> {
+        self.components.get(name)
+    }
+    /// Get a reference to the schema of a type.
+    ///
+    /// If `schema` is inline, it itself is returned,
+    /// otherwise the component is looked up by name and its schema is returned.
+    ///
+    /// # Panics
+    /// Panics if `schema` refers to a non-existing component.
+    pub fn get_unpack<'a>(&'a self, schema: &'a ComponentOrInlineSchema) -> &'a Schema {
+        match schema {
+            ComponentOrInlineSchema::Component { name } => self.get_component(name).unwrap(),
+            ComponentOrInlineSchema::Inline(s) => s,
+        }
+    }
+    /// Describes a component, iff it isn't already described.
+    ///
+    /// # Parameters
+    /// - `name`: name of the component
+    /// - `desc`: descriptor function
+    ///
+    /// # Returns
+    /// Reference to the component
+    ///
+    /// # Circular references
+    /// To avoid infinite recursion on circular references,
+    /// a blanket schema is stored under component name first,
+    /// then the component is described and the schema replaced.
+    ///
+    /// Note that this _may_ cause invalid spec generation if
+    /// somewhere in such loop there are types that rely on
+    /// cloned modification of the schema of underlying component.
+    pub fn describe_component(
+        &mut self,
+        name: &str,
+        desc: impl FnOnce(&mut ComponentDescriptor) -> Schema,
+    ) -> ComponentOrInlineSchema {
+        if !self.components.contains_key(name) {
+            self.components
+                .insert(Cow::Owned(name.to_string()), Default::default());
+            self.components[name] = desc(self);
+        }
+        ComponentOrInlineSchema::Component {
+            name: Cow::Owned(name.to_string()),
+        }
+    }
+    /// Finalizes the descriptor and packages up all components.
+    pub(crate) fn build(self) -> IndexMap<Cow<'static, str>, ObjectOrReference<Schema>> {
+        self.components
+            .into_iter()
+            .map(|(k, v)| (k, ObjectOrReference::Object(v)))
+            .collect()
+    }
+}
+
 /// This can be derived by `#[derive(Schema)]`.
 ///
 /// # `#[derive(Schema)]`
