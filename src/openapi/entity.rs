@@ -9,8 +9,6 @@ use std::{
 };
 use warp::{Rejection, Reply};
 
-pub type Components = Vec<(Cow<'static, str>, Schema)>;
-
 pub type Responses = IndexMap<Cow<'static, str>, Response>;
 
 #[derive(Debug)]
