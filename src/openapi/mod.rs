@@ -193,7 +193,7 @@
 //! }
 //!
 //! impl openapi::ResponseEntity for Error {
-//!     fn describe_responses() -> openapi::Responses {
+//!     fn describe_responses(_: &mut openapi::ComponentDescriptor) -> openapi::Responses {
 //!         let mut map = IndexMap::new();
 //!
 //!         map.insert(
