@@ -212,7 +212,7 @@ macro_rules! integer {
     ($T:ty) => {
         impl Entity for $T {
 			fn type_name() -> Cow<'static, str> {
-				Cow::Borrowed("int")
+				Cow::Borrowed("integer")
 			}
             #[inline]
             fn describe(_: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
