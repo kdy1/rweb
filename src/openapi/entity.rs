@@ -146,11 +146,22 @@ impl ComponentDescriptor {
 /// }
 /// ```
 pub trait Entity {
-    fn describe() -> Schema;
+    /// String uniquely identifying this type, respecting component naming pattern.
+    ///
+    /// If this type is a component, this is the component's name.
+    ///
+    /// Even if this type is not a component, this is necessary for assembling names of generic components
+    /// parameterized on underlying types.
+    ///
+    /// # Returns
+    /// Name of this type, respecting `^[a-zA-Z0-9\.\-_]+$` regex.
+    ///
+    /// # Panics
+    /// Panic if you decide that this type must not be used for generic parameterization of components.
+    fn type_name() -> Cow<'static, str>;
 
-    fn describe_components() -> Components {
-        Default::default()
-    }
+    /// Describe this entity, and the components it (may) requires.
+    fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema;
 }
 
 /// This should be implemented only for types that know how it should be
