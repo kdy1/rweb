@@ -218,6 +218,11 @@ macro_rules! integer {
             fn describe(_: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
                 ComponentOrInlineSchema::Inline(Schema {
                     schema_type: Some(Type::Integer),
+					minimum: if <$T>::MIN == 0 {
+						Some(serde_json::json!(0))
+					} else {
+						None
+					},
                     ..Default::default()
                 })
             }
