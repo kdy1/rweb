@@ -249,10 +249,10 @@ fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
             skip_de,
         },
         {
-            map.insert(rweb::rt::Cow::Borrowed(name_str), {
+            fields.insert(rweb::rt::Cow::Borrowed(name_str), {
                 {
                     #[allow(unused_mut)]
-                    let mut s = <Type as rweb::openapi::Entity>::describe();
+                    let mut s = <Type as rweb::openapi::Entity>::describe(comp_d);
                     let description = desc;
                     if !description.is_empty() {
                         s.description = rweb::rt::Cow::Borrowed(description);
@@ -266,6 +266,9 @@ fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
                     }
                     if skip_de {
                         s.read_only = Some(true);
+                    }
+                    if comp_d.get_unpack(&s).nullable != Some(true) {
+                        required_fields.push(rweb::rt::Cow::Borrowed(name_str));
                     }
                     s
                 }
@@ -281,8 +284,16 @@ fn handle_fields(type_attrs: &[Attribute], fields: &mut Fields) -> Block {
     block.stmts.push(
         q!({
             #[allow(unused_mut)]
-            let mut map: rweb::rt::IndexMap<rweb::rt::Cow<'static, str>, _> =
+            let mut fields: rweb::rt::IndexMap<rweb::rt::Cow<'static, str>, _> =
                 rweb::rt::IndexMap::default();
+        })
+        .parse(),
+    );
+    block.stmts.push(
+        q!({
+            #[allow(unused_mut)]
+            let mut required_fields: std::vec::Vec<rweb::rt::Cow<'static, str>> =
+                std::vec::Vec::default();
         })
         .parse(),
     );
@@ -291,53 +302,11 @@ fn handle_fields(type_attrs: &[Attribute], fields: &mut Fields) -> Block {
         block.stmts.push(handle_field(type_attrs, f));
     }
 
-    block.stmts.push(Stmt::Expr(q!({ map }).parse()));
+    block
+        .stmts
+        .push(Stmt::Expr(q!({ (fields, required_fields) }).parse()));
 
     block
-}
-
-fn handle_fields_required(type_attrs: &[Attribute], fields: &Fields) -> Expr {
-    let reqf_v: Punctuated<Expr, Token![,]> = fields
-        .iter()
-        .filter_map(|f| {
-            let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
-            if skip_ser && skip_de {
-                return None;
-            }
-
-            Some(Pair::Punctuated(
-                q!(
-                    Vars {
-                        name_str: field_name(type_attrs, &*f),
-                        Type: &f.ty
-                    },
-                    {
-                        {
-                            if !<Type as rweb::openapi::Entity>::describe()
-                                .nullable
-                                .unwrap_or(false)
-                            {
-                                Some(rweb::rt::Cow::Borrowed(name_str))
-                            } else {
-                                None
-                            }
-                        }
-                    }
-                )
-                .parse(),
-                Default::default(),
-            ))
-        })
-        .collect();
-
-    if reqf_v.is_empty() {
-        q!({ vec![] })
-    } else {
-        q!(Vars { reqf_v }, {
-            vec![reqf_v].into_iter().flatten().collect()
-        })
-    }
-    .parse()
 }
 
 fn extract_component(attrs: &[Attribute]) -> Option<String> {
@@ -409,46 +378,25 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     let component = extract_component(&attrs);
     let example = extract_example(&mut attrs);
 
+    let mut block: Block = q!({ {} }).parse();
     let mut fields: Punctuated<FieldValue, Token![,]> = Default::default();
     if let Some(tts) = example {
         fields.push(q!(Vars { tts }, ({ example: Some(tts) })).parse());
     }
-    let mut subcomponents: Block = q!({ {} }).parse();
-    subcomponents.stmts.push(
-        q!({
-            #[allow(unused_mut)]
-            let mut compos: rweb::openapi::Components = vec![];
-        })
-        .parse(),
-    );
-    macro_rules! subcomponents_handle_fields {
-        ($fields:expr) => {
-            for f in $fields {
-                let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
-
-                if !skip_ser || !skip_de {
-                    subcomponents.stmts.push(
-                        q!(Vars { Type: &f.ty }, {
-                            compos.append(&mut <Type as rweb::openapi::Entity>::describe_components());
-                        })
-                        .parse(),
-                    );
-                }
-
-            }
-        };
-    }
 
     match data {
         Data::Struct(ref mut data) => {
-            subcomponents_handle_fields!(&data.fields);
-
             match data.fields {
                 Fields::Named(_) => {
-                    let block = handle_fields(&attrs, &mut data.fields);
-                    let required_block = handle_fields_required(&attrs, &data.fields);
-                    fields.push(q!(Vars { block }, { properties: block }).parse());
-                    fields.push(q!(Vars { required_block }, { required: required_block }).parse());
+                    let fields_block = handle_fields(&attrs, &mut data.fields);
+                    block.stmts.push(
+                        q!(Vars { fields_block }, {
+                            let (fields, required_fields) = fields_block;
+                        })
+                        .parse(),
+                    );
+                    fields.push(q!({ properties: fields }).parse());
+                    fields.push(q!({ required: required_fields }).parse());
                 }
                 Fields::Unnamed(ref n) if n.unnamed.len() == 1 => {}
                 _ => {}
@@ -484,10 +432,6 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                 fields.push(q!(Vars { exprs }, { enum_values: vec![exprs] }).parse());
                 fields.push(q!({ schema_type: Some(rweb::openapi::Type::String) }).parse());
             } else {
-                for v in &data.variants {
-                    subcomponents_handle_fields!(&v.fields);
-                }
-
                 let exprs: Punctuated<Expr, Token![,]> = data
                     .variants
                     .iter_mut()
@@ -497,15 +441,11 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                         match v.fields {
                             Fields::Named(..) => Some(Pair::Punctuated(
                                 {
-                                    let fields = handle_fields(&attrs, &mut v.fields);
-                                    let fields_required = handle_fields_required(&attrs, &v.fields);
+                                    let fields_block = handle_fields(&attrs, &mut v.fields);
                                     q!(
-                                        Vars {
-                                            fields,
-                                            fields_required,
-                                            desc
-                                        },
+                                        Vars { fields_block, desc },
                                         ({
+                                            let (fields, fields_required) = fields_block;
                                             #[allow(unused_mut)]
                                             let mut s = rweb::openapi::Schema {
                                                 properties: fields,
@@ -518,7 +458,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                                                     rweb::rt::Cow::Borrowed(description);
                                             }
 
-                                            rweb::openapi::ObjectOrReference::Object(s)
+                                            rweb::openapi::ComponentOrInlineSchema::Inline(s)
                                         })
                                     )
                                     .parse()
@@ -540,14 +480,15 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                                         },
                                         ({
                                             #[allow(unused_mut)]
-                                            let mut s = <Type as rweb::openapi::Entity>::describe();
+                                            let mut s =
+                                                <Type as rweb::openapi::Entity>::describe(comp_d);
                                             let description = desc;
                                             if !description.is_empty() {
                                                 s.description =
                                                     rweb::rt::Cow::Borrowed(description);
                                             }
 
-                                            rweb::openapi::ObjectOrReference::Object(s)
+                                            rweb::openapi::ComponentOrInlineSchema::Inline(s)
                                         })
                                     )
                                     .parse(),
@@ -565,138 +506,109 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }
 
-    subcomponents.stmts.push(Stmt::Expr(q!({ compos }).parse()));
-    let mut item = if let Some(comp) = component {
-        if generics.params.is_empty() {
-            let path_to_schema = format!("#/components/schemas/{}", comp);
-            q!(
-                Vars {
-                    Type: &ident,
-                    desc,
-                    path_to_schema,
+    block.stmts.push(Stmt::Expr(
+        if component.is_some() {
+            q!(Vars { desc, fields }, {
+                comp_d.describe_component(&Self::type_name(), |comp_d| rweb::openapi::Schema {
                     fields,
-                    comp,
-                    subcomponents,
-                },
-                {
-                    impl rweb::openapi::Entity for Type {
-                        fn describe() -> rweb::openapi::Schema {
-                            rweb::openapi::Schema {
-                                ref_path: rweb::rt::Cow::Borrowed(path_to_schema),
-                                ..rweb::rt::Default::default()
-                            }
-                        }
-
-                        fn describe_components() -> rweb::openapi::Components {
-                            let mut comps = subcomponents;
-                            comps.push((
-                                rweb::rt::Cow::Borrowed(comp),
-                                rweb::openapi::Schema {
-                                    fields,
-                                    description: rweb::rt::Cow::Borrowed(desc),
-                                    ..rweb::rt::Default::default()
-                                },
-                            ));
-                            comps
-                        }
-                    }
-                }
-            )
-        } else {
-            let rtcc_v: Punctuated<pmutil::Quote, Token![,]> = generics
-                .params
-                .iter()
-                .flat_map(|g| match g {
-                    syn::GenericParam::Type(t) => Some({
-                        let tpn = &t.ident;
-                        q!(Vars { tpn }, {
-                            {
-                                rweb::openapi::schema_consistent_component_name(
-                                    &<tpn as rweb::openapi::Entity>::describe(),
-                                )
-                                .expect(
-                                    "To use generic components, all type parameters must \
-                                     themselves be components (or lists of)",
-                                )
-                            }
-                        })
-                    }),
-                    syn::GenericParam::Const(con) => Some({
-                        let tpn = &con.ident;
-                        q!(Vars { tpn }, {
-                            {
-                                tpn.to_string()
-                            }
-                        })
-                    }),
-                    _ => None,
+                    description: rweb::rt::Cow::Borrowed(desc),
+                    ..rweb::rt::Default::default()
                 })
-                .map(|q| Pair::Punctuated(q, Default::default()))
-                .collect();
-            let rtcc = q!(Vars { comp, rtcc_v }, {
-                {
-                    comp.to_string() + "-_" + vec![rtcc_v].join("_").as_str() + "_-"
-                }
-            });
-            q!(
-                Vars {
-                    Type: &ident,
-                    desc,
+            })
+        } else {
+            q!(Vars { desc, fields }, {
+                rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
                     fields,
-                    rtcc,
-                    subcomponents,
-                },
-                {
-                    impl rweb::openapi::Entity for Type {
-                        fn describe() -> rweb::openapi::Schema {
-                            rweb::openapi::Schema {
-                                ref_path: rweb::rt::Cow::Owned(format!(
-                                    "#/components/schemas/{}",
-                                    rtcc
-                                )),
-                                ..rweb::rt::Default::default()
-                            }
-                        }
-
-                        fn describe_components() -> rweb::openapi::Components {
-                            let mut comps = subcomponents;
-                            comps.push((
-                                rweb::rt::Cow::Owned(rtcc),
-                                rweb::openapi::Schema {
-                                    fields,
-                                    description: rweb::rt::Cow::Borrowed(desc),
-                                    ..rweb::rt::Default::default()
-                                },
-                            ));
-                            comps
-                        }
-                    }
-                }
-            )
+                    description: rweb::rt::Cow::Borrowed(desc),
+                    ..rweb::rt::Default::default()
+                })
+            })
         }
+        .parse(),
+    ));
+
+    let typename = component.clone().unwrap_or_else(|| ident.to_string());
+    let typename: Expr = if generics.params.is_empty() {
+        q!(Vars { typename }, { rweb::rt::Cow::Borrowed(typename) }).parse()
     } else {
+        let generics_typenames: Punctuated<pmutil::Quote, Token![,]> = generics
+            .params
+            .iter()
+            .flat_map(|g| match g {
+                syn::GenericParam::Type(t) => Some({
+                    let tpn = &t.ident;
+                    q!(Vars { tpn }, {
+                        {
+                            <tpn as rweb::openapi::Entity>::type_name().to_string()
+                        }
+                    })
+                }),
+                syn::GenericParam::Const(con) => Some({
+                    let tpn = &con.ident;
+                    q!(Vars { tpn }, {
+                        {
+                            tpn.to_string()
+                        }
+                    })
+                }),
+                _ => None,
+            })
+            .map(|q| Pair::Punctuated(q, Default::default()))
+            .collect();
         q!(
             Vars {
-                Type: &ident,
-                desc,
-                fields,
-                subcomponents,
+                typename,
+                generics_typenames
             },
             {
-                impl rweb::openapi::Entity for Type {
-                    fn describe() -> rweb::openapi::Schema {
-                        rweb::openapi::Schema {
-                            fields,
-                            description: rweb::rt::Cow::Borrowed(desc),
-                            ..rweb::rt::Default::default()
-                        }
-                    }
-                    fn describe_components() -> rweb::openapi::Components {
-                        subcomponents
-                    }
-                }
+                rweb::rt::Cow::Owned(format!(
+                    "{}-{}-",
+                    typename,
+                    vec![generics_typenames].join("_")
+                ))
             }
         )
+        .parse()
+    };
+
+    let mut item = if let Some(comp) = component {
+		q!(
+			Vars {
+				Type: &ident,
+				typename,
+				block,
+			},
+			{
+				impl rweb::openapi::Entity for Type {
+					fn type_name() -> rweb::rt::Cow<&'static, str> {
+						typename
+					}
+
+					fn describe(comp_d: &mut rweb::openapi::ComponentDescriptor) -> rweb::openapi::ComponentOrInlineSchema {
+						comp_d.describe_component(&Self::type_name(), |comp_d| block)
+					}
+				}
+			}
+		)
+    } else {
+        q!(
+			Vars {
+				Type: &ident,
+				typename,
+				block,
+			},
+			{
+				impl rweb::openapi::Entity for Type {
+					fn type_name() -> rweb::rt::Cow<&'static, str> {
+						typename
+					}
+
+					fn describe(comp_d: &mut rweb::openapi::ComponentDescriptor) -> rweb::openapi::ComponentOrInlineSchema {
+						block
+					}
+				}
+			}
+		)
     }
     .parse::<ItemImpl>()
     .with_generics(generics);
