@@ -253,22 +253,24 @@ fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
                 {
                     #[allow(unused_mut)]
                     let mut s = <Type as rweb::openapi::Entity>::describe(comp_d);
-                    let description = desc;
-                    if !description.is_empty() {
-                        s.description = rweb::rt::Cow::Borrowed(description);
-                    }
-                    let example = example_v;
-                    if let Some(example) = example {
-                        s.example = Some(example);
-                    }
-                    if skip_ser {
-                        s.write_only = Some(true);
-                    }
-                    if skip_de {
-                        s.read_only = Some(true);
-                    }
                     if comp_d.get_unpack(&s).nullable != Some(true) {
                         required_fields.push(rweb::rt::Cow::Borrowed(name_str));
+                    }
+                    if let rweb::openapi::ComponentOrInlineSchema::Inline(s) = &mut s {
+                        let description = desc;
+                        if !description.is_empty() {
+                            s.description = rweb::rt::Cow::Borrowed(description);
+                        }
+                        let example = example_v;
+                        if let Some(example) = example {
+                            s.example = Some(example);
+                        }
+                        if skip_ser {
+                            s.write_only = Some(true);
+                        }
+                        if skip_de {
+                            s.read_only = Some(true);
+                        }
                     }
                     s
                 }
@@ -482,13 +484,18 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                                             #[allow(unused_mut)]
                                             let mut s =
                                                 <Type as rweb::openapi::Entity>::describe(comp_d);
-                                            let description = desc;
-                                            if !description.is_empty() {
-                                                s.description =
-                                                    rweb::rt::Cow::Borrowed(description);
+                                            if let rweb::openapi::ComponentOrInlineSchema::Inline(
+                                                s,
+                                            ) = &mut s
+                                            {
+                                                let description = desc;
+                                                if !description.is_empty() {
+                                                    s.description =
+                                                        rweb::rt::Cow::Borrowed(description);
+                                                }
                                             }
 
-                                            rweb::openapi::ComponentOrInlineSchema::Inline(s)
+                                            s
                                         })
                                     )
                                     .parse(),
@@ -571,45 +578,26 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
         .parse()
     };
 
-    let mut item = if let Some(comp) = component {
-		q!(
-			Vars {
-				Type: &ident,
-				typename,
-				block,
-			},
-			{
-				impl rweb::openapi::Entity for Type {
-					fn type_name() -> rweb::rt::Cow<&'static, str> {
-						typename
-					}
+    let mut item = q!(
+        Vars {
+            Type: &ident,
+            typename,
+            block,
+        },
+        {
+            impl rweb::openapi::Entity for Type {
+                fn type_name() -> rweb::rt::Cow<'static, str> {
+                    typename
+                }
 
-					fn describe(comp_d: &mut rweb::openapi::ComponentDescriptor) -> rweb::openapi::ComponentOrInlineSchema {
-						comp_d.describe_component(&Self::type_name(), |comp_d| block)
-					}
-				}
-			}
-		)
-    } else {
-        q!(
-			Vars {
-				Type: &ident,
-				typename,
-				block,
-			},
-			{
-				impl rweb::openapi::Entity for Type {
-					fn type_name() -> rweb::rt::Cow<&'static, str> {
-						typename
-					}
-
-					fn describe(comp_d: &mut rweb::openapi::ComponentDescriptor) -> rweb::openapi::ComponentOrInlineSchema {
-						block
-					}
-				}
-			}
-		)
-    }
+                fn describe(
+                    comp_d: &mut rweb::openapi::ComponentDescriptor,
+                ) -> rweb::openapi::ComponentOrInlineSchema {
+                    block
+                }
+            }
+        }
+    )
     .parse::<ItemImpl>()
     .with_generics(generics);
 
