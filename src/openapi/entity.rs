@@ -167,7 +167,7 @@ pub trait Entity {
 /// This should be implemented only for types that know how it should be
 /// encoded.
 pub trait ResponseEntity: Entity {
-    fn describe_responses() -> Responses;
+    fn describe_responses(comp_d: &mut ComponentDescriptor) -> Responses;
 }
 
 /// Implements entity by another entity
@@ -302,8 +302,8 @@ impl Entity for str {
 }
 
 impl ResponseEntity for str {
-    fn describe_responses() -> Responses {
-        String::describe_responses()
+    fn describe_responses(comp_d: &mut ComponentDescriptor) -> Responses {
+        String::describe_responses(comp_d)
     }
 }
 
@@ -324,8 +324,8 @@ impl<T> ResponseEntity for Box<T>
 where
     T: ?Sized + ResponseEntity,
 {
-    fn describe_responses() -> Responses {
-        T::describe_responses()
+    fn describe_responses(comp_d: &mut ComponentDescriptor) -> Responses {
+        T::describe_responses(comp_d)
     }
 }
 
@@ -346,8 +346,8 @@ impl<T> ResponseEntity for Arc<T>
 where
     T: ?Sized + ResponseEntity,
 {
-    fn describe_responses() -> Responses {
-        T::describe_responses()
+    fn describe_responses(comp_d: &mut ComponentDescriptor) -> Responses {
+        T::describe_responses(comp_d)
     }
 }
 
@@ -368,8 +368,8 @@ impl<'a, T> ResponseEntity for &'a T
 where
     T: ?Sized + ResponseEntity,
 {
-    fn describe_responses() -> Responses {
-        T::describe_responses()
+    fn describe_responses(comp_d: &mut ComponentDescriptor) -> Responses {
+        T::describe_responses(comp_d)
     }
 }
 
@@ -462,34 +462,62 @@ impl<T> ResponseEntity for Option<T>
 where
     T: ResponseEntity,
 {
-    fn describe_responses() -> Responses {
-        let mut responses = T::describe_responses();
-        for (_, r) in responses.iter_mut() {
-            for (_, v) in r.content.iter_mut() {
-                if v.schema.is_some() {
-                    match v.schema.as_mut().unwrap() {
-                        ObjectOrReference::Object(ref mut o) => {
-                            o.nullable = Some(true);
-                        }
-                        ObjectOrReference::Ref { .. } => {}
-                    }
-                }
-            }
-        }
-
-        responses
+    fn describe_responses(comp_d: &mut ComponentDescriptor) -> Responses {
+        T::describe_responses(comp_d)
+            .into_iter()
+            .map(|(k, r)| {
+                (
+                    k,
+                    Response {
+                        content: r
+                            .content
+                            .into_iter()
+                            .map(|(k, v)| {
+                                (
+                                    k,
+                                    MediaType {
+                                        schema: v.schema.map(|desc| {
+                                            let schema = comp_d.get_unpack(&desc);
+                                            if schema.nullable == Some(true) {
+                                                desc
+                                            } else {
+                                                let mut schema = schema.clone();
+                                                schema.nullable = Some(true);
+                                                match desc {
+                                                    ComponentOrInlineSchema::Component { name } => {
+                                                        comp_d.describe_component(
+                                                            &format!("{}_Opt", name),
+                                                            |_| schema,
+                                                        )
+                                                    }
+                                                    ComponentOrInlineSchema::Inline(_) => {
+                                                        ComponentOrInlineSchema::Inline(schema)
+                                                    }
+                                                }
+                                            }
+                                        }),
+                                        ..v
+                                    },
+                                )
+                            })
+                            .collect(),
+                        ..r
+                    },
+                )
+            })
+            .collect()
     }
 }
 
 delegate_entity!(String => str);
 
 impl ResponseEntity for String {
-    fn describe_responses() -> Responses {
+    fn describe_responses(comp_d: &mut ComponentDescriptor) -> Responses {
         let mut content = IndexMap::new();
         content.insert(
             Cow::Borrowed("text/plain"),
             MediaType {
-                schema: Some(ObjectOrReference::Object(Self::describe())),
+                schema: Some(Self::describe(comp_d)),
                 examples: None,
                 encoding: Default::default(),
             },
@@ -546,9 +574,11 @@ where
     T: ResponseEntity,
     E: ResponseEntity,
 {
-    fn describe_responses() -> IndexMap<Cow<'static, str>, Response> {
-        let mut map = T::describe_responses();
-        map.extend(E::describe_responses());
+    fn describe_responses(
+        comp_d: &mut ComponentDescriptor,
+    ) -> IndexMap<Cow<'static, str>, Response> {
+        let mut map = T::describe_responses(comp_d);
+        map.extend(E::describe_responses(comp_d));
         map
     }
 }
@@ -579,7 +609,7 @@ delegate_entity!(Infallible => ());
 
 impl ResponseEntity for Infallible {
     #[inline]
-    fn describe_responses() -> Responses {
+    fn describe_responses(_: &mut ComponentDescriptor) -> Responses {
         Default::default()
     }
 }
@@ -590,13 +620,13 @@ impl<T> ResponseEntity for Json<T>
 where
     T: Entity,
 {
-    fn describe_responses() -> Responses {
-        let schema = Self::describe();
+    fn describe_responses(comp_d: &mut ComponentDescriptor) -> Responses {
+        let schema = Self::describe(comp_d);
         let mut content = IndexMap::new();
         content.insert(
             Cow::Borrowed("application/json"),
             MediaType {
-                schema: Some(ObjectOrReference::Object(schema)),
+                schema: Some(schema),
                 examples: None,
                 encoding: Default::default(),
             },
@@ -619,13 +649,13 @@ type SerdeJsonValue = serde_json::Value;
 delegate_entity!(SerdeJsonValue => ());
 
 impl ResponseEntity for serde_json::Value {
-    fn describe_responses() -> Responses {
-        let schema = Self::describe();
+    fn describe_responses(comp_d: &mut ComponentDescriptor) -> Responses {
+        let schema = Self::describe(comp_d);
         let mut content = IndexMap::new();
         content.insert(
             Cow::Borrowed("application/json"),
             MediaType {
-                schema: Some(ObjectOrReference::Object(schema)),
+                schema: Some(schema),
                 examples: None,
                 encoding: Default::default(),
             },
@@ -650,7 +680,7 @@ delegate_entity!(<T: Entity> Form<T> => T);
 delegate_entity!(Rejection => ());
 
 impl ResponseEntity for Rejection {
-    fn describe_responses() -> Responses {
+    fn describe_responses(_: &mut ComponentDescriptor) -> Responses {
         Default::default()
     }
 }
@@ -659,7 +689,7 @@ type HttpError = http::Error;
 delegate_entity!(HttpError => ());
 
 impl ResponseEntity for http::Error {
-    fn describe_responses() -> Responses {
+    fn describe_responses(_: &mut ComponentDescriptor) -> Responses {
         Default::default()
     }
 }
@@ -668,7 +698,7 @@ type DynReply = dyn Reply;
 delegate_entity!(DynReply => ());
 
 impl ResponseEntity for dyn Reply {
-    fn describe_responses() -> Responses {
+    fn describe_responses(_: &mut ComponentDescriptor) -> Responses {
         Default::default()
     }
 }
