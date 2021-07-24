@@ -6,7 +6,6 @@ use rweb::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(EnumSetType, Schema, Serialize, Deserialize, Debug)]
-#[schema(component = "Flagged")]
 pub enum Flagged {
     A,
     B,
@@ -15,15 +14,21 @@ pub enum Flagged {
 
 #[derive(EnumSetType, Schema, Serialize, Deserialize, Debug)]
 #[enumset(serialize_as_list)]
-#[schema(component = "Named")]
 pub enum Named {
     A,
     B,
     C,
 }
 
+#[derive(Schema, Serialize, Deserialize, Debug)]
+#[schema(component = "Components")]
+struct Components {
+    flagged: EnumSet<Flagged>,
+    named: EnumSet<Named>,
+}
+
 #[get("/")]
-fn index(_: Query<EnumSet<Flagged>>, _: Json<EnumSet<Named>>) -> String {
+fn index(_: Json<Components>) -> String {
     String::new()
 }
 
@@ -44,9 +49,20 @@ fn description() {
             }
         };
     }
-    let flagged = component!("Flagged_EnumSet");
+    let components = component!("Components");
+    macro_rules! unpack {
+        ($opt:expr) => {
+            $opt.unwrap().unwrap().unwrap()
+        };
+    }
+    macro_rules! prop {
+        ($prop:expr) => {
+            unpack!(components.properties.get($prop))
+        };
+    }
+    let flagged = prop!("flagged");
     assert_eq!(flagged.schema_type, Some(openapi::Type::Integer));
-    let named = component!("Named_EnumSet");
+    let named = prop!("named");
     assert_eq!(named.schema_type, Some(openapi::Type::Array));
     assert!(named.items.is_some());
 }
