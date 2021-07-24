@@ -48,7 +48,7 @@ impl Builder {
         let cell = RefCell::new(collector);
 
         let ret = COLLECTOR.set(&cell, || op());
-        let mut spec = cell.into_inner().spec;
+        let mut spec = cell.into_inner().spec();
         spec.openapi = "3.0.1".into();
         (spec, ret)
     }

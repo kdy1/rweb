@@ -387,6 +387,15 @@ impl Collector {
     }
 
     pub fn add_scheme<T>() {}
+
+    fn spec(self) -> Spec {
+        let mut spec = self.spec;
+        spec.components
+            .get_or_insert_with(Default::default)
+            .schemas
+            .extend(self.components.build());
+        spec
+    }
 }
 
 fn new() -> Collector {
