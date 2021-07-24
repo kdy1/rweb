@@ -447,7 +447,7 @@ where
             desc
         } else {
             let mut schema = schema.clone();
-            schema.nullable = Some(false);
+            schema.nullable = Some(true);
             match desc {
                 ComponentOrInlineSchema::Component { .. } => {
                     comp_d.describe_component(&Self::type_name(), |_| schema)
