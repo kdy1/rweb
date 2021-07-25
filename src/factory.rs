@@ -1,7 +1,11 @@
 use futures::future::ok;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+#[cfg(feature = "multipart")]
+use warp::filters::multipart;
+#[cfg(feature = "websocket")]
+use warp::filters::ws::Ws;
 use warp::{
-    filters::{multipart, ws::Ws, BoxedFilter},
+    filters::BoxedFilter,
     reply::{json, Response},
     Filter, Rejection, Reply,
 };
@@ -174,6 +178,7 @@ where
     }
 }
 
+#[cfg(feature = "websocket")]
 impl FromRequest for Ws {
     type Filter = BoxedFilter<(Ws,)>;
 
@@ -182,6 +187,7 @@ impl FromRequest for Ws {
     }
 }
 
+#[cfg(feature = "multipart")]
 impl FromRequest for multipart::FormData {
     type Filter = BoxedFilter<(Self,)>;
 
