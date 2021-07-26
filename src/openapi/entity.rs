@@ -716,7 +716,7 @@ impl Entity for uuid::Uuid {
         Cow::Borrowed("uuid")
     }
 
-    fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+    fn describe(_: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
         ComponentOrInlineSchema::Inline(Schema {
             schema_type: Some(Type::String),
             format: Self::type_name(),
@@ -781,7 +781,7 @@ mod chrono_impls {
             Cow::Borrowed("date-time")
         }
 
-        fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        fn describe(_: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
             ComponentOrInlineSchema::Inline(Schema {
                 schema_type: Some(Type::String),
                 format: Self::type_name(),
@@ -797,7 +797,7 @@ mod chrono_impls {
             Cow::Borrowed("date")
         }
 
-        fn describe(comp_d: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        fn describe(_: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
             ComponentOrInlineSchema::Inline(Schema {
                 schema_type: Some(Type::String),
                 format: Self::type_name(),
