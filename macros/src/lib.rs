@@ -1,3 +1,7 @@
+//! proc macros for rweb
+
+#![deny(missing_docs)]
+
 extern crate proc_macro;
 use self::route::compile_route;
 use pmutil::{q, ToTokensExt};
@@ -9,6 +13,7 @@ mod route;
 mod router;
 mod util;
 
+/// Creates a get method route handler
 #[proc_macro_attribute]
 pub fn get(
     path: proc_macro::TokenStream,
@@ -17,6 +22,7 @@ pub fn get(
     compile_route(Some(q!({ get })), path.into(), fn_item.into())
 }
 
+/// Creates a post method route handler
 #[proc_macro_attribute]
 pub fn post(
     path: proc_macro::TokenStream,
@@ -25,6 +31,7 @@ pub fn post(
     compile_route(Some(q!({ post })), path.into(), fn_item.into())
 }
 
+/// Creates a put method route handler
 #[proc_macro_attribute]
 pub fn put(
     path: proc_macro::TokenStream,
@@ -33,6 +40,7 @@ pub fn put(
     compile_route(Some(q!({ put })), path.into(), fn_item.into())
 }
 
+/// Creates a delete method route handler
 #[proc_macro_attribute]
 pub fn delete(
     path: proc_macro::TokenStream,
@@ -41,6 +49,7 @@ pub fn delete(
     compile_route(Some(q!({ delete })), path.into(), fn_item.into())
 }
 
+/// Creates a head method route handler
 #[proc_macro_attribute]
 pub fn head(
     path: proc_macro::TokenStream,
@@ -49,6 +58,7 @@ pub fn head(
     compile_route(Some(q!({ head })), path.into(), fn_item.into())
 }
 
+/// Creates a options method route handler
 #[proc_macro_attribute]
 pub fn options(
     path: proc_macro::TokenStream,
@@ -57,6 +67,7 @@ pub fn options(
     compile_route(Some(q!({ options })), path.into(), fn_item.into())
 }
 
+/// Creates a patch method route handler
 #[proc_macro_attribute]
 pub fn patch(
     path: proc_macro::TokenStream,
