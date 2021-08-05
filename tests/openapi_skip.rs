@@ -30,20 +30,24 @@ fn test_skip() {
         rweb::openapi::ObjectOrReference::Object(s) => s,
         _ => panic!(),
     };
+    macro_rules! unpack {
+        ($opt:expr) => {
+            $opt.unwrap().unwrap().unwrap()
+        };
+    }
+    macro_rules! prop {
+        ($prop:expr) => {
+            unpack!(whence.properties.get($prop))
+        };
+    }
     assert!(whence.properties.contains_key("always"));
     assert!(whence.properties.contains_key("only_yeet"));
     assert!(whence.properties.contains_key("only_take"));
     assert!(!whence.properties.contains_key("nevah"));
-    assert_eq!(whence.properties.get("always").unwrap().read_only, None);
-    assert_eq!(whence.properties.get("always").unwrap().write_only, None);
-    assert_eq!(
-        whence.properties.get("only_yeet").unwrap().read_only,
-        Some(true)
-    );
-    assert_eq!(whence.properties.get("only_yeet").unwrap().write_only, None);
-    assert_eq!(whence.properties.get("only_take").unwrap().read_only, None);
-    assert_eq!(
-        whence.properties.get("only_take").unwrap().write_only,
-        Some(true)
-    );
+    assert_eq!(prop!("always").read_only, None);
+    assert_eq!(prop!("always").write_only, None);
+    assert_eq!(prop!("only_yeet").read_only, Some(true));
+    assert_eq!(prop!("only_yeet").write_only, None);
+    assert_eq!(prop!("only_take").read_only, None);
+    assert_eq!(prop!("only_take").write_only, Some(true));
 }

@@ -39,11 +39,9 @@ fn test_multi_generics_compile() {
     }
     assert!(schemas.contains_key("One"));
     assert!(schemas.contains_key("Two"));
-    assert!(schemas.contains_key("GenericStruct-_string_Opt_integer_-"));
+    assert!(schemas.contains_key("GenericStruct-string_Opt_uinteger-"));
     assert!(schemas.contains_key("One_Opt"));
-    assert!(schemas.contains_key("One_Map"));
-    assert!(schemas.contains_key("Two_List"));
-    assert!(schemas.contains_key("GenericStruct-_One_Opt_One_-_Opt"));
+    assert!(schemas.contains_key("GenericStruct-One_Opt_One-_Opt"));
     macro_rules! component {
         ($cn:expr) => {
             match schemas.get($cn) {
@@ -53,28 +51,14 @@ fn test_multi_generics_compile() {
             }
         };
     }
-    match &component!("One_Opt").one_of[0] {
-        ObjectOrReference::Object(s) => {
-            assert_eq!(s.ref_path, "#/components/schemas/One");
-            assert_eq!(s.schema_type, None);
+    assert_eq!(
+        &component!("GenericStruct-One_Opt_One-_Opt").nullable,
+        &Some(true)
+    );
+    assert_eq!(
+        &component!("GenericStruct-One_Opt_One-_Opt").properties["a"],
+        &ComponentOrInlineSchema::Component {
+            name: rt::Cow::Borrowed("One_Opt")
         }
-        ObjectOrReference::Ref { ref_path } => assert_eq!(ref_path, "#/components/schemas/One"),
-    }
-    match &component!("One_Map").additional_properties {
-        Some(ObjectOrReference::Object(s)) => {
-            assert_eq!(s.ref_path, "#/components/schemas/One");
-            assert_eq!(s.schema_type, None);
-        }
-        Some(ObjectOrReference::Ref { ref_path }) => {
-            assert_eq!(ref_path, "#/components/schemas/One")
-        }
-        None => panic!("Map component missing `additional_properties`"),
-    }
-    match &component!("Two_List").items {
-        Some(s) => {
-            assert_eq!(s.ref_path, "#/components/schemas/Two");
-            assert_eq!(s.schema_type, None);
-        }
-        None => panic!("Array component missing `items`"),
-    }
+    );
 }

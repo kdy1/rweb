@@ -51,7 +51,7 @@ enum TestEnum {
 }
 
 #[get("/")]
-fn test_enum_r(_: Query<TestEnum>) -> String {
+fn test_enum_r(_: Json<TestEnum>) -> String {
     String::new()
 }
 
@@ -72,7 +72,7 @@ fn test_enum() {
     println!("{}", serde_yaml::to_string(&schema).unwrap());
     for variant in &schema.one_of {
         match variant {
-            openapi::ObjectOrReference::Object(vs) => {
+            openapi::ComponentOrInlineSchema::Inline(vs) => {
                 if vs.properties.contains_key(&Cow::Borrowed("afield")) {
                     assert!(vs.required.contains(&Cow::Borrowed("afield")));
                 }

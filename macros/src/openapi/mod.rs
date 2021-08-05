@@ -29,17 +29,17 @@ mod case;
 mod derive;
 
 macro_rules! quote_str_indexmap {
-	($map:expr, $quot:ident) => {
-		$map.iter()
+    ($map:expr, $quot:ident) => {
+        $map.iter()
         .map(|(nam, t)| {
-			let tq = $quot(t);
+            let tq = $quot(t);
             Pair::Punctuated(
                 q!(Vars { nam, tq }, { rweb::rt::Cow::Borrowed(nam) => tq }),
                 Default::default(),
             )
         })
         .collect();
-	};
+    };
 }
 
 pub fn quote_op(op: Operation) -> Expr {
@@ -135,9 +135,7 @@ fn quote_parameter(param: &ObjectOrReference<Parameter>) -> Expr {
                 location: location_v,
                 required: required_v,
                 representation: Some(rweb::openapi::ParameterRepresentation::Simple {
-                    schema: rweb::openapi::ObjectOrReference::Object(
-                        <Type as rweb::openapi::Entity>::describe(),
-                    ),
+                    schema: <Type as rweb::openapi::Entity>::describe(__collector.components()),
                 }),
                 ..Default::default()
             })
@@ -158,11 +156,13 @@ fn quote_response(r: &Response) -> Expr {
                 {
                     (|| {
                         let mut resp =
-                            <aschema_v as rweb::openapi::ResponseEntity>::describe_responses()
-                                .into_iter()
-                                .next()
-                                .map(|(_, r)| r)
-                                .unwrap_or_else(|| Default::default());
+                            <aschema_v as rweb::openapi::ResponseEntity>::describe_responses(
+                                __collector.components(),
+                            )
+                            .into_iter()
+                            .next()
+                            .map(|(_, r)| r)
+                            .unwrap_or_else(|| Default::default());
                         resp.description = rweb::rt::Cow::Borrowed(description_v);
                         resp
                     })()

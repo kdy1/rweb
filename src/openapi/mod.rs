@@ -193,7 +193,7 @@
 //! }
 //!
 //! impl openapi::ResponseEntity for Error {
-//!     fn describe_responses() -> openapi::Responses {
+//!     fn describe_responses(_: &mut openapi::ComponentDescriptor) -> openapi::Responses {
 //!         let mut map = IndexMap::new();
 //!
 //!         map.insert(
@@ -211,7 +211,7 @@
 
 pub use self::{
     builder::{spec, Builder},
-    entity::{Components, Entity, ResponseEntity, Responses},
+    entity::{ComponentDescriptor, Entity, ResponseEntity, Responses},
 };
 use crate::FromRequest;
 use http::Method;
@@ -228,11 +228,18 @@ scoped_thread_local!(static COLLECTOR: RefCell<Collector>);
 #[derive(Debug)]
 pub struct Collector {
     spec: Spec,
+    components: ComponentDescriptor,
     path_prefix: String,
     tags: Vec<Cow<'static, str>>,
 }
 
 impl Collector {
+    /// Method used by `#[op]`
+    #[doc(hidden)]
+    pub fn components(&mut self) -> &mut ComponentDescriptor {
+        &mut self.components
+    }
+
     /// Method used by `#[router]`.
     #[doc(hidden)]
     pub fn with_appended_prefix<F, Ret>(
@@ -262,14 +269,12 @@ impl Collector {
     }
 
     pub fn add_request_type_to<T: FromRequest + Entity>(&mut self, op: &mut Operation) {
-        self.add_components(T::describe_components());
-
         if T::is_body() {
             if op.request_body.is_some() {
                 panic!("Multiple body detected");
             }
 
-            let s = T::describe();
+            let s = T::describe(&mut self.components);
 
             let mut content = IndexMap::new();
 
@@ -277,7 +282,7 @@ impl Collector {
             content.insert(
                 Cow::Borrowed(T::content_type()),
                 MediaType {
-                    schema: Some(ObjectOrReference::Object(s)),
+                    schema: Some(s),
                     examples: None,
                     encoding: Default::default(),
                 },
@@ -298,46 +303,29 @@ impl Collector {
     fn add_query_type_to<T: FromRequest + Entity>(&mut self, op: &mut Operation) {
         debug_assert!(T::is_query());
 
-        let s = T::describe();
+        let s = T::describe(&mut self.components);
+        let s = self.components.get_unpack(&s);
 
-        assert!(
-            s.enum_values.is_empty(),
-            "Query<Enum> is invalid. Store enum as a field."
+        assert_eq!(
+            Some(Type::Object),
+            s.schema_type,
+            "Query<[not object]> is invalid. Store [not object] as a field."
         );
 
-        if let Some(Type::Object) = s.schema_type {
-            //
-
-            for (name, s) in s.properties {
-                if s.properties.is_empty() {
-                    op.parameters.push(ObjectOrReference::Object(Parameter {
-                        name,
-                        location: Location::Query,
-                        description: s.description.clone(),
-                        representation: Some(ParameterRepresentation::Simple {
-                            schema: ObjectOrReference::Object(s),
-                        }),
-                        ..Default::default()
-                    }));
-                } else {
-                    op.parameters.push(ObjectOrReference::Object(Parameter {
-                        required: Some(s.required.contains(&name)),
-                        name,
-                        location: Location::Query,
-                        description: s.description.clone(),
-                        representation: Some(ParameterRepresentation::Simple {
-                            schema: ObjectOrReference::Object(s),
-                        }),
-                        ..Default::default()
-                    }));
-                }
-            }
+        for (name, ps) in &s.properties {
+            op.parameters.push(ObjectOrReference::Object(Parameter {
+                name: name.clone(),
+                location: Location::Query,
+                required: Some(s.required.contains(name)),
+                representation: Some(ParameterRepresentation::Simple { schema: ps.clone() }),
+                ..Default::default()
+            }));
         }
     }
 
     pub fn add_response_to<T: ResponseEntity>(&mut self, op: &mut Operation) {
-        self.add_components(T::describe_components());
-        let mut responses = T::describe_responses();
+        // T::describe(&mut self.components);
+        let mut responses = T::describe_responses(&mut self.components);
         for (code, mut resp) in &mut responses {
             if let Some(ex_resp) = op.responses.remove(code) {
                 if !ex_resp.description.is_empty() {
@@ -346,20 +334,6 @@ impl Collector {
             }
         }
         op.responses.extend(responses);
-    }
-
-    fn add_components(&mut self, components: Components) {
-        for (k, s) in components {
-            if self.spec.components.is_none() {
-                self.spec.components = Some(Default::default());
-            }
-            self.spec
-                .components
-                .as_mut()
-                .unwrap()
-                .schemas
-                .insert(k, ObjectOrReference::Object(s));
-        }
     }
 
     #[doc(hidden)]
@@ -413,11 +387,21 @@ impl Collector {
     }
 
     pub fn add_scheme<T>() {}
+
+    fn spec(self) -> Spec {
+        let mut spec = self.spec;
+        spec.components
+            .get_or_insert_with(Default::default)
+            .schemas
+            .extend(self.components.build());
+        spec
+    }
 }
 
 fn new() -> Collector {
     Collector {
         spec: Default::default(),
+        components: ComponentDescriptor::new(),
         path_prefix: Default::default(),
         tags: vec![],
     }
@@ -435,28 +419,6 @@ where
         })
     } else {
         op(None)
-    }
-}
-
-pub fn schema_consistent_component_name(s: &Schema) -> Result<String, &'static str> {
-    if s.ref_path.is_empty() {
-        let optsuff = match s.nullable {
-            Some(true) => "_Opt",
-            _ => "",
-        };
-        match s.schema_type {
-            Some(Type::String) => Ok("string".to_string()),
-            Some(Type::Number) => Ok("number".to_string()),
-            Some(Type::Integer) => Ok("integer".to_string()),
-            Some(Type::Boolean) => Ok("boolean".to_string()),
-            Some(Type::Array) => Ok(schema_consistent_component_name(
-                s.items.as_ref().ok_or("array types must declare `items`")?,
-            )? + "_List"),
-            _ => Err("anonymous types don't have component names"),
-        }
-        .map(|s| s + optsuff)
-    } else {
-        Ok(s.ref_path[("#/components/schemas/".len())..].to_string())
     }
 }
 

@@ -37,7 +37,7 @@ fn description() {
     assert!(schemas.contains_key("Two"));
     assert!(schemas.contains_key("Three"));
     assert!(schemas.contains_key("One_Opt"));
-    assert!(schemas.contains_key("One_Opt_List"));
+    assert!(!schemas.contains_key("One_Opt_List"));
     assert!(!schemas.contains_key("One_List"));
     assert!(!schemas.contains_key("Two_List"));
     assert!(!schemas.contains_key("Three_List"));

@@ -34,18 +34,18 @@ fn description() {
     macro_rules! object {
         ($o:expr) => {
             match $o {
-                openapi::ObjectOrReference::Object(s) => s,
+                openapi::ComponentOrInlineSchema::Inline(s) => s,
                 _ => panic!("Expected object, not reference"),
             }
         };
     }
-    let res = &component!("IHazResult").properties["result"];
+    let res = object!(&component!("IHazResult").properties["result"]);
     assert_eq!(
         object!(&res.one_of[0]).schema_type,
         Some(openapi::Type::Object)
     );
     assert_eq!(
-        object!(&res.one_of[0]).properties["Ok"].schema_type,
+        object!(&object!(&res.one_of[0]).properties["Ok"]).schema_type,
         Some(openapi::Type::Integer)
     );
     assert_eq!(
@@ -53,7 +53,7 @@ fn description() {
         Some(openapi::Type::Object)
     );
     assert_eq!(
-        object!(&res.one_of[1]).properties["Err"].schema_type,
+        object!(&object!(&res.one_of[1]).properties["Err"]).schema_type,
         Some(openapi::Type::String)
     );
 }
