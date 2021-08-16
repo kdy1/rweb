@@ -516,23 +516,33 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     block.stmts.push(Stmt::Expr(
         if component.is_some() {
             q!(Vars { desc, fields }, {
-                comp_d.describe_component(&Self::type_name(), |comp_d| rweb::openapi::Schema {
+                rweb::openapi::Schema {
                     fields,
                     description: rweb::rt::Cow::Borrowed(desc),
                     ..rweb::rt::Default::default()
-                })
+                }
             })
         } else {
             q!(Vars { desc, fields }, {
-                rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                rweb::openapi::Schema {
                     fields,
                     description: rweb::rt::Cow::Borrowed(desc),
                     ..rweb::rt::Default::default()
-                })
+                }
             })
         }
         .parse(),
     ));
+    let block: Expr = if component.is_some() {
+        q!(Vars { block }, {
+            comp_d.describe_component(&Self::type_name(), |comp_d| block)
+        })
+    } else {
+        q!(Vars { block }, {
+            rweb::openapi::ComponentOrInlineSchema::Inline(block)
+        })
+    }
+    .parse();
 
     let typename = component.clone().unwrap_or_else(|| ident.to_string());
     let typename: Expr = if generics.params.is_empty() {
