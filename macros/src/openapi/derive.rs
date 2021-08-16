@@ -514,23 +514,13 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     }
 
     block.stmts.push(Stmt::Expr(
-        if component.is_some() {
-            q!(Vars { desc, fields }, {
-                rweb::openapi::Schema {
-                    fields,
-                    description: rweb::rt::Cow::Borrowed(desc),
-                    ..rweb::rt::Default::default()
-                }
-            })
-        } else {
-            q!(Vars { desc, fields }, {
-                rweb::openapi::Schema {
-                    fields,
-                    description: rweb::rt::Cow::Borrowed(desc),
-                    ..rweb::rt::Default::default()
-                }
-            })
-        }
+        q!(Vars { desc, fields }, {
+            rweb::openapi::Schema {
+                fields,
+                description: rweb::rt::Cow::Borrowed(desc),
+                ..rweb::rt::Default::default()
+            }
+        })
         .parse(),
     ));
     let block: Expr = if component.is_some() {
