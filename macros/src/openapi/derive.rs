@@ -525,80 +525,157 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
 					EnumTagType::None => panic!("Schema generation for C-Like enums with untagged representation is not supported")
 				}
             } else {
-                let exprs: Punctuated<Expr, Token![,]> = data
-                    .variants
-                    .iter_mut()
-                    .filter_map(|v| {
-                        let desc = extract_doc(&mut v.attrs);
+                let variants: Vec<(String, Option<Expr>)> = data.variants.iter().filter_map(|v| {
+                    let name = get_rename(&v.attrs).unwrap_or_else(|| get_rename_all(&attrs).apply_to_variant(&v.ident.to_string()));
+                    let desc = extract_doc(&v.attrs);
+                    match v.fields {
+                        Fields::Named(..) => Some((name, Some({
+                            let fields_block = handle_fields(&attrs, &v.fields);
+                            q!(
+                                Vars { fields_block, desc },
+                                ({
+                                    let (fields, fields_required) = fields_block;
+                                    #[allow(unused_mut)]
+                                    let mut s = rweb::openapi::Schema {
+                                        schema_type: Some(rweb::openapi::Type::Object),
+                                        properties: fields,
+                                        required: fields_required,
+                                        ..rweb::rt::Default::default()
+                                    };
+                                    let description = desc;
+                                    if !description.is_empty() {
+                                        s.description =
+                                            rweb::rt::Cow::Borrowed(description);
+                                    }
 
-                        match v.fields {
-                            Fields::Named(..) => Some(Pair::Punctuated(
-                                {
-                                    let fields_block = handle_fields(&attrs, &mut v.fields);
-                                    q!(
-                                        Vars { fields_block, desc },
-                                        ({
-                                            let (fields, fields_required) = fields_block;
-                                            #[allow(unused_mut)]
-                                            let mut s = rweb::openapi::Schema {
-                                                properties: fields,
-                                                required: fields_required,
-                                                ..rweb::rt::Default::default()
-                                            };
-                                            let description = desc;
-                                            if !description.is_empty() {
-                                                s.description =
-                                                    rweb::rt::Cow::Borrowed(description);
-                                            }
-
-                                            rweb::openapi::ComponentOrInlineSchema::Inline(s)
-                                        })
-                                    )
-                                    .parse()
+                                    rweb::openapi::ComponentOrInlineSchema::Inline(s)
+                                })
+                            )
+                            .parse()
+                        }))),
+                        Fields::Unnamed(ref f) if f.unnamed.is_empty() => Some((name, None)),
+                        Fields::Unnamed(ref f) if f.unnamed.len() == 1 => Some((name, Some(
+                            q!(
+                                Vars {
+                                    Type: &f.unnamed.first().unwrap().ty,
+                                    desc
                                 },
-                                Default::default(),
-                            )),
-                            Fields::Unnamed(ref f) => {
-                                //
-                                assert!(f.unnamed.len() <= 1);
-                                if f.unnamed.is_empty() {
-                                    return None;
+                                ({
+                                    #[allow(unused_mut)]
+                                    let mut s =
+                                        <Type as rweb::openapi::Entity>::describe(comp_d);
+                                    if let rweb::openapi::ComponentOrInlineSchema::Inline(
+                                        s,
+                                    ) = &mut s
+                                    {
+                                        let description = desc;
+                                        if !description.is_empty() {
+                                            s.description =
+                                                rweb::rt::Cow::Borrowed(description);
+                                        }
+                                    }
+
+                                    s
+                                })
+                            )
+                            .parse()
+                        ))),
+                        Fields::Unnamed(..) => panic!("Schema generation for tuple enum variants is currently not supported"),
+                        Fields::Unit => Some((name, None)),
+                    }
+                }).collect();
+
+                match ett {
+                    EnumTagType::External => {
+                        let variants: Punctuated<pmutil::Quote, Token![,]> = variants.into_iter().map(|(name, schema)| if let Some(schema) = schema {
+                            q!(Vars { name, schema }, { rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                schema_type: Some(rweb::openapi::Type::Object),
+                                properties: rweb::rt::indexmap![rweb::rt::Cow::Borrowed(name) => schema],
+                                required: vec![rweb::rt::Cow::Borrowed(name)],
+                                ..Default::default()
+                            })})
+                        } else {
+                            q!(Vars { name }, { rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                schema_type: Some(rweb::openapi::Type::String),
+                                enum_values: vec![rweb::rt::Cow::Borrowed(name)],
+                                ..Default::default()
+                            })})
+                        }).collect();
+                        fields.push(q!(Vars { variants }, { one_of: vec![variants] }).parse());
+                    }
+                    EnumTagType::Internal { tag } => {
+                        let variants: Punctuated<pmutil::Quote, Token![,]> = variants.into_iter().map(|(name, schema)| if let Some(schema) = schema {
+                            q!(Vars { tag: &tag, name, s: schema }, { rweb::openapi::ComponentOrInlineSchema::Inline(match s {
+                                rweb::openapi::ComponentOrInlineSchema::Inline(mut schema) if schema.schema_type == Some(rweb::openapi::Type::Object) => {
+                                    if schema.properties.insert(rweb::rt::Cow::Borrowed(tag), rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                        schema_type: Some(rweb::openapi::Type::String),
+                                        enum_values: vec![rweb::rt::Cow::Borrowed(name)],
+                                        ..Default::default()
+                                    })).is_some() {
+                                        panic!("Enum internal repr tag property interferes with property of enum variant");
+                                    }
+                                    schema.required.push(rweb::rt::Cow::Borrowed(tag));
+                                    schema
                                 }
-
-                                Some(Pair::Punctuated(
-                                    q!(
-                                        Vars {
-                                            Type: &f.unnamed.first().unwrap().ty,
-                                            desc
-                                        },
-                                        ({
-                                            #[allow(unused_mut)]
-                                            let mut s =
-                                                <Type as rweb::openapi::Entity>::describe(comp_d);
-                                            if let rweb::openapi::ComponentOrInlineSchema::Inline(
-                                                s,
-                                            ) = &mut s
-                                            {
-                                                let description = desc;
-                                                if !description.is_empty() {
-                                                    s.description =
-                                                        rweb::rt::Cow::Borrowed(description);
-                                                }
-                                            }
-
-                                            s
-                                        })
-                                    )
-                                    .parse(),
-                                    Default::default(),
-                                ))
-                            }
-                            Fields::Unit => None,
-                        }
-                    })
-                    .collect();
-
-                fields.push(q!(Vars { exprs }, { one_of: vec![exprs] }).parse());
+                                schema => rweb::openapi::Schema {
+                                    all_of: vec![rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                        schema_type: Some(rweb::openapi::Type::Object),
+                                        properties: rweb::rt::indexmap![rweb::rt::Cow::Borrowed(tag) => rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                            schema_type: Some(rweb::openapi::Type::String),
+                                            enum_values: vec![rweb::rt::Cow::Borrowed(name)],
+                                            ..Default::default()
+                                        })],
+                                        required: vec![rweb::rt::Cow::Borrowed(tag)],
+                                        ..Default::default()
+                                    }), schema],
+                                    ..Default::default()
+                                }
+                            })})
+                        } else {
+                            q!(Vars { tag: &tag, name }, { rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                schema_type: Some(rweb::openapi::Type::Object),
+                                properties: rweb::rt::indexmap![rweb::rt::Cow::Borrowed(tag) => rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                    schema_type: Some(rweb::openapi::Type::String),
+                                    enum_values: vec![rweb::rt::Cow::Borrowed(name)],
+                                    ..Default::default()
+                                })],
+                                required: vec![rweb::rt::Cow::Borrowed(tag)],
+                                ..Default::default()
+                            })})
+                        }).collect();
+                        fields.push(q!(Vars { variants }, { one_of: vec![variants] }).parse());
+                    }
+                    EnumTagType::Adjacent { tag, content } => {
+                        let variants: Punctuated<pmutil::Quote, Token![,]> = variants.into_iter().map(|(name, schema)| if let Some(schema) = schema {
+                            q!(Vars { tag: &tag, content: &content, name, schema }, { rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                schema_type: Some(rweb::openapi::Type::Object),
+                                properties: rweb::rt::indexmap![rweb::rt::Cow::Borrowed(tag) => rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                    schema_type: Some(rweb::openapi::Type::String),
+                                    enum_values: vec![rweb::rt::Cow::Borrowed(name)],
+                                    ..Default::default()
+                                }), rweb::rt::Cow::Borrowed(content) => schema],
+                                required: vec![rweb::rt::Cow::Borrowed(tag), rweb::rt::Cow::Borrowed(content)],
+                                ..Default::default()
+                            })})
+                        } else {
+                            q!(Vars { tag: &tag, name }, { rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                schema_type: Some(rweb::openapi::Type::Object),
+                                properties: rweb::rt::indexmap![rweb::rt::Cow::Borrowed(tag) => rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                                    schema_type: Some(rweb::openapi::Type::String),
+                                    enum_values: vec![rweb::rt::Cow::Borrowed(name)],
+                                    ..Default::default()
+                                })],
+                                required: vec![rweb::rt::Cow::Borrowed(tag)],
+                                ..Default::default()
+                            })})
+                        }).collect();
+                        fields.push(q!(Vars { variants }, { one_of: vec![variants] }).parse());
+                    }
+                    EnumTagType::None => {
+                        let variants: Punctuated<Expr, Token![,]> = variants.into_iter().map(|(_, schema)| schema.expect("Schema generation for unit variant in untagged enum is not supported")).collect();
+                        fields.push(q!(Vars { variants }, { one_of: vec![variants] }).parse());
+                    }
+                }
             }
         }
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
