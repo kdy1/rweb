@@ -63,6 +63,78 @@ fn get_rename(attrs: &[Attribute]) -> Option<String> {
     })
 }
 
+/// Styles of representing an enum.
+///
+/// Copied from https://github.com/serde-rs/serde/blob/master/serde_derive/src/internals/attr.rs
+enum EnumTagType {
+    /// The default.
+    ///
+    /// ```json
+    /// {"variant1": {"key1": "value1", "key2": "value2"}}
+    /// ```
+    External,
+
+    /// `#[serde(tag = "type")]`
+    ///
+    /// ```json
+    /// {"type": "variant1", "key1": "value1", "key2": "value2"}
+    /// ```
+    Internal { tag: String },
+
+    /// `#[serde(tag = "t", content = "c")]`
+    ///
+    /// ```json
+    /// {"t": "variant1", "c": {"key1": "value1", "key2": "value2"}}
+    /// ```
+    Adjacent { tag: String, content: String },
+
+    /// `#[serde(untagged)]`
+    ///
+    /// ```json
+    /// {"key1": "value1", "key2": "value2"}
+    /// ```
+    None,
+}
+
+/// Search for `#[serde(tag = '')]`, `#[serde(content = '')]`, and `#[serde(untagged)]`.
+fn get_enum_tag_type(attrs: &[Attribute]) -> EnumTagType {
+    let mut untagged = false;
+    let mut tag = None;
+    let mut content = None;
+    // Don't panic on invalid serde tags since serde will report them properly itself
+    for attr in get_serde_meta_attrs(attrs) {
+        match attr {
+            Meta::Path(path) => {
+                if path.is_ident("untagged") {
+                    untagged = true;
+                }
+            }
+            Meta::NameValue(MetaNameValue { path, lit, .. }) => {
+                if path.is_ident("tag") {
+                    if let Lit::Str(s) = lit {
+                        tag = Some(s.value());
+                    }
+                } else if path.is_ident("content") {
+                    if let Lit::Str(s) = lit {
+                        content = Some(s.value());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    match (untagged, tag, content) {
+        (false, None, None) => EnumTagType::External,
+        (false, Some(tag), None) => EnumTagType::Internal { tag },
+        (false, Some(tag), Some(content)) => EnumTagType::Adjacent { tag, content },
+        (true, None, None) => EnumTagType::None,
+        (untagged, tag, content) => panic!(
+            "Invalid serde enum tag type configuration: untagged={}, tag={:?}, content={:?}",
+            untagged, tag, content
+        ),
+    }
+}
+
 fn get_skip_mode(attrs: &[Attribute]) -> (bool, bool) {
     let mut ser = false;
     let mut de = false;
