@@ -20,9 +20,7 @@ fn get_serde_meta_attrs<'a>(attrs: &'a [Attribute]) -> impl Iterator<Item = Meta
         .iter()
         .filter_map(|attr| {
             if attr.path.is_ident("serde") {
-                parse2::<Paren<Meta>>(attr.tokens.clone())
-                    .map(|p| p.inner)
-                    .ok()
+                attr.parse_meta().ok()
             } else {
                 None
             }
