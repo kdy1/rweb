@@ -479,6 +479,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
             fields.push(q!({ schema_type: Some(rweb::openapi::Type::Object) }).parse());
         }
         Data::Enum(ref mut data) => {
+            let ett = get_enum_tag_type(&attrs);
             if data
                 .variants
                 .iter()
@@ -503,8 +504,26 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                     })
                     .collect();
 
-                fields.push(q!(Vars { exprs }, { enum_values: vec![exprs] }).parse());
-                fields.push(q!({ schema_type: Some(rweb::openapi::Type::String) }).parse());
+                match ett {
+					EnumTagType::External => {
+						fields.push(q!(Vars { exprs }, { enum_values: vec![exprs] }).parse());
+						fields.push(q!({ schema_type: Some(rweb::openapi::Type::String) }).parse());
+					}
+					EnumTagType::Internal { tag } | EnumTagType::Adjacent { tag, .. } => {
+						fields.push(q!({ schema_type: Some(rweb::openapi::Type::Object) }).parse());
+						fields.push(q!(Vars { exprs, tag: tag.as_str() }, {
+							properties: rweb::rt::indexmap![rweb::rt::Cow::Borrowed(tag) => rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+								schema_type: Some(rweb::openapi::Type::String),
+								enum_values: vec![exprs],
+								..rweb::rt::Default::default()
+							})]
+						}).parse());
+						fields.push(q!(Vars { tag }, {
+							required: vec![rweb::rt::Cow::Borrowed(tag)]
+						}).parse());
+					}
+					EnumTagType::None => panic!("Schema generation for C-Like enums with untagged representation is not supported")
+				}
             } else {
                 let exprs: Punctuated<Expr, Token![,]> = data
                     .variants
