@@ -178,7 +178,7 @@ Correct usage: #[schema(description = \"foo\", example = \"bar\")]",
     };
 }
 
-fn extract_example(attrs: &mut Vec<Attribute>) -> Option<TokenStream> {
+fn extract_example(attrs: &Vec<Attribute>) -> Option<TokenStream> {
     let mut v = None;
 
     let mut process_nv = |n: syn::MetaNameValue| {
@@ -245,7 +245,7 @@ fn extract_example(attrs: &mut Vec<Attribute>) -> Option<TokenStream> {
     }
 }
 
-fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
+fn extract_doc(attrs: &Vec<Attribute>) -> String {
     let mut doc = None;
     let mut comments = String::new();
 
@@ -299,11 +299,11 @@ fn extract_doc(attrs: &mut Vec<Attribute>) -> String {
     }
 }
 
-fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
+fn handle_field(type_attrs: &[Attribute], f: &Field) -> Stmt {
     let name_str = field_name(type_attrs, &*f);
 
-    let desc = extract_doc(&mut f.attrs);
-    let example_v = extract_example(&mut f.attrs);
+    let desc = extract_doc(&f.attrs);
+    let example_v = extract_example(&f.attrs);
     let (skip_ser, skip_de) = get_skip_mode(&f.attrs);
 
     // We don't require it to be `Entity`
@@ -352,7 +352,7 @@ fn handle_field(type_attrs: &[Attribute], f: &mut Field) -> Stmt {
     .parse()
 }
 
-fn handle_fields(type_attrs: &[Attribute], fields: &mut Fields) -> Block {
+fn handle_fields(type_attrs: &[Attribute], fields: &Fields) -> Block {
     // Properties
     let mut block: Block = q!({ {} }).parse();
     block.stmts.push(
