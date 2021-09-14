@@ -63,7 +63,7 @@ fn struct_rename_all() {
     println!("{}", yaml);
 
     assert!(yaml.contains("dataMsg"));
-    assert!(yaml.contains("DATA2_MESSAGE"));
+    assert!(yaml.contains("DATA2_MSG"));
 }
 
 #[test]
