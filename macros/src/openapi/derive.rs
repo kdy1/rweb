@@ -485,7 +485,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                 .iter()
                 .all(|variant| variant.fields.is_empty())
             {
-                // c-like enums
+                // unit-like enums
 
                 let exprs: Punctuated<Expr, Token![,]> = data
                     .variants
@@ -522,7 +522,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                             required: vec![rweb::rt::Cow::Borrowed(tag)]
                         }).parse());
                     }
-                    EnumTagType::None => panic!("Schema generation for C-Like enums with untagged representation is not supported")
+                    EnumTagType::None => panic!("Schema generation for unit-like enums with untagged representation is not supported")
                 }
             } else {
                 let variants: Vec<(String, Option<Expr>)> = data.variants.iter().filter_map(|v| {
