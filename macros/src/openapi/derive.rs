@@ -10,8 +10,34 @@ use syn::{
     parse2,
     punctuated::{Pair, Punctuated},
     Attribute, Block, Data, DeriveInput, Expr, Field, FieldValue, Fields, GenericParam, ItemImpl,
-    Lit, LitStr, Meta, NestedMeta, Stmt, Token, TraitBound, TraitBoundModifier, TypeParamBound,
+    Lit, LitStr, Meta, MetaList, MetaNameValue, NestedMeta, Stmt, Token, TraitBound,
+    TraitBoundModifier, TypeParamBound,
 };
+
+/// Extracts all `#[serde(..)]` attributes and flattens `Meta::List`s.
+fn get_serde_meta_attrs<'a>(attrs: &'a [Attribute]) -> impl Iterator<Item = Meta> + 'a {
+    attrs
+        .iter()
+        .filter_map(|attr| {
+            if attr.path.is_ident("serde") {
+                parse2::<Paren<Meta>>(attr.tokens.clone())
+                    .map(|p| p.inner)
+                    .ok()
+            } else {
+                None
+            }
+        })
+        .flat_map(|meta| match meta {
+            Meta::List(MetaList { nested, .. }) => nested
+                .into_iter()
+                .filter_map(|m| match m {
+                    NestedMeta::Meta(m) => Some(m),
+                    _ => None,
+                })
+                .collect(),
+            m => vec![m],
+        })
+}
 
 /// Search for `#[serde(rename_all = '')]`
 fn get_rename_all(attrs: &[Attribute]) -> RenameRule {
