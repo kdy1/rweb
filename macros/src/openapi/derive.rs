@@ -39,69 +39,45 @@ fn get_serde_meta_attrs<'a>(attrs: &'a [Attribute]) -> impl Iterator<Item = Meta
 
 /// Search for `#[serde(rename_all = '')]`
 fn get_rename_all(attrs: &[Attribute]) -> RenameRule {
-    attrs
-        .iter()
-        .find_map(|attr| {
-            //
-            if !attr.path.is_ident("serde") {
-                return None;
-            }
-
-            match parse2::<Paren<KeyValue<Ident, LitStr>>>(attr.tokens.clone()).map(|v| v.inner) {
-                Ok(kv) if kv.key == "rename_all" => Some(kv.value.value().parse().unwrap()),
-                _ => None,
-            }
+    get_serde_meta_attrs(attrs)
+        .find_map(|attr| match attr {
+            Meta::NameValue(MetaNameValue {
+                path,
+                lit: Lit::Str(value),
+                ..
+            }) if path.is_ident("rename_all") => Some(value.value().parse().unwrap()),
+            _ => None,
         })
         .unwrap_or(RenameRule::None)
 }
 
 /// Search for `#[serde(rename = '')]`
 fn get_rename(attrs: &[Attribute]) -> Option<String> {
-    attrs.iter().find_map(|attr| {
-        //
-        if !attr.path.is_ident("serde") {
-            return None;
-        }
-
-        // Handle #[serde(rename = "foo")]
-        let meta = match parse2::<Paren<Meta>>(attr.tokens.clone()) {
-            Ok(v) => v.inner,
-            Err(..) => return None,
-        };
-
-        if meta.path().is_ident("rename") {
-            return match meta {
-                Meta::NameValue(meta) => match meta.lit {
-                    Lit::Str(s) => Some(s.value()),
-                    _ => None,
-                },
-                _ => None,
-            };
-        }
-
-        None
+    get_serde_meta_attrs(attrs).find_map(|attr| match attr {
+        Meta::NameValue(MetaNameValue {
+            path,
+            lit: Lit::Str(value),
+            ..
+        }) if path.is_ident("rename") => Some(value.value()),
+        _ => None,
     })
 }
 
 fn get_skip_mode(attrs: &[Attribute]) -> (bool, bool) {
     let mut ser = false;
     let mut de = false;
-    for attr in attrs {
-        if attr.path.is_ident("serde") {
-            match parse2::<Paren<Meta>>(attr.tokens.clone()) {
-                Ok(Paren {
-                    inner: Meta::Path(pa),
-                }) => {
-                    if pa.is_ident("skip") {
-                        return (true, true);
-                    } else if pa.is_ident("skip_serializing") {
-                        ser = true
-                    } else if pa.is_ident("skip_deserializing") {
-                        de = true
-                    }
+    for attr in get_serde_meta_attrs(attrs) {
+        match attr {
+            Meta::Path(pa) => {
+                if pa.is_ident("skip") {
+                    return (true, true);
+                } else if pa.is_ident("skip_serializing") {
+                    ser = true
+                } else if pa.is_ident("skip_deserializing") {
+                    de = true
                 }
-                Ok(..) | Err(..) => {}
-            };
+            }
+            _ => {}
         }
     }
     (ser, de)
