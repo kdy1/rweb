@@ -453,6 +453,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
     let example = extract_example(&mut attrs);
 
     let mut block: Block = q!({ {} }).parse();
+    let mut final_statement: Option<Expr> = None;
     let mut fields: Punctuated<FieldValue, Token![,]> = Default::default();
     if let Some(tts) = example {
         fields.push(q!(Vars { tts }, ({ example: Some(tts) })).parse());
@@ -472,8 +473,32 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                     fields.push(q!({ properties: fields }).parse());
                     fields.push(q!({ required: required_fields }).parse());
                 }
-                Fields::Unnamed(ref n) if n.unnamed.len() == 1 => {}
-                _ => {}
+                Fields::Unnamed(ref n) if n.unnamed.len() == 1 => {
+                    final_statement = Some(
+                        q!(
+                            Vars {
+                                Type: &n.unnamed.first().unwrap().ty,
+                                desc: &desc
+                            },
+                            ({
+                                #[allow(unused_mut)]
+                                let mut s = <Type as rweb::openapi::Entity>::describe(comp_d);
+                                if let rweb::openapi::ComponentOrInlineSchema::Inline(s) = &mut s {
+                                    let description = desc;
+                                    if !description.is_empty() {
+                                        s.description = rweb::rt::Cow::Borrowed(description);
+                                    }
+                                }
+
+                                s
+                            })
+                        )
+                        .parse(),
+                    )
+                }
+                Fields::Unnamed(..) => {
+                    panic!("Schema generation for tuple structs is currently not supported")
+                }
             }
 
             fields.push(q!({ schema_type: Some(rweb::openapi::Type::Object) }).parse());
@@ -681,26 +706,28 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }
 
-    block.stmts.push(Stmt::Expr(
-        if component.is_some() {
-            q!(Vars { desc, fields }, {
-                comp_d.describe_component(&Self::type_name(), |comp_d| rweb::openapi::Schema {
-                    fields,
-                    description: rweb::rt::Cow::Borrowed(desc),
-                    ..rweb::rt::Default::default()
+    block
+        .stmts
+        .push(Stmt::Expr(final_statement.unwrap_or_else(|| {
+            if component.is_some() {
+                q!(Vars { desc, fields }, {
+                    comp_d.describe_component(&Self::type_name(), |comp_d| rweb::openapi::Schema {
+                        fields,
+                        description: rweb::rt::Cow::Borrowed(desc),
+                        ..rweb::rt::Default::default()
+                    })
                 })
-            })
-        } else {
-            q!(Vars { desc, fields }, {
-                rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
-                    fields,
-                    description: rweb::rt::Cow::Borrowed(desc),
-                    ..rweb::rt::Default::default()
+            } else {
+                q!(Vars { desc, fields }, {
+                    rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
+                        fields,
+                        description: rweb::rt::Cow::Borrowed(desc),
+                        ..rweb::rt::Default::default()
+                    })
                 })
-            })
-        }
-        .parse(),
-    ));
+            }
+            .parse()
+        })));
 
     let typename = component.clone().unwrap_or_else(|| ident.to_string());
     let typename: Expr = if generics.params.is_empty() {
