@@ -1,17 +1,17 @@
 use crate::{
     openapi::case::RenameRule,
-    parse::{Delimited, KeyValue, Paren},
+    parse::{Delimited, Paren},
     route::EqStr,
     util::ItemImplExt,
 };
 use pmutil::{q, ToTokensExt};
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use syn::{
     parse2,
     punctuated::{Pair, Punctuated},
     Attribute, Block, Data, DeriveInput, Expr, Field, FieldValue, Fields, GenericParam, ItemImpl,
-    Lit, LitStr, Meta, MetaList, MetaNameValue, NestedMeta, Stmt, Token, TraitBound,
-    TraitBoundModifier, TypeParamBound,
+    Lit, Meta, MetaList, MetaNameValue, NestedMeta, Stmt, Token, TraitBound, TraitBoundModifier,
+    TypeParamBound,
 };
 
 /// Extracts all `#[serde(..)]` attributes and flattens `Meta::List`s.
