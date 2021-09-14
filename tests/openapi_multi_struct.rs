@@ -20,8 +20,19 @@ pub struct Three {
     list_of_opt_of_one: Vec<Option<One>>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Schema)]
+#[schema(component = "Wrapper")]
+pub struct Wrapper(Three);
+
+#[derive(Debug, Serialize, Deserialize, Schema)]
+struct Relevant {
+    one: One,
+    three: Three,
+    wrapper: Wrapper,
+}
+
 #[get("/")]
-fn index(_: Query<One>, _: Json<Three>) -> String {
+fn index(_: Query<Relevant>) -> String {
     String::new()
 }
 
@@ -43,4 +54,5 @@ fn description() {
     assert!(!schemas.contains_key("Three_List"));
     assert!(!schemas.contains_key("Two_Opt"));
     assert!(!schemas.contains_key("Three_Opt"));
+    assert!(schemas.contains_key("Wrapper"));
 }
