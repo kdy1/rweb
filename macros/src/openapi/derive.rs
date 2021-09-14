@@ -499,6 +499,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                 Fields::Unnamed(..) => {
                     panic!("Schema generation for tuple structs is currently not supported")
                 }
+                Fields::Unit => fields.push(q!({ nullable: Some(true) }).parse()),
             }
 
             fields.push(q!({ schema_type: Some(rweb::openapi::Type::Object) }).parse());

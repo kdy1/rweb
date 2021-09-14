@@ -203,6 +203,7 @@ impl Entity for () {
     fn describe(_: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
         ComponentOrInlineSchema::Inline(Schema {
             schema_type: Some(Type::Object),
+            nullable: Some(true),
             ..Default::default()
         })
     }
