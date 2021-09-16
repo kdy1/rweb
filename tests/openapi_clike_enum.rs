@@ -4,8 +4,15 @@ use rweb::*;
 use serde::{Deserialize, Serialize};
 
 #[get("/")]
-fn index(_: Json<Color>) -> String {
+fn index(_: Json<Colors>) -> String {
     String::new()
+}
+
+#[derive(Debug, Serialize, Deserialize, Schema)]
+struct Colors {
+    colordef: Color,
+    coloradj: ColorAdjtagged,
+    colorint: ColorInttagged,
 }
 
 #[derive(Debug, Serialize, Deserialize, Schema)]
@@ -28,6 +35,23 @@ impl std::str::FromStr for Color {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Schema)]
+#[serde(tag = "tag", rename_all = "lowercase")]
+#[schema(component = "ColorInttagged")]
+enum ColorInttagged {
+    Black,
+    Blue,
+}
+
+#[derive(Debug, Serialize, Deserialize, Schema)]
+#[serde(rename_all = "lowercase")]
+#[serde(tag = "tag", content = "content")]
+#[schema(component = "ColorAdjtagged")]
+enum ColorAdjtagged {
+    Black,
+    Blue,
+}
+
 #[test]
 fn description() {
     let (spec, _) = openapi::spec().build(|| {
@@ -45,6 +69,18 @@ fn description() {
         };
     }
     let schema = component!("Color");
+    assert_eq!(schema.schema_type, Some(openapi::Type::String));
+    assert_eq!(schema.enum_values, vec!["black", "blue"]);
+    let schema = component!("ColorInttagged");
+    assert_eq!(schema.schema_type, Some(openapi::Type::Object));
+    assert_eq!(schema.required, vec!["tag"]);
+    let schema = schema.properties["tag"].unwrap().unwrap();
+    assert_eq!(schema.schema_type, Some(openapi::Type::String));
+    assert_eq!(schema.enum_values, vec!["black", "blue"]);
+    let schema = component!("ColorAdjtagged");
+    assert_eq!(schema.schema_type, Some(openapi::Type::Object));
+    assert_eq!(schema.required, vec!["tag"]);
+    let schema = schema.properties["tag"].unwrap().unwrap();
     assert_eq!(schema.schema_type, Some(openapi::Type::String));
     assert_eq!(schema.enum_values, vec!["black", "blue"]);
 }
