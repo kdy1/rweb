@@ -33,14 +33,22 @@ fn struct_field() {
 #[test]
 fn struct_rename_all() {
     #[derive(Debug, Serialize, Deserialize, Schema)]
+    #[serde(deny_unknown_fields)]
     #[serde(rename_all = "camelCase")]
     struct Data {
         data_msg: String,
     }
+    #[derive(Debug, Serialize, Deserialize, Schema)]
+    #[serde(deny_unknown_fields, rename_all = "SCREAMING_SNAKE_CASE")]
+    struct Data2 {
+        data2_msg: String,
+    }
 
     #[get("/")]
-    fn index(_: Query<Data>) -> String {
-        String::new()
+    fn index(_: Query<Data>) -> Json<Data2> {
+        Json::from(Data2 {
+            data2_msg: String::new(),
+        })
     }
 
     let (spec, _) = openapi::spec().build(|| {
@@ -55,6 +63,7 @@ fn struct_rename_all() {
     println!("{}", yaml);
 
     assert!(yaml.contains("dataMsg"));
+    assert!(yaml.contains("DATA2_MSG"));
 }
 
 #[test]
