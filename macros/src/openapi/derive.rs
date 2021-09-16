@@ -727,8 +727,7 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
                 rweb::openapi::ComponentOrInlineSchema::Inline(block)
             })
         }
-    })
-    .parse();
+    }.parse());
 
     let typename = component.clone().unwrap_or_else(|| ident.to_string());
     let typename: Expr = if generics.params.is_empty() {
