@@ -711,6 +711,34 @@ impl ResponseEntity for dyn Reply {
     }
 }
 
+impl Entity for std::net::Ipv4Addr {
+    fn type_name() -> Cow<'static, str> {
+        Cow::Borrowed("ipv4")
+    }
+
+    fn describe(_: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        ComponentOrInlineSchema::Inline(Schema {
+            schema_type: Some(Type::String),
+            format: Self::type_name(),
+            ..Default::default()
+        })
+    }
+}
+
+impl Entity for std::net::Ipv6Addr {
+    fn type_name() -> Cow<'static, str> {
+        Cow::Borrowed("ipv6")
+    }
+
+    fn describe(_: &mut ComponentDescriptor) -> ComponentOrInlineSchema {
+        ComponentOrInlineSchema::Inline(Schema {
+            schema_type: Some(Type::String),
+            format: Self::type_name(),
+            ..Default::default()
+        })
+    }
+}
+
 #[cfg(feature = "uuid")]
 impl Entity for uuid::Uuid {
     fn type_name() -> Cow<'static, str> {
