@@ -707,28 +707,27 @@ pub fn derive_schema(input: DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!("#[derive(Schema)] for union"),
     }
 
-    block
-        .stmts
-        .push(Stmt::Expr(final_statement.unwrap_or_else(|| {
-            if component.is_some() {
-                q!(Vars { desc, fields }, {
-                    comp_d.describe_component(&Self::type_name(), |comp_d| rweb::openapi::Schema {
-                        fields,
-                        description: rweb::rt::Cow::Borrowed(desc),
-                        ..rweb::rt::Default::default()
-                    })
-                })
-            } else {
-                q!(Vars { desc, fields }, {
-                    rweb::openapi::ComponentOrInlineSchema::Inline(rweb::openapi::Schema {
-                        fields,
-                        description: rweb::rt::Cow::Borrowed(desc),
-                        ..rweb::rt::Default::default()
-                    })
-                })
+    block.stmts.push(Stmt::Expr(
+        q!(Vars { desc, fields }, {
+            rweb::openapi::Schema {
+                fields,
+                description: rweb::rt::Cow::Borrowed(desc),
+                ..rweb::rt::Default::default()
             }
-            .parse()
-        })));
+        })
+        .parse(),
+    ));
+    let block: Expr = final_statement.unwrap_or_else(|| {
+        if component.is_some() {
+            q!(Vars { block }, {
+                comp_d.describe_component(&Self::type_name(), |comp_d| block)
+            })
+        } else {
+            q!(Vars { block }, {
+                rweb::openapi::ComponentOrInlineSchema::Inline(block)
+            })
+        }
+    }.parse());
 
     let typename = component.clone().unwrap_or_else(|| ident.to_string());
     let typename: Expr = if generics.params.is_empty() {
