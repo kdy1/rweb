@@ -10,6 +10,7 @@ use warp::{
     Filter, Rejection, Reply,
 };
 
+/// Implements conversion of HTTP Request to a specific type
 pub trait FromRequest: Sized {
     /// Extract should be `(Self,),`
     type Filter: Filter<Error = Rejection>;
@@ -35,10 +36,12 @@ pub trait FromRequest: Sized {
         false
     }
 
+    /// MIME type of the resource
     fn content_type() -> &'static str {
         "*/*"
     }
 
+    /// Create a parsing filter
     fn new() -> Self::Filter;
 }
 
@@ -82,6 +85,7 @@ where
 pub struct Json<T>(T);
 
 impl<T> Json<T> {
+    /// Return the underlying json value
     pub fn into_inner(self) -> T {
         self.0
     }
@@ -128,6 +132,7 @@ where
 pub struct Form<T>(T);
 
 impl<T> Form<T> {
+    /// return the underlying form
     pub fn into_inner(self) -> T {
         self.0
     }
@@ -158,6 +163,7 @@ where
 pub struct Query<T>(T);
 
 impl<T> Query<T> {
+    /// return the underlying query
     pub fn into_inner(self) -> T {
         self.0
     }

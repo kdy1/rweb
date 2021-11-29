@@ -1,4 +1,4 @@
-/// Helper macro to chain multiple routes with .or(route()) between them.
+//! Helper macro to chain multiple routes with .or(route()) between them.
 ///
 /// # Example - single use with data injection
 ///
