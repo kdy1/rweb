@@ -38,7 +38,7 @@ macro_rules! quote_str_indexmap {
                 Default::default(),
             )
         })
-        .collect();
+        .collect()
     };
 }
 
