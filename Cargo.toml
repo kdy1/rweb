@@ -10,7 +10,7 @@ keywords = ["rweb", "server", "http", "hyper"]
 license = "Apache-2.0"
 name = "rweb"
 repository = "https://github.com/kdy1/rweb.git"
-version = "0.15.0"
+version = "0.15.1"
 
 [package.metadata.docs.rs]
 all-features = true
