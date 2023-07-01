@@ -40,7 +40,7 @@ mod filters {
     /// The 4 TODOs filters combined.
     pub fn todos(
         db: Db,
-    ) -> impl Filter<Extract = impl rweb::Reply, Error = rweb::Rejection> + Clone {
+    ) -> impl Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection> + Clone {
         todos_list(db.clone())
             .or(todos_create(db.clone()))
             .or(todos_update(db.clone()))
@@ -50,7 +50,7 @@ mod filters {
     /// GET /todos?offset=3&limit=5
     pub fn todos_list(
         db: Db,
-    ) -> impl Filter<Extract = impl rweb::Reply, Error = rweb::Rejection> + Clone {
+    ) -> impl Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection> + Clone {
         rweb::path!("todos")
             .and(rweb::get())
             .and(rweb::query::<ListOptions>())
@@ -61,7 +61,7 @@ mod filters {
     /// POST /todos with JSON body
     pub fn todos_create(
         db: Db,
-    ) -> impl Filter<Extract = impl rweb::Reply, Error = rweb::Rejection> + Clone {
+    ) -> impl Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection> + Clone {
         rweb::path!("todos")
             .and(rweb::post())
             .and(json_body())
@@ -72,7 +72,7 @@ mod filters {
     /// PUT /todos/:id with JSON body
     pub fn todos_update(
         db: Db,
-    ) -> impl Filter<Extract = impl rweb::Reply, Error = rweb::Rejection> + Clone {
+    ) -> impl Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection> + Clone {
         rweb::path!("todos" / u64)
             .and(rweb::put())
             .and(json_body())
@@ -83,7 +83,7 @@ mod filters {
     /// DELETE /todos/:id
     pub fn todos_delete(
         db: Db,
-    ) -> impl Filter<Extract = impl rweb::Reply, Error = rweb::Rejection> + Clone {
+    ) -> impl Filter<Extract = (impl rweb::Reply,), Error = rweb::Rejection> + Clone {
         // We'll make one of our endpoints admin-only to show how authentication filters
         // are used
         let admin_only = rweb::header::exact("authorization", "Bearer admin");

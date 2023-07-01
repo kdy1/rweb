@@ -174,7 +174,7 @@ macro_rules! invalid_schema_usage {
             "Invalid schema usage: {}
 Correct usage: #[schema(description = \"foo\", example = \"bar\")]",
             $act.dump()
-        );
+        )
     };
 }
 
