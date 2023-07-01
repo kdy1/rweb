@@ -28,7 +28,7 @@ chrono = {version = "0.4.19", features = ["serde"], optional = true}
 enumset = {version = "1.0", features = ["serde"], optional = true}
 futures = "0.3"
 http = "0.2"
-indexmap = "2.0"
+indexmap = "1.9"
 rweb-macros = {version = "0.14.1", path = "./macros"}
 rweb-openapi = {version = "0.7.0", optional = true}
 scoped-tls = "1"
